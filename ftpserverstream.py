@@ -1,12 +1,14 @@
 import sys, errno
 from pyftpdlib import ftpserver
-import Queue
+import Queue, time
 
 class StreamHandler(ftpserver.FTPHandler):
-    def __init__(self, conn, server):
+    def __init__(self, conn, server, wait_time=1):
         (super(StreamHandler, self)).__init__(conn, server)
         self._out_dtp_queue = Queue.Queue()
         self._close_connection = False
+        self._wait_time = wait_time
+ 	self._packet_size = 100
 
     def close(self):
         super(StreamHandler, self).close()
@@ -44,6 +46,7 @@ class StreamHandler(ftpserver.FTPHandler):
                         self.data_channel.push(data)
                     else:
                         self.data_channel.push_with_producer(data)
+                    time.sleep(self._wait_time)
                 except:
                     # dealing with this exception is up to DTP (see bug #84)
                     self.data_channel.handle_error()
@@ -96,14 +99,46 @@ class StreamHandler(ftpserver.FTPHandler):
         self._out_dtp_queue = Queue.Queue()
 
     def ftp_RETR(self, file):
-    	streaming_count = 1
-        while streaming_count:
+        """
+        Copied and pasted the code from ftp_RETR here, because we need to set
+        the offset of the file reading, and not just handle the ftp_REST case.
+        """
+        offset_pos = self._restart_position
+        self._restart_position = 0
+        while offset_pos < self.fs.getsize(file):
             try:
-                filechunk_name = file + '.' + str(streaming_count)
-                fd = self.run_as_current_user(self.fs.open, filechunk_name, 'rb')
-                fd.close()
-                super(StreamHandler, self).ftp_RETR(filechunk_name)
-                self._on_dtp_connection()
+                try:
+                    fd = self.run_as_current_user(self.fs.open, file, 'rb')
+                except (EnvironmentError, FilesystemError):
+                    err = sys.exc_info()[1]
+                    why = _strerror(err)
+                    self.respond('550 %s.' % why)
+                    return
+        
+                if offset_pos:
+                    # Make sure that the requested offset is valid (within the
+                    # size of the file being resumed).
+                    # According to RFC-1123 a 554 reply may result in case that
+                    # the existing file cannot be repositioned as specified in
+                    # the REST.
+                    ok = 0
+                    try:
+                        if offset_pos > self.fs.getsize(file):
+                            raise ValueError
+                        fd.seek(offset_pos)
+                        ok = 1
+                    except ValueError:
+                        why = "Invalid REST parameter"
+                    except (EnvironmentError, FilesystemError):
+                        err = sys.exc_info()[1]
+                        why = _strerror(err)
+                    if not ok:
+                        fd.close()
+                        self.respond('554 %s' % why)
+                        return
+                producer = FilePacketProducer(fd, self._current_type, self._packet_size)
+                self.push_dtp_data(producer, isproducer=True, file=fd, cmd="RETR")
+
             except IOError, err:
                 # initial file did not exist. Otherwise assume things
                 # are broken into chunks...
@@ -112,8 +147,17 @@ class StreamHandler(ftpserver.FTPHandler):
                     self.respond('550 %s.' % why)
                 return
 
-            streaming_count += 1
+            offset_pos += self._packet_size
         self._close_connection = True
+
+class FilePacketProducer(ftpserver.FileProducer):
+     """Wraps around FileProducer such that reading is limited by
+     packet_size.
+     Default buffer_size is 65536 as specified in FileProducer.
+     """
+     def __init__(self, file, type, packet_size=65536):
+        self.buffer_size = packet_size
+        super(FilePacketProducer, self).__init__(file, type)
 
 def main(user_params):
     user = "user" + "1"
