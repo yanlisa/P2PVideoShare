@@ -109,7 +109,7 @@ class StreamHandler(ftpserver.FTPHandler):
             try:
                 try:
                     fd = self.run_as_current_user(self.fs.open, file, 'rb')
-                except (EnvironmentError, FilesystemError):
+                except (EnvironmentError, ftpserver.FilesystemError):
                     err = sys.exc_info()[1]
                     why = _strerror(err)
                     self.respond('550 %s.' % why)
@@ -137,7 +137,8 @@ class StreamHandler(ftpserver.FTPHandler):
                         self.respond('554 %s' % why)
                         return
                 producer = FilePacketProducer(fd, self._current_type, self._packet_size)
-                self.push_dtp_data(producer, isproducer=False, file=fd, cmd="RETR")
+                data = fd.read(self._packet_size)
+                self.push_dtp_data(data, isproducer=False, file=fd, cmd="RETR")
 
             except IOError, err:
                 # initial file did not exist. Otherwise assume things
