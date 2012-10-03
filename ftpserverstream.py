@@ -137,7 +137,7 @@ class StreamHandler(ftpserver.FTPHandler):
                         self.respond('554 %s' % why)
                         return
                 producer = FilePacketProducer(fd, self._current_type, self._packet_size)
-                self.push_dtp_data(producer, isproducer=True, file=fd, cmd="RETR")
+                self.push_dtp_data(producer, isproducer=False, file=fd, cmd="RETR")
 
             except IOError, err:
                 # initial file did not exist. Otherwise assume things
