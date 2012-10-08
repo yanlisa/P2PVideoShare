@@ -36,7 +36,7 @@ class StreamHandler(ftpserver.FTPHandler):
 
         # check for data to send
         if not self._out_dtp_queue.empty():
-            while not self._out_dtp_queue.empty():
+            #while not self._out_dtp_queue.empty():
                 data, isproducer, file, cmd = self._out_dtp_queue.get()
                 self.data_channel.cmd = cmd
                 if file:
@@ -177,26 +177,6 @@ class FilePacketProducer(ftpserver.FileProducer):
         self.buffer_size = packet_size
         super(FilePacketProducer, self).__init__(file, type)
 
-def main(user_params):
-    user = "user" + "1"
-    pw = "1"
-
-    if len(user_params) == 3:
-        user = user_params[1] + "1"
-        pw = user_params[2]
-
-    authorizer = ftpserver.DummyAuthorizer()
-    authorizer.add_user(user, pw, "/home/ec2-user", perm='elr')
-    authorizer.add_anonymous("/home/ec2-user", perm='elr')
-
-    handler = StreamHandler
-    handler.authorizer = authorizer
-    handler.masquerade_address = '107.21.135.254'
-    handler.passive_ports = range(60000, 65535)
-    address = ("10.29.147.60", 21)
-    ftpd = ftpserver.FTPServer(address, handler)
-    ftpd.serve_forever()
-
 class MovieLister(ftpserver.BufferedIteratorProducer):
     def __init__(self, iterator):
         super(MovieLister, self).__init__(iterator)
@@ -218,6 +198,40 @@ class MovieLister(ftpserver.BufferedIteratorProducer):
             except StopIteration:
                 break
         return ''.join(buffer)
+
+def main_no_stream(user_params):
+    user = "user" + "1"
+    pw = "1"
+
+    authorizer = ftpserver.DummyAuthorizer()
+    authorizer.add_user(user, pw, "/home/ec2-user", perm='elr')
+    # allow anonymous login.
+    authorizer.add_anonymous("/home/ec2-user", perm='elr')
+
+    handler = ftpserver.FTPHandler
+    handler.authorizer = authorizer
+    handler.masquerade_address = '107.21.135.254'
+    handler.passive_ports = range(60000, 65535)
+    address = ("10.29.147.60", 21)
+    ftpd = ftpserver.FTPServer(address, handler)
+    ftpd.serve_forever()
+
+def main(user_params):
+    user = "user" + "1"
+    pw = "1"
+
+    authorizer = ftpserver.DummyAuthorizer()
+    authorizer.add_user(user, pw, "/home/ec2-user", perm='elr')
+    # allow anonymous login.
+    authorizer.add_anonymous("/home/ec2-user", perm='elr')
+
+    handler = StreamHandler
+    handler.authorizer = authorizer
+    handler.masquerade_address = '107.21.135.254'
+    handler.passive_ports = range(60000, 65535)
+    address = ("10.29.147.60", 21)
+    ftpd = ftpserver.FTPServer(address, handler)
+    ftpd.serve_forever()
 
 if __name__ == "__main__":
     main(sys.argv)
