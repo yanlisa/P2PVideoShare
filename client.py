@@ -39,7 +39,7 @@ class StreamFTP(ftplib.FTP, object):
         if callback is None: callback = ftplib.print_line
         resp = self.sendcmd('TYPE A')
         conn = self.transfercmd(cmd)
-	self.conn.settimeout(self.timeout)
+	conn.settimeout(self.timeout)
         fp = conn.makefile('rb')
 	print cmd, 'returned:'
         while 1:
