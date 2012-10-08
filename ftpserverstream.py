@@ -170,6 +170,7 @@ def main(user_params):
     
     authorizer = ftpserver.DummyAuthorizer()
     authorizer.add_user(user, pw, "/home/ec2-user", perm='elr')
+    # test
     authorizer.add_anonymous("/home/ec2-user", perm='elr')
     
     handler = StreamHandler
