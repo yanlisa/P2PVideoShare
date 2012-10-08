@@ -14,12 +14,16 @@ from socket import _GLOBAL_DEFAULT_TIMEOUT
  
 class StreamFTP(ftplib.FTP, object):
     def __init__(self, host='', user='', passwd='', acct='',
-                 timeout=_GLOBAL_DEFAULT_TIMEOUT):
+                 timeout=10.0):
         (super(StreamFTP, self)).__init__(host, user, passwd, acct, timeout)
 
     def retrbinary(self, cmd, callback, blocksize=8192, rest=None):
+        """
+	Called for file transfer.
+	"""
         self.voidcmd('TYPE I')
         conn = self.transfercmd(cmd, rest)
+	conn.settimeout(self.timeout)
         while 1:
             data = conn.recv(blocksize)
             if not data:
@@ -29,10 +33,15 @@ class StreamFTP(ftplib.FTP, object):
         return self.retrresp()
 
     def retrlines(self, cmd, callback=None):
+        """
+	Called for all other commands other than file transfer itself.
+	"""
         if callback is None: callback = ftplib.print_line
         resp = self.sendcmd('TYPE A')
         conn = self.transfercmd(cmd)
+	self.conn.settimeout(self.timeout)
         fp = conn.makefile('rb')
+	print cmd, 'returned:'
         while 1:
             line = fp.readline()
             if self.debugging > 2: print '*retr*', repr(line)
@@ -52,14 +61,28 @@ class StreamFTP(ftplib.FTP, object):
         "Can have different responses, so just keep trying."
         return self.getresp()
 
-def runrecv(user=None, pw=None, fname = "billofrights.txt"):
+def filecallback(fname, file_to_write):
+    """
+        Assumes file is already open to write to.
+    """
+    total_bytes = [0]
+    def helper(data):
+        total_bytes[0] += sys.getsizeof(data)
+        outputStr = "%s: Received %d bytes.\n" % (fname, total_bytes[0])
+	sys.stdout.write(outputStr)
+	sys.stdout.flush()
+	file_to_write.write(data)
+
+    return helper
+
+def runrecv(fname = "billofrights.txt", user='', pw=''):
     ftp = StreamFTP('107.21.135.254')
     ftp.login(user, pw)
     ftp.set_pasv(True) # Trying Passive mode
-    ret_status = ftp.retrlines('LIST')
+    # ret_status = ftp.retrlines('LIST')
     file_to_write = open(fname, 'wb')
     # ret_status = ftp.retrbinary('RETR ' + fname, ftplib.print_line)
-    ret_status = ftp.retrbinary('RETR ' + fname, file_to_write.write)
+    ret_status = ftp.retrbinary('RETR ' + fname, filecallback(fname, file_to_write))
     file_to_write.close()
     ftp.quit()
 
