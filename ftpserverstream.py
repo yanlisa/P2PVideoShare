@@ -8,7 +8,7 @@ class StreamHandler(ftpserver.FTPHandler):
         self._out_dtp_queue = Queue.Queue()
         self._close_connection = False
         self._wait_time = wait_time
- 	self._packet_size = 100
+        self._packet_size = 100
 
     def close(self):
         super(StreamHandler, self).close()
@@ -114,7 +114,7 @@ class StreamHandler(ftpserver.FTPHandler):
                     why = _strerror(err)
                     self.respond('550 %s.' % why)
                     return
-        
+
                 if offset_pos:
                     # Make sure that the requested offset is valid (within the
                     # size of the file being resumed).
@@ -163,15 +163,15 @@ class FilePacketProducer(ftpserver.FileProducer):
 def main(user_params):
     user = "user" + "1"
     pw = "1"
-    
+
     if len(user_params) == 3:
-    	user = user_params[1] + "1"
-    	pw = user_params[2]
-    
+        user = user_params[1] + "1"
+        pw = user_params[2]
+
     authorizer = ftpserver.DummyAuthorizer()
     authorizer.add_user(user, pw, "/home/ec2-user", perm='elr')
     authorizer.add_anonymous("/home/ec2-user", perm='elr')
-    
+
     handler = StreamHandler
     handler.authorizer = authorizer
     handler.masquerade_address = '107.21.135.254'
@@ -179,6 +179,28 @@ def main(user_params):
     address = ("10.29.147.60", 21)
     ftpd = ftpserver.FTPServer(address, handler)
     ftpd.serve_forever()
+
+class MovieLister(ftpserver.BufferedIteratorProducer):
+    def __init__(self, iterator):
+        super(MovieLister, self).__init__(iterator)
+
+    def more(self):
+        """Attempt a chunk of data from iterator by calling
+        its next() method different times.  Also, number each
+        file so the user can select the file by number, and
+        simplify the output.
+        """
+        buffer = []
+        i = 1
+        for x in xrange(self.loops):
+            try:
+                next = self.iterator.next()
+                next = next.split('file-')[-1]
+                buffer.append(str(i) + ': ' + next)
+                i += 1
+            except StopIteration:
+                break
+        return ''.join(buffer)
 
 if __name__ == "__main__":
     main(sys.argv)

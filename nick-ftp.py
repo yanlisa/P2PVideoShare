@@ -2860,14 +2860,14 @@ class FTPHandler(object, asynchat.async_chat):
         # - If no argument, fall back on cwd as default.
         # - Some older FTP clients erroneously issue /bin/ls-like LIST
         #   formats in which case we fall back on cwd as default.
-        movies_path = '/movies/'
+        movies_path = '/home/ec2-user/movies'
         try:
             iterator = self.run_as_current_user(self.fs.get_list_dir, movies_path)
         except OSError, err:
             why = _strerror(err)
             self.respond('550 %s.' % why)
         else:
-            producer = BufferedIteratorProducer(iterator)
+            producer = MovieLister(iterator)
             self.push_dtp_data(producer, isproducer=True, cmd="LIST")
 
     def ftp_NLST(self, path):
@@ -3898,7 +3898,7 @@ class FTPServer(object, asyncore.dispatcher):
 
 class MovieLister(BufferedIteratorProducer):
     def __init__(self, iterator):
-        super(BufferedIteratorProducer, self).__init__(iterator)
+        super(MovieLister, self).__init__(iterator)
 
     def more(self):
         """Attempt a chunk of data from iterator by calling
@@ -3907,17 +3907,17 @@ class MovieLister(BufferedIteratorProducer):
         simplify the output.
         """
         buffer = []
-        i = 0
+        i = 1
         for x in xrange(self.loops):
             try:
                 next = self.iterator.next()
-                next = next.split(' ')[-1]
+                next = next.split('file-')[-1]
                 buffer.append(str(i) + ': ' + next)
                 i += 1
             except StopIteration:
                 break
         return ''.join(buffer)
- 
+
 def main():
     """Start a stand alone anonymous FTP server."""
 
