@@ -52,17 +52,16 @@ class StreamFTP(ftplib.FTP, object):
         "Can have different responses, so just keep trying."
         return self.getresp()
 
-def runrecv(user, pw):
+def runrecv(user=None, pw=None, fname = "billofrights.txt"):
     ftp = StreamFTP('107.21.135.254')
     ftp.login(user, pw)
     ftp.set_pasv(True) # Trying Passive mode
-    fname = "billofrights.txt"
+    ret_status = ftp.retrlines('LIST')
     file_to_write = open(fname, 'wb')
-    ret_status = ftp.retrbinary('RETR ' + fname, ftplib.print_line)
+    # ret_status = ftp.retrbinary('RETR ' + fname, ftplib.print_line)
+    ret_status = ftp.retrbinary('RETR ' + fname, file_to_write.write)
     file_to_write.close()
     ftp.quit()
 
 if __name__ == "__main__":
-    user = "user"
-    pw = "1"
-    runrecv(user, pw)
+    runrecv()
