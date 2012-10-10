@@ -19,11 +19,11 @@ class StreamFTP(ftplib.FTP, object):
 
     def retrbinary(self, cmd, callback, blocksize=8192, rest=None):
         """
-	Called for file transfer.
-	"""
+        Called for file transfer.
+        """
         self.voidcmd('TYPE I')
         conn = self.transfercmd(cmd, rest)
-	conn.settimeout(self.timeout)
+        conn.settimeout(self.timeout)
         while 1:
             data = conn.recv(blocksize)
             if not data:
@@ -34,14 +34,14 @@ class StreamFTP(ftplib.FTP, object):
 
     def retrlines(self, cmd, callback=None):
         """
-	Called for all other commands other than file transfer itself.
-	"""
+        Called for all other commands other than file transfer itself.
+        """
         if callback is None: callback = ftplib.print_line
         resp = self.sendcmd('TYPE A')
         conn = self.transfercmd(cmd)
-	conn.settimeout(self.timeout)
+        conn.settimeout(self.timeout)
         fp = conn.makefile('rb')
-	print cmd, 'returned:'
+        print cmd, 'returned:'
         while 1:
             line = fp.readline()
             if self.debugging > 2: print '*retr*', repr(line)
@@ -69,9 +69,9 @@ def filecallback(fname, file_to_write):
     def helper(data):
         total_bytes[0] += sys.getsizeof(data)
         outputStr = "%s: Received %d bytes.\n" % (fname, total_bytes[0])
-	sys.stdout.write(outputStr)
-	sys.stdout.flush()
-	file_to_write.write(data)
+        sys.stdout.write(outputStr)
+        sys.stdout.flush()
+        file_to_write.write(data)
 
     return helper
 
