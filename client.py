@@ -13,9 +13,14 @@ except ImportError:
 from socket import _GLOBAL_DEFAULT_TIMEOUT
  
 class StreamFTP(ftplib.FTP, object):
+    packet_size = 100 # default (in bytes)
     def __init__(self, host='', user='', passwd='', acct='',
                  timeout=10.0):
         (super(StreamFTP, self)).__init__(host, user, passwd, acct, timeout)
+
+    @staticmethod
+    def set_packet_size(packet_size):
+        StreamFTP.packet_size = packet_size
 
     def retrbinary(self, cmd, callback, blocksize=8192, rest=None):
         """
@@ -24,6 +29,8 @@ class StreamFTP(ftplib.FTP, object):
         self.voidcmd('TYPE I')
         conn = self.transfercmd(cmd, rest)
         conn.settimeout(self.timeout)
+        if self.packet_size:
+	        blocksize = self.packet_size
         while 1:
             data = conn.recv(blocksize)
             if not data:
@@ -68,7 +75,8 @@ def filecallback(fname, file_to_write):
     total_bytes = [0]
     def helper(data):
         total_bytes[0] += sys.getsizeof(data)
-        outputStr = "%s: Received %d bytes.\n" % (fname, total_bytes[0])
+        outputStr = "%s: Received %d bytes. Total: %d bytes.\n" % \
+            (fname, sys.getsizeof(data), total_bytes[0])
         sys.stdout.write(outputStr)
         sys.stdout.flush()
         file_to_write.write(data)
@@ -86,5 +94,11 @@ def runrecv(fname = "billofrights.txt", user='', pw=''):
     file_to_write.close()
     ftp.quit()
 
+def set_recv_packet_size(packet_size):
+    StreamFTP.set_packet_size(packet_size)
+
 if __name__ == "__main__":
+    if len(sys.argv) == 2:
+        packet_size = int(sys.argv[1])
+        set_recv_packet_size(packet_size)
     runrecv()
