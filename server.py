@@ -1,21 +1,28 @@
 import sys, errno
 from pyftpdlib import ftpserver
-import Queue, time
+import Queue, time, re
 
 class StreamHandler(ftpserver.FTPHandler):
+    packet_size = 100 # default (in bytes)
+
     def __init__(self, conn, server, wait_time=1):
         (super(StreamHandler, self)).__init__(conn, server)
         self._close_connection = False
         self._wait_time = wait_time
-        self._packet_size = 100
         self.dtp_handler = DTPPacketHandler
-        self.dtp_handler.set_buffer_size(self._packet_size)
+        self.dtp_handler.set_buffer_size(self.packet_size)
+        self.producer = FilePacketProducer
+        self.producer.set_buffer_size(self.packet_size)
+
+    @staticmethod
+    def set_packet_size(packet_size):
+        StreamHandler.packet_size = packet_size
 
     def ftp_RETR(self, file):
+        """Retrieve the specified file (transfer from the server to the
+        client)
         """
-        Copied and pasted the code from ftp_RETR here, because we need to set
-        the offset of the file reading, and not just handle the ftp_REST case.
-        """
+        movies_path = '/home/ec2-user/movies'
         rest_pos = self._restart_position
         self._restart_position = 0
         try:
@@ -25,7 +32,6 @@ class StreamHandler(ftpserver.FTPHandler):
             why = _strerror(err)
             self.respond('550 %s.' % why)
             return
-
 
         if rest_pos:
             # Make sure that the requested offset is valid (within the
@@ -41,15 +47,13 @@ class StreamHandler(ftpserver.FTPHandler):
                 ok = 1
             except ValueError:
                 why = "Invalid REST parameter"
-            except (EnvironmentError, FilesystemError):
-                err = sys.exc_info()[1]
-                why = ftpserver._strerror(err)
+            except IOError, err:
+                why = _strerror(err)
             if not ok:
-                fd.close()
                 self.respond('554 %s' % why)
                 return
-        producer = FilePacketProducer(fd, self._current_type)
-        self.push_dtp_data(producer, isproducer=True, file=fd, cmd="RETR")        
+        producer = self.producer(fd, self._current_type)
+        self.push_dtp_data(producer, isproducer=True, file=fd, cmd="RETR")
 
     def ftp_LIST(self, path):
         """Return a list of files in the specified directory to the
@@ -90,7 +94,6 @@ class FilePacketProducer(ftpserver.FileProducer):
     def __init__(self, file, type, packet_size=65536, wait_time=1):
         self.wait_time = wait_time
         super(FilePacketProducer, self).__init__(file, type)
-        FilePacketProducer.buffer_size = 131072 #packet_size
 
     @staticmethod
     def set_buffer_size(buffer_size):
@@ -99,9 +102,9 @@ class FilePacketProducer(ftpserver.FileProducer):
     def more(self):
         time.sleep(self.wait_time)
         data = super(FilePacketProducer, self).more()
-        # outputStr = "Size of packet to send: %d\n" % sys.getsizeof(data)
-        # sys.stdout.write(outputStr)
-        # sys.stdout.flush()
+        outputStr = "Size of packet to send: %d\n" % sys.getsizeof(data)
+        sys.stdout.write(outputStr)
+        sys.stdout.flush()
         return data
 
 class MovieLister(ftpserver.BufferedIteratorProducer):
@@ -144,14 +147,13 @@ def main_no_stream(user_params):
     ftpd.serve_forever()
 
 def main(user_params):
-    user = "user" + "1"
-    pw = "1"
-
     authorizer = ftpserver.DummyAuthorizer()
-    authorizer.add_user(user, pw, "/home/ec2-user", perm='elr')
     # allow anonymous login.
     authorizer.add_anonymous("/home/ec2-user", perm='elr')
 
+    if len(sys.argv) == 2:
+        packet_size = int(sys.argv[1])
+        StreamHandler.set_packet_size(packet_size)
     handler = StreamHandler
     handler.authorizer = authorizer
     handler.masquerade_address = '107.21.135.254'

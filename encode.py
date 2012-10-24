@@ -41,6 +41,8 @@ def code(filestr, prefix, k, n, dirname=''):
     os.chdir(current_dir)
 
 if __name__ == "__main__":
+    """Encodes files within the movies directory."""
+
     k = 20
     n = 40
     if len(sys.argv) < 2:
@@ -51,4 +53,6 @@ if __name__ == "__main__":
         if len(sys.argv) == 4:
             k = int(sys.argv[2])
             n = int(sys.argv[3])
+        movies_path = '/home/ec2-user/movies'
+        os.chdir(movies_path)
         split_and_encode(filestr, k, n)
