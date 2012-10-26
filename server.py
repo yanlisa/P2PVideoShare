@@ -11,18 +11,38 @@ class StreamHandler(ftpserver.FTPHandler):
         self._wait_time = wait_time
         self.dtp_handler = DTPPacketHandler
         self.dtp_handler.set_buffer_size(self.packet_size)
-        self.producer = FilePacketProducer
+        self.producer = FileStreamProducer
         self.producer.set_buffer_size(self.packet_size)
 
+        # change
+        self.chunkproducer = FileChunkProducer
     @staticmethod
     def set_packet_size(packet_size):
         StreamHandler.packet_size = packet_size
 
     def ftp_RETR(self, file):
         """Retrieve the specified file (transfer from the server to the
-        client)
+        client).
+
+        If the file has an integer extension, assume it is asking for a
+        file frame. cd into the correct directory and transmit all chunks
+        the server has for that frame.
         """
         movies_path = '/home/ec2-user/movies'
+
+        """
+        ext = (file.split('.'))[-1]
+        if ext.isdigit():
+            try:
+                iterator = self.run_as_current_user(self.fs.get_list_dir, movies_path)
+            except OSError, err:
+                why = ftpserver._strerror(err)
+                self.respond('550 %s.' % why)
+    
+            producer = self.chunkproducer(file_list, self._current_type)
+            return
+        """
+
         rest_pos = self._restart_position
         self._restart_position = 0
         try:
@@ -86,26 +106,59 @@ class DTPPacketHandler(ftpserver.DTPHandler):
     def set_buffer_size(out_buffer_size):
         DTPPacketHandler.ac_out_buffer_size = out_buffer_size
 
-class FilePacketProducer(ftpserver.FileProducer):
+class FileStreamProducer(ftpserver.FileProducer):
     """Wraps around FileProducer such that reading is limited by
     packet_size.
     Default buffer_size is 65536 as specified in FileProducer.
     """
-    def __init__(self, file, type, packet_size=65536, wait_time=1):
-        self.wait_time = wait_time
-        super(FilePacketProducer, self).__init__(file, type)
+    FileStreamProducer.buffer_size = 65535
+    FileStreamProducer.wait_time = 1
+    def __init__(self, file, type):
+        super(FileStreamProducer, self).__init__(file, type)
 
     @staticmethod
     def set_buffer_size(buffer_size):
-        FilePacketProducer.buffer_size = buffer_size
+        FileStreamProducer.buffer_size = buffer_size
+
+    @staticmethod
+    def set_wait_time(wait_time):
+        FileStreamProducer.wait_time = wait_time
 
     def more(self):
         time.sleep(self.wait_time)
-        data = super(FilePacketProducer, self).more()
+        data = super(FileStreamProducer, self).more()
         outputStr = "Size of packet to send: %d\n" % sys.getsizeof(data)
         sys.stdout.write(outputStr)
         sys.stdout.flush()
         return data
+
+class FileChunkProducer(FileStreamProducer):
+    """Takes a queue of file chunk objects and attempts to send
+    one with each call to self.more().
+    
+    If the network is limited, just send as much of each file chunk object
+    as possible at a time, then send the remaining part of that file chunk
+    on the next iteration and close the file chunk object. On the
+    following iteration, send the next file chunk.
+    """
+    def __init__(self, filequeue, type, packet_size=65536, wait_time=1):
+        self.file_queue = filequeue
+        self.curr_file = None
+        self.curr_producer = None
+
+    def more(self):
+        if not self.curr_file and not self.file_queue.empty():
+            self.curr_file = self.file_queue.get()
+            self.curr_producer = super(FileChunkProducer, \
+                self).__init__(self.curr_file, type)
+        if self.curr_producer:
+            # More to send.
+            data = self.curr_producer.more()
+            if not data:
+                self.curr_file = None
+                self.curr_producer = None
+            return data
+        return None
 
 class MovieLister(ftpserver.BufferedIteratorProducer):
     def __init__(self, iterator):
@@ -146,21 +199,33 @@ def main_no_stream(user_params):
     ftpd = ftpserver.FTPServer(address, handler)
     ftpd.serve_forever()
 
-def main(user_params):
-    authorizer = ftpserver.DummyAuthorizer()
-    # allow anonymous login.
-    authorizer.add_anonymous("/home/ec2-user", perm='elr')
+def main():
+    """Parameters:
+        No parameters: run with defaults (assume on ec2server)
+        arg1: Packet_size
+        arg2: IP address 
+        arg3: path
+    """
+    path = "/home/ec2-user/"
+    address = ("10.29.147.60", 21)
 
-    if len(sys.argv) == 2:
+    print "Arguments:", sys.argv
+    if len(sys.argv) > 1:
         packet_size = int(sys.argv[1])
         StreamHandler.set_packet_size(packet_size)
+    if len(sys.argv) == 4:
+        address = (sys.argv[2], 21)
+        path = sys.argv[3]
+
+    authorizer = ftpserver.DummyAuthorizer()
+    # allow anonymous login.
+    authorizer.add_anonymous(path, perm='elr')
     handler = StreamHandler
     handler.authorizer = authorizer
     handler.masquerade_address = '107.21.135.254'
     handler.passive_ports = range(60000, 65535)
-    address = ("10.29.147.60", 21)
     ftpd = ftpserver.FTPServer(address, handler)
     ftpd.serve_forever()
 
 if __name__ == "__main__":
-    main(sys.argv)
+    main()
