@@ -4,14 +4,22 @@ import os, sys
 def split_and_encode(filestr, k, n):
     chunk_size = 50 # kB
     chunk_num = 1
-    prefix = (filestr.split('.'))[0]
-    dirname = prefix 
+
+    filename = ''
+    # Remove "file-" prefix and extension.
+    try:
+        filename=(((filestr.split('.'))[0]).split('file-'))[1]
+    except:
+        print "Filename in wrong format. Must be 'file-<filename>.ext."
+        return
+
+    dirname = filename + '-chunks'
     os.mkdir(dirname)
 
     forig = open(filestr, 'rb')
     data = forig.read(chunk_size)
     while data:
-        subfilestr = prefix + '.' + str(chunk_num)
+        subfilestr = filename + '.' + str(chunk_num)
         subfile = open(dirname + '/' + subfilestr, 'wb')
         subfile.write(data)
         subfile.close()
