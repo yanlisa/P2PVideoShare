@@ -15,7 +15,7 @@ class StreamHandler(ftpserver.FTPHandler):
         self.producer.set_buffer_size(self.packet_size)
 
         # change
-        self.chunkproducer = FileChunkProducer
+        self.chunkproducer = FileStreamProducer
     @staticmethod
     def set_packet_size(packet_size):
         StreamHandler.packet_size = packet_size
@@ -30,18 +30,22 @@ class StreamHandler(ftpserver.FTPHandler):
         """
         movies_path = '/home/ec2-user/movies'
 
-        """
         ext = (file.split('.'))[-1]
         if ext.isdigit():
             try:
-                iterator = self.run_as_current_user(self.fs.get_list_dir, movies_path)
+                # filename should be prefixed by "file-" in order to be valid.
+                # frame number is expected to exist for this cache.
+                filename=(((file.split('.'))[0]).split('file-'))[1]
+                chunksdir = 'chunks-' + filename
+                framedir = filename + '.' + ext + '.dir'
+                path = movies_path + '/' + chunksdir + '/' + framedir
+                iterator = self.run_as_current_user(self.fs.get_list_dir, path)
             except OSError, err:
                 why = ftpserver._strerror(err)
                 self.respond('550 %s.' % why)
     
-            producer = self.chunkproducer(file_list, self._current_type)
+            producer = self.chunkproducer(file, self._current_type)
             return
-        """
 
         rest_pos = self._restart_position
         self._restart_position = 0
@@ -111,8 +115,8 @@ class FileStreamProducer(ftpserver.FileProducer):
     packet_size.
     Default buffer_size is 65536 as specified in FileProducer.
     """
-    FileStreamProducer.buffer_size = 65535
-    FileStreamProducer.wait_time = 1
+    buffer_size = 65535
+    wait_time = 1
     def __init__(self, file, type):
         super(FileStreamProducer, self).__init__(file, type)
 
