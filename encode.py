@@ -13,7 +13,7 @@ def split_and_encode(filestr, k, n):
         print "Filename in wrong format. Must be 'file-<filename>.ext."
         return
 
-    dirname = filename + '-chunks'
+    dirname = 'chunks-' + filename
     os.mkdir(dirname)
 
     forig = open(filestr, 'rb')
