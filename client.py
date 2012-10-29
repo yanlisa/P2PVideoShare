@@ -58,7 +58,6 @@ class StreamFTP(ftplib.FTP, object):
                 line = line[:-2]
             elif line[-1:] == '\n':
                 line = line[:-1]
-            print line
             callback(line)
         fp.close()
         conn.close()
@@ -83,22 +82,66 @@ def filecallback(fname, file_to_write):
 
     return helper
 
-def runrecv(fname = "billofrights.txt", user='', pw=''):
+def chunkcallback(chunk_size, fname):
+    chunk_num_and_data = [0, '']
+    print "Expected chunk_size:", chunk_size
+    header_and_total_chunk = (37, chunk_size) # header is 37B
+    expected_threshold = [header_and_total_chunk[1]]
+
+    # directory name by convention is filename itself.
+    os.mkdir(fname)
+
+    def helper(data):
+        datastring = data + chunk_num_and_data[1]
+        curr_bytes = sys.getsizeof(datastring)
+        outputStr = "%s: Received %d bytes. Current Total: %d bytes.\n" % \
+            (fname, sys.getsizeof(data), curr_bytes)
+        sys.stdout.write(outputStr)
+        sys.stdout.flush()
+        # print "Current", str(curr_bytes), "vs. expected", str(expected_threshold[0])
+        if curr_bytes >= expected_threshold[0]:
+            filestr = fname + '/' + fname + '.' + str(chunk_num_and_data[0])
+            outputStr = "Writing %d bytes to %s.\n" % \
+                (curr_bytes, filestr)
+            sys.stdout.write(outputStr)
+            sys.stdout.flush()
+            file_to_write = open(filestr, 'wb')
+            file_to_write.write(datastring)
+            file_to_write.close()
+            # reset
+            chunk_num_and_data[1] = '' # new data string
+            expected_threshold[0] = header_and_total_chunk[1] # new threshold.
+            chunk_num_and_data[0] += 1 # new file extension
+        else:
+            chunk_num_and_data[1] = datastring
+            # expecting one more packet, so add a header size.
+            expected_threshold[0] += header_and_total_chunk[0]
+
+    return helper
+
+def runrecv(packet_size, fname):
     ftp = StreamFTP('107.21.135.254')
-    ftp.login(user, pw)
+    ftp.login('','')
     ftp.set_pasv(True) # Trying Passive mode
-    # ret_status = ftp.retrlines('LIST')
-    file_to_write = open(fname, 'wb')
-    # ret_status = ftp.retrbinary('RETR ' + fname, ftplib.print_line)
-    ret_status = ftp.retrbinary('RETR ' + fname, filecallback(fname, file_to_write))
-    file_to_write.close()
+    ret_status = ftp.retrlines('LIST')
+    # file_to_write = open(fname, 'wb')
+    # ret_status = ftp.retrbinary('RETR ' + fname, filecallback(fname, file_to_write))
+
+    ret_status = ftp.retrbinary('RETR ' + fname, chunkcallback( \
+            packet_size, fname))
+    # file_to_write.close()
     ftp.quit()
 
 def set_recv_packet_size(packet_size):
     StreamFTP.set_packet_size(packet_size)
+    print "StreamFTP now has size ", StreamFTP.packet_size
 
 if __name__ == "__main__":
-    if len(sys.argv) == 2:
+    packet_size = 2500
+    if len(sys.argv) > 1:
         packet_size = int(sys.argv[1])
         set_recv_packet_size(packet_size)
-    runrecv()
+    if len(sys.argv) > 2:
+        runrecv(packet_size, sys.argv[2])
+    else:
+        "Please specify filename."
