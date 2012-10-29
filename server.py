@@ -4,6 +4,7 @@ import Queue, time, re
 
 class StreamHandler(ftpserver.FTPHandler):
     packet_size = 100 # default (in bytes)
+    max_chunks = 20
 
     def __init__(self, conn, server, wait_time=1):
         (super(StreamHandler, self)).__init__(conn, server)
@@ -13,9 +14,9 @@ class StreamHandler(ftpserver.FTPHandler):
         self.dtp_handler.set_buffer_size(self.packet_size)
         self.producer = FileStreamProducer
         self.producer.set_buffer_size(self.packet_size)
+        self.chunkproducer = FileChunkProducer
+        self.chunkproducer.set_buffer_size(self.packet_size)
 
-        # change
-        self.chunkproducer = FileStreamProducer
     @staticmethod
     def set_packet_size(packet_size):
         StreamHandler.packet_size = packet_size
@@ -39,20 +40,21 @@ class StreamHandler(ftpserver.FTPHandler):
                 chunksdir = 'chunks-' + filename
                 framedir = filename + '.' + ext + '.dir'
                 path = movies_path + '/' + chunksdir + '/' + framedir
-                iterator = self.run_as_current_user(self.fs.get_list_dir, path)
+                # get chunks list and open up all files
+                files = self.get_chunk_files(path)
             except OSError, err:
                 why = ftpserver._strerror(err)
                 self.respond('550 %s.' % why)
-    
-            producer = self.chunkproducer(file, self._current_type)
+
+            producer = self.chunkproducer(files, self._current_type)
+            self.push_dtp_data(producer, isproducer=True, file=None, cmd="RETR")
             return
 
         rest_pos = self._restart_position
         self._restart_position = 0
         try:
             fd = self.run_as_current_user(self.fs.open, file, 'rb')
-        except (EnvironmentError, FilesystemError):
-            err = sys.exc_info()[1]
+        except OSError, err:
             why = _strerror(err)
             self.respond('550 %s.' % why)
             return
@@ -78,6 +80,24 @@ class StreamHandler(ftpserver.FTPHandler):
                 return
         producer = self.producer(fd, self._current_type)
         self.push_dtp_data(producer, isproducer=True, file=fd, cmd="RETR")
+
+    def get_chunk_files(self, path):
+        """For the specified path, open up all files for reading. and return
+        an array of file objects opened for read."""
+        iterator = self.run_as_current_user(self.fs.get_list_dir, path)
+        files = Queue.Queue()
+        for x in xrange(self.max_chunks):
+            try:
+                liststr = iterator.next()
+                filename = ((liststr.split(' ')[-1]).split('\r'))[0]
+                filepath = path + '/' + filename
+                fd = self.run_as_current_user(self.fs.open, filepath, 'rb')
+                files.put(fd)
+            except StopIteration, err:
+                why = _strerror(err)
+                self.respond('544 %s' %why)
+                break
+        return files 
 
     def ftp_LIST(self, path):
         """Return a list of files in the specified directory to the
@@ -116,8 +136,10 @@ class FileStreamProducer(ftpserver.FileProducer):
     Default buffer_size is 65536 as specified in FileProducer.
     """
     buffer_size = 65535
-    wait_time = 1
-    def __init__(self, file, type):
+    wait_time = 0.1
+    def __init__(self, file, type, buff=0):
+        if buff:
+            self.buffer_size = buff
         super(FileStreamProducer, self).__init__(file, type)
 
     @staticmethod
@@ -145,22 +167,34 @@ class FileChunkProducer(FileStreamProducer):
     on the next iteration and close the file chunk object. On the
     following iteration, send the next file chunk.
     """
-    def __init__(self, filequeue, type, packet_size=65536, wait_time=1):
+    def __init__(self, filequeue, type):
         self.file_queue = filequeue
-        self.curr_file = None
         self.curr_producer = None
+        self.type = type
+        if not self.file_queue.empty():
+            self.curr_producer = FileStreamProducer( \
+                self.file_queue.get(), self.type, self.buffer_size)
+            # self.curr_producer = ftpserver.FileProducer( \
+            #    self.file_queue.get(), self.type)
+
+    @staticmethod
+    def set_buffer_size(buffer_size):
+        FileChunkProducer.buffer_size = buffer_size
+
+    @staticmethod
+    def set_wait_time(wait_time):
+        FileChunkProducer.wait_time = wait_time
 
     def more(self):
-        if not self.curr_file and not self.file_queue.empty():
-            self.curr_file = self.file_queue.get()
-            self.curr_producer = super(FileChunkProducer, \
-                self).__init__(self.curr_file, type)
         if self.curr_producer:
-            # More to send.
             data = self.curr_producer.more()
             if not data:
-                self.curr_file = None
-                self.curr_producer = None
+                if not self.file_queue.empty():
+                    self.curr_producer = FileStreamProducer( \
+                        self.file_queue.get(), self.type, self.buffer_size)
+                    # self.curr_producer = ftpserver.FileProducer( \
+                    #     self.file_queue.get(), self.type)
+                    data = self.curr_producer.more()
             return data
         return None
 
@@ -179,9 +213,10 @@ class MovieLister(ftpserver.BufferedIteratorProducer):
         for x in xrange(self.loops):
             try:
                 next = self.iterator.next()
-                next = next.split('file-')[-1]
-                buffer.append(str(i) + ': ' + next)
-                i += 1
+                file_format = next.split('file-')
+                if len(file_format) > 1:
+                    buffer.append(str(i) + ': ' + file_format[-1])
+                    i += 1
             except StopIteration:
                 break
         return ''.join(buffer)
@@ -217,6 +252,7 @@ def main():
     if len(sys.argv) > 1:
         packet_size = int(sys.argv[1])
         StreamHandler.set_packet_size(packet_size)
+        print "StreamHandler now has size ", StreamHandler.packet_size
     if len(sys.argv) == 4:
         address = (sys.argv[2], 21)
         path = sys.argv[3]
