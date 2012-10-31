@@ -17,6 +17,9 @@ class StreamHandler(ftpserver.FTPHandler):
         self.chunkproducer = FileChunkProducer
         self.chunkproducer.set_buffer_size(self.packet_size)
 
+    def get_chunks(self):
+        return range(1, 40)
+
     @staticmethod
     def set_packet_size(packet_size):
         StreamHandler.packet_size = packet_size
@@ -30,7 +33,6 @@ class StreamHandler(ftpserver.FTPHandler):
         the server has for that frame.
         """
         movies_path = '/home/ec2-user/movies'
-
         ext = (file.split('.'))[-1]
         if ext.isdigit():
             try:
@@ -50,14 +52,37 @@ class StreamHandler(ftpserver.FTPHandler):
             self.push_dtp_data(producer, isproducer=True, file=None, cmd="RETR")
             return
 
+        if file.find('/home/ec2-user/') == 0:
+            file = file[15:]
+            print 'request: %s' % file
+
         rest_pos = self._restart_position
         self._restart_position = 0
         try:
-            fd = self.run_as_current_user(self.fs.open, file, 'rb')
-        except OSError, err:
-            why = _strerror(err)
-            self.respond('550 %s.' % why)
-            return
+            iterator = self.run_as_current_user(self.fs.get_list_dir,
+                                                movies_path)
+            files = (MovieLister(iterator)).more() + '\n'
+            files_list = files.split('\r\n')[:-1]
+            regex = re.compile(file + '.*')
+            found_file = None
+            for file_entry in files_list:
+                found_file = regex.match(file_entry)
+                if found_file:
+                    break
+            if found_file == None:
+                raise IOError('file number not found')
+            found_file = found_file.group()
+            print('found the file: file-%s' % found_file[len(file) + 2:])
+            found_file = movies_path + '/file-' + found_file[len(file) + 2 :]
+            fd = self.run_as_current_user(self.fs.open, found_file, 'rb')
+        except IOError, err:
+            try:
+                fd = self.run_as_current_user(self.fs.open, movies_path + '/' + file, 'rb')
+            except IOError, err:
+                #why = _strerror(err)
+                why = str(err)
+                self.respond('550 %s.' % why)
+                return
 
         if rest_pos:
             # Make sure that the requested offset is valid (within the
@@ -219,7 +244,7 @@ class MovieLister(ftpserver.BufferedIteratorProducer):
                     i += 1
             except StopIteration:
                 break
-        return ''.join(buffer)
+        return ''.join(buffer)[:-1]
 
 def main_no_stream(user_params):
     user = "user" + "1"
