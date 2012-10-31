@@ -1,7 +1,10 @@
 import ftplib
+from ftplib import FTP
 import sys
 import os
 import datetime
+import threading
+import Queue
 
 # Import SOCKS module if it exists, else standard socket module socket
 try:
@@ -12,31 +15,44 @@ except ImportError:
     import socket
 from socket import _GLOBAL_DEFAULT_TIMEOUT
  
-class StreamFTP(ftplib.FTP, object):
-    packet_size = 100 # default (in bytes)
+class StreamFTP(threading.Thread, FTP, object):
     def __init__(self, host='', user='', passwd='', acct='',
                  timeout=10.0):
-        (super(StreamFTP, self)).__init__(host, user, passwd, acct, timeout)
+        self.instr_queue = Queue.Queue()
+        self.conn = None # connection socket
+        self.callback = None
+        FTP.__init__(self, host, user, passwd, acct, timeout)
+        threading.Thread.__init__(self)
 
-    @staticmethod
-    def set_packet_size(packet_size):
-        StreamFTP.packet_size = packet_size
+    def set_chunk_size(self, chunk_size):
+        self.chunk_size = chunk_size
+
+    def get_queue(self):
+        return self.instr_queue
+
+    def set_callback(self, callback):
+        self.callback = callback
 
     def retrbinary(self, cmd, callback, blocksize=8192, rest=None):
         """
         Called for file transfer.
         """
         self.voidcmd('TYPE I')
-        conn = self.transfercmd(cmd, rest)
-        conn.settimeout(self.timeout)
-        if self.packet_size:
-	        blocksize = self.packet_size
-        while 1:
-            data = conn.recv(blocksize)
-            if not data:
-                break
-            callback(data)
-        conn.close()
+        self.conn = self.transfercmd(cmd, rest)
+        self.conn.settimeout(self.timeout)
+        if self.chunk_size:
+	        blocksize = self.chunk_size
+        try:
+            while 1:
+                data = self.conn.recv(blocksize)
+                if not data:
+                    break
+                callback(data)
+        except:
+            print "Unexpected error:", sys.exc_info()[0]
+            raise
+        self.conn.close()
+        self.conn = None
         return self.retrresp()
 
     def retrlines(self, cmd, callback=None):
@@ -45,9 +61,9 @@ class StreamFTP(ftplib.FTP, object):
         """
         if callback is None: callback = ftplib.print_line
         resp = self.sendcmd('TYPE A')
-        conn = self.transfercmd(cmd)
-        conn.settimeout(self.timeout)
-        fp = conn.makefile('rb')
+        self.conn = self.transfercmd(cmd)
+        self.conn.settimeout(self.timeout)
+        fp = self.conn.makefile('rb')
         print cmd, 'returned:'
         while 1:
             line = fp.readline()
@@ -60,69 +76,50 @@ class StreamFTP(ftplib.FTP, object):
                 line = line[:-1]
             callback(line)
         fp.close()
-        conn.close()
+        self.conn.close()
+        self.conn = None
         return self.retrresp()
 
     def retrresp(self):
-        "Can have different responses, so just keep trying."
+        """Can have different responses, so just keep trying."""
         return self.getresp()
 
-def filecallback(fname, file_to_write):
-    """
-        Assumes file is already open to write to.
-    """
-    total_bytes = [0]
-    def helper(data):
-        total_bytes[0] += sys.getsizeof(data)
-        outputStr = "%s: Received %d bytes. Total: %d bytes.\n" % \
-            (fname, sys.getsizeof(data), total_bytes[0])
-        sys.stdout.write(outputStr)
-        sys.stdout.flush()
-        file_to_write.write(data)
-
-    return helper
-
-def chunkcallback(chunk_size, fname):
-    chunk_num_and_data = [0, '']
-    print "Expected chunk_size:", chunk_size
-    header_and_total_chunk = (37, chunk_size) # header is 37B
-    expected_threshold = [header_and_total_chunk[1]]
-
-    # directory name by convention is filename itself.
-    os.mkdir(fname)
-
-    def helper(data):
-        datastring = data + chunk_num_and_data[1]
-        curr_bytes = sys.getsizeof(datastring)
-        outputStr = "%s: Received %d bytes. Current Total: %d bytes.\n" % \
-            (fname, sys.getsizeof(data), curr_bytes)
-        sys.stdout.write(outputStr)
-        sys.stdout.flush()
-        # print "Current", str(curr_bytes), "vs. expected", str(expected_threshold[0])
-        if curr_bytes >= expected_threshold[0]:
-            filestr = fname + '/' + fname + '.' + str(chunk_num_and_data[0])
-            outputStr = "Writing %d bytes to %s.\n" % \
-                (curr_bytes, filestr)
-            sys.stdout.write(outputStr)
-            sys.stdout.flush()
-            file_to_write = open(filestr, 'wb')
-            file_to_write.write(datastring)
-            file_to_write.close()
-            # reset
-            chunk_num_and_data[1] = '' # new data string
-            expected_threshold[0] = header_and_total_chunk[1] # new threshold.
-            chunk_num_and_data[0] += 1 # new file extension
-        else:
-            chunk_num_and_data[1] = datastring
-            # expecting one more packet, so add a header size.
-            expected_threshold[0] += header_and_total_chunk[0]
-
-    return helper
+    def run(self):
+        """
+        Continually get instructions from a queue called by intermediary
+        thread-client class.
+        The intermediary thread-client class can close the recv socket
+        arbitrarily, so this while loop needs to catch those exceptions.
+        The queue contains strings of FTP instructions.
+        """
+        self.login('','')
+        self.set_pasv(True) # Trying Passive mode
+        while 1:
+            cmd = self.instr_queue.get()
+            fn_name = cmd.split(' ')[0]
+            if fn_name == "QUIT":
+                self.quit()
+                break
+            elif fn_name == "RETR":
+                fname = cmd.split(' ')[1]
+                try:
+                    resp = self.retrbinary(cmd, self.callback(self.chunk_size, fname))
+                except socket.error:
+                    print "Connection closed."
+                except:
+                    print "Unexpected error:", sys.exc_info()[0]
+            elif fn_name == "LIST":
+                try:
+                    resp = self.retrlines(cmd)
+                except socket.error:
+                    print "Connection closed."
+                except:
+                    print "Unexpected error:", sys.exc_info()[0]
 
 def runrecv(packet_size, fname):
     ftp = StreamFTP('107.21.135.254')
-    ftp.login('','')
-    ftp.set_pasv(True) # Trying Passive mode
+    ftp.set_packet_size(packet_size)
+    print "StreamFTP now has size ", StreamFTP.packet_size
     ret_status = ftp.retrlines('LIST')
     # file_to_write = open(fname, 'wb')
     # ret_status = ftp.retrbinary('RETR ' + fname, filecallback(fname, file_to_write))
@@ -132,15 +129,10 @@ def runrecv(packet_size, fname):
     # file_to_write.close()
     ftp.quit()
 
-def set_recv_packet_size(packet_size):
-    StreamFTP.set_packet_size(packet_size)
-    print "StreamFTP now has size ", StreamFTP.packet_size
-
 if __name__ == "__main__":
     packet_size = 2500
     if len(sys.argv) > 1:
         packet_size = int(sys.argv[1])
-        set_recv_packet_size(packet_size)
     if len(sys.argv) > 2:
         runrecv(packet_size, sys.argv[2])
     else:
