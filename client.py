@@ -19,6 +19,7 @@ class StreamFTP(threading.Thread, FTP, object):
     def __init__(self, host='', user='', passwd='', acct='',
                  timeout=10.0):
         self.instr_queue = Queue.Queue()
+        self.resp_queue = Queue.Queue() # responses, in order.
         self.conn = None # connection socket
         self.callback = None
         FTP.__init__(self, host, user, passwd, acct, timeout)
@@ -27,8 +28,11 @@ class StreamFTP(threading.Thread, FTP, object):
     def set_chunk_size(self, chunk_size):
         self.chunk_size = chunk_size
 
-    def get_queue(self):
+    def get_instr_queue(self):
         return self.instr_queue
+
+    def get_resp_queue(self):
+        return self.resp_queue
 
     def set_callback(self, callback):
         self.callback = callback
@@ -59,12 +63,12 @@ class StreamFTP(threading.Thread, FTP, object):
         """
         Called for all other commands other than file transfer itself.
         """
+        response = ''
         if callback is None: callback = ftplib.print_line
         resp = self.sendcmd('TYPE A')
         self.conn = self.transfercmd(cmd)
         self.conn.settimeout(self.timeout)
         fp = self.conn.makefile('rb')
-        print cmd, 'returned:'
         while 1:
             line = fp.readline()
             if self.debugging > 2: print '*retr*', repr(line)
@@ -75,9 +79,11 @@ class StreamFTP(threading.Thread, FTP, object):
             elif line[-1:] == '\n':
                 line = line[:-1]
             callback(line)
+            response += line + "\n"
         fp.close()
         self.conn.close()
         self.conn = None
+        self.resp_queue.put(response)
         return self.retrresp()
 
     def retrresp(self):
@@ -107,14 +113,14 @@ class StreamFTP(threading.Thread, FTP, object):
                 except socket.error:
                     print "Connection closed."
                 except:
-                    print "Unexpected error:", sys.exc_info()[0]
+                   print "Unexpected error:", sys.exc_info()[0]
             elif fn_name == "LIST":
-                try:
-                    resp = self.retrlines(cmd)
-                except socket.error:
-                    print "Connection closed."
-                except:
-                    print "Unexpected error:", sys.exc_info()[0]
+                # try:
+                resp = self.retrlines(cmd)
+                # except socket.error:
+                #     print "Connection closed."
+                # except:
+                #     print "Unexpected error:", sys.exc_info()[0]
 
 def runrecv(packet_size, fname):
     ftp = StreamFTP('107.21.135.254')

@@ -16,7 +16,8 @@ class ThreadClient(object):
         self.client = StreamFTP(address)
         self.client.set_chunk_size(packet_size)
         self.client.set_callback(self.chunkcallback)
-        self.instr_queue = self.client.get_queue()
+        self.instr_queue = self.client.get_instr_queue()
+        self.resp_queue = self.client.get_resp_queue()
         self.client.start()
 
     def put_instruction(self, cmd_string):
@@ -37,6 +38,13 @@ class ThreadClient(object):
                 print "Socket closed. Errors:", sys.exc_info()[0]
                 return True
         return False
+
+    def get_response(self):
+        try:
+            response_string = self.resp_queue.get()
+            return response_string
+        except:
+            return None
 
     def chunkcallback(self, chunk_size, fname):
         chunk_num_and_data = [0, '']
@@ -85,6 +93,7 @@ if __name__ == "__main__":
         fname = sys.argv[2]
         thread_client = ThreadClient('107.21.135.254', chunk_size)
         thread_client.put_instruction('LIST')
+        print thread_client.get_response()
         thread_client.put_instruction('RETR ' + fname)
         time.sleep(3)
         thread_client.kill_transfer()
