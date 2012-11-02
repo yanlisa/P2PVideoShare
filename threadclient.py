@@ -1,4 +1,4 @@
-from client import StreamFTP
+from streamer import StreamFTP
 import os, sys, errno
 import time
 
