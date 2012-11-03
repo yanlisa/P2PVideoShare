@@ -22,7 +22,7 @@ class Cache(object):
         # allow anonymous login.
         self.authorizer.add_anonymous(path, perm='elr')
         handler = CacheHandler
-        handler.authorizer = authorizer
+        handler.authorizer = self.authorizer
         handler.masquerade_address = '107.21.135.254'
         handler.passive_ports = range(60000, 65535)
 
@@ -50,8 +50,8 @@ class CacheHandler(StreamHandler):
     A new set of chunks is modified based on the transaction records, and this
     is done in a separate thread.
     """
-    def __init__(self, conn, server, wait_time=1):
-        StreamHandler.__init__(self, conn, server, wait_time)
+    def __init__(self, conn, server):
+        StreamHandler.__init__(self, conn, server)
         self.chunks = []
         self.transaction_record = Queue.Queue()
         while len(self.chunks) < 15:
@@ -75,13 +75,13 @@ class CacheHandler(StreamHandler):
         client).
 
         Accepts filestrings of the form:
-            file-<filename>.<ext>&<framenum>
+            file-<filename>.<ext>%<framenum>
 
         If the file has an integer extension, assume it is asking for a
         file frame. cd into the correct directory and transmit all chunks
         the server has for that frame.
         """
-        framenum = (file.split('&'))[-1]
+        framenum = (file.split('%'))[-1]
         if framenum.isdigit():
             try:
                 # filename should be prefixed by "file-" in order to be valid.
@@ -99,6 +99,8 @@ class CacheHandler(StreamHandler):
             producer = self.chunkproducer(files, self._current_type)
             self.push_dtp_data(producer, isproducer=True, file=None, cmd="RETR")
             return
+        why = "Invalid filename. Usage: RETR file-<filename>.<ext>%<framenum>"
+        self.responsd('554 %s', why)
 
 class ServerDownloader(ThreadClient, threading.Thread):
     """
@@ -132,9 +134,9 @@ class ServerDownloader(ThreadClient, threading.Thread):
     
         return helper
 
-if __name == "__main__":
-    address = ("10.0.1.2", 24) 
-    path = "/Users/Lisa/Research"
+if __name__ == "__main__":
+    # address = ("10.0.1.2", 24) 
+    # path = "/Users/Lisa/Research"
 
     path = "/home/ec2-user/"
     address = ("10.29.147.60", 21)
