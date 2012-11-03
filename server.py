@@ -2,20 +2,36 @@ import sys, errno
 from pyftpdlib import ftpserver
 import Queue, time, re
 
+class ThreadServer(ftpserver.FTPServer, threading.Thread):
+    """
+        A threaded server. Requires a Handler.
+    """
+    def __init__(self, address, handler):
+        ftpserver.FTPServer.__init__(self, address, handler)
+        threading.Thread.__init__(self)
+    
+    def run(self):
+        self.serve_forever()
+
 class StreamHandler(ftpserver.FTPHandler):
+    """The general handler for an FTP Server in this network.
+    CacheHandler, a specific Handler to use for Caches, inherits from this one.
+
+    Has two different responses for ftp_RETR:
+    -If type is of the form 'chunk-<filename>.<int>', send all 
+    """
     packet_size = 100 # default (in bytes)
     max_chunks = 20
 
-    def __init__(self, conn, server, wait_time=1):
+    def __init__(self, conn, server):
         (super(StreamHandler, self)).__init__(conn, server)
         self._close_connection = False
-        self._wait_time = wait_time
         self.dtp_handler = DTPPacketHandler
         self.dtp_handler.set_buffer_size(self.packet_size)
-        self.producer = FileStreamProducer
-        self.producer.set_buffer_size(self.packet_size)
+        self.producer = FileProducer
         self.chunkproducer = FileChunkProducer
         self.chunkproducer.set_buffer_size(self.packet_size)
+        self.movies_path = "/home/ec2-user/movies"
 
     def get_chunks(self):
         return range(1, 40)
@@ -28,11 +44,10 @@ class StreamHandler(ftpserver.FTPHandler):
         """Retrieve the specified file (transfer from the server to the
         client).
 
-        If the file has an integer extension, assume it is asking for a
-        file frame. cd into the correct directory and transmit all chunks
-        the server has for that frame.
+        Accepts filestrings of the form:
+            chunk-<filename>.<ext>&<framenum>/<chunknum>
+            file-<filename>
         """
-        movies_path = '/home/ec2-user/movies'
         ext = (file.split('.'))[-1]
         if ext.isdigit():
             try:
@@ -41,7 +56,7 @@ class StreamHandler(ftpserver.FTPHandler):
                 filename=(((file.split('.'))[0]).split('file-'))[1]
                 chunksdir = 'chunks-' + filename
                 framedir = filename + '.' + ext + '.dir'
-                path = movies_path + '/' + chunksdir + '/' + framedir
+                path = self.movies_path + '/' + chunksdir + '/' + framedir
                 # get chunks list and open up all files
                 files = self.get_chunk_files(path)
             except OSError, err:
@@ -51,6 +66,28 @@ class StreamHandler(ftpserver.FTPHandler):
             producer = self.chunkproducer(files, self._current_type)
             self.push_dtp_data(producer, isproducer=True, file=None, cmd="RETR")
             return
+
+        chunk-prefix = (file.split('-'))[0]
+        if chunk-prefix == "chunk":
+            chunknum = (file.split('/'))[-1]
+            framenum = (file.split('&')[-1]).split('/')[0]
+            if chunknum.isdigit() and framenum.isdigit():
+                try:
+                    filename = ((file.split'.')[0]).split('chunk-')[1]
+                    chunksdir = 'chunks-' + filename
+                    framedir = filename + '.' + framenum + '.dir'
+                    path = self.movies_path + '/' + chunksdir + '/' + framedir
+                    filepath = path + '/' # INCOMPLETE. Need to decide on file format.
+                    # get chunks list and open up all files
+                    files = self.get_chunk_files(path)
+                except OSError, err:
+                    why = ftpserver._strerror(err)
+                    self.respond('550 %s.' % why)
+
+                producer = self.chunkproducer(files, self._current_type)
+                self.push_dtp_data(producer, isproducer=True, file=None, cmd="RETR")
+                return
+
 
         if file.find('/home/ec2-user/') == 0:
             file = file[15:]
@@ -156,8 +193,12 @@ class DTPPacketHandler(ftpserver.DTPHandler):
         DTPPacketHandler.ac_out_buffer_size = out_buffer_size
 
 class FileStreamProducer(ftpserver.FileProducer):
-    """Wraps around FileProducer such that reading is limited by
+    """
+    This class is not currently in use, but we will keep it here.
+    
+    Wraps around FileProducer such that reading is limited by
     packet_size.
+    Wait 0.1 s before calling more().
     Default buffer_size is 65536 as specified in FileProducer.
     """
     buffer_size = 65535
@@ -199,16 +240,10 @@ class FileChunkProducer(FileStreamProducer):
         if not self.file_queue.empty():
             self.curr_producer = FileStreamProducer( \
                 self.file_queue.get(), self.type, self.buffer_size)
-            # self.curr_producer = ftpserver.FileProducer( \
-            #    self.file_queue.get(), self.type)
 
     @staticmethod
     def set_buffer_size(buffer_size):
         FileChunkProducer.buffer_size = buffer_size
-
-    @staticmethod
-    def set_wait_time(wait_time):
-        FileChunkProducer.wait_time = wait_time
 
     def more(self):
         if self.curr_producer:
@@ -217,8 +252,6 @@ class FileChunkProducer(FileStreamProducer):
                 if not self.file_queue.empty():
                     self.curr_producer = FileStreamProducer( \
                         self.file_queue.get(), self.type, self.buffer_size)
-                    # self.curr_producer = ftpserver.FileProducer( \
-                    #     self.file_queue.get(), self.type)
                     data = self.curr_producer.more()
             return data
         return None
