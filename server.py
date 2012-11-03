@@ -22,7 +22,8 @@ class StreamHandler(ftpserver.FTPHandler):
     -If type is of the form 'chunk-<filename>.<int>', send all 
     """
     packet_size = 100 # default (in bytes)
-    max_chunks = 20
+    max_chunks = 40
+    movies_path='/home/ec2-user/movies'
 
     def __init__(self, conn, server):
         (super(StreamHandler, self)).__init__(conn, server)
@@ -32,7 +33,6 @@ class StreamHandler(ftpserver.FTPHandler):
         self.producer = ftpserver.FileProducer
         self.chunkproducer = FileChunkProducer
         self.chunkproducer.set_buffer_size(self.packet_size)
-        self.movies_path = "/home/ec2-user/movies"
 
     def get_chunks(self):
         return range(1, 40)
@@ -40,6 +40,10 @@ class StreamHandler(ftpserver.FTPHandler):
     @staticmethod
     def set_packet_size(packet_size):
         StreamHandler.packet_size = packet_size
+
+    @staticmethod
+    def set_movies_path(path):
+        StreamHandler.movies_path = path
 
     def ftp_RETR(self, file):
         """Retrieve the specified file (transfer from the server to the
@@ -49,35 +53,16 @@ class StreamHandler(ftpserver.FTPHandler):
             chunk-<filename>.<ext>&<framenum>/<chunknum>
             file-<filename>
         """
-        ext = (file.split('.'))[-1]
-        if ext.isdigit():
-            try:
-                # filename should be prefixed by "file-" in order to be valid.
-                # frame number is expected to exist for this cache.
-                filename=(((file.split('.'))[0]).split('file-'))[1]
-                chunksdir = 'chunks-' + filename
-                framedir = filename + '.' + ext + '.dir'
-                path = self.movies_path + '/' + chunksdir + '/' + framedir
-                # get chunks list and open up all files
-                files = self.get_chunk_files(path)
-            except OSError, err:
-                why = ftpserver._strerror(err)
-                self.respond('550 %s.' % why)
-
-            producer = self.chunkproducer(files, self._current_type)
-            self.push_dtp_data(producer, isproducer=True, file=None, cmd="RETR")
-            return
-
         chunk_prefix = (file.split('-'))[0]
         if chunk_prefix == "chunk":
             chunknum = (file.split('/'))[-1]
-            framenum = (file.split('%')[-1]).split('/')[0]
+            framenum = (file.split('.')[-1]).split('/')[0]
             if chunknum.isdigit() and framenum.isdigit():
                 try:
                     filename = ((file.split('.'))[0]).split('chunk-')[1]
                     chunksdir = 'chunks-' + filename
                     framedir = filename + '.' + framenum + '.dir'
-                    path = self.movies_path + '/' + chunksdir + '/' + framedir
+                    path = StreamHandler.movies_path + '/' + chunksdir + '/' + framedir
                     filepath = path + '/' # INCOMPLETE. Need to decide on file format.
                     # get chunks list and open up all files
                     files = self.get_chunk_files(path)
@@ -90,7 +75,7 @@ class StreamHandler(ftpserver.FTPHandler):
                 return
 
 
-        if file.find('/home/ec2-user/') == 0:
+        if file.find(StreamHandler.movies_path) == 0:
             file = file[15:]
             print 'request: %s' % file
 
@@ -98,7 +83,7 @@ class StreamHandler(ftpserver.FTPHandler):
         self._restart_position = 0
         try:
             iterator = self.run_as_current_user(self.fs.get_list_dir,
-                                                movies_path)
+                                                StreamHandler.movies_path)
             files = (MovieLister(iterator)).more() + '\n'
             files_list = files.split('\r\n')[:-1]
             regex = re.compile(file + '.*')
@@ -111,11 +96,11 @@ class StreamHandler(ftpserver.FTPHandler):
                 raise IOError('file number not found')
             found_file = found_file.group()
             print('found the file: file-%s' % found_file[len(file) + 2:])
-            found_file = movies_path + '/file-' + found_file[len(file) + 2 :]
+            found_file = StreamHandler.movies_path + '/file-' + found_file[len(file) + 2 :]
             fd = self.run_as_current_user(self.fs.open, found_file, 'rb')
         except IOError, err:
             try:
-                fd = self.run_as_current_user(self.fs.open, movies_path + '/' + file, 'rb')
+                fd = self.run_as_current_user(self.fs.open, StreamHandler.movies_path + '/' + file, 'rb')
             except IOError, err:
                 #why = _strerror(err)
                 why = str(err)
@@ -169,9 +154,8 @@ class StreamHandler(ftpserver.FTPHandler):
         # - If no argument, fall back on cwd as default.
         # - Some older FTP clients erroneously issue /bin/ls-like LIST
         #   formats in which case we fall back on cwd as default.
-        movies_path = '/home/ec2-user/movies'
         try:
-            iterator = self.run_as_current_user(self.fs.get_list_dir, movies_path)
+            iterator = self.run_as_current_user(self.fs.get_list_dir, StreamHandler.movies_path)
         except OSError, err:
             why = ftpserver._strerror(err)
             self.respond('550 %s.' % why)

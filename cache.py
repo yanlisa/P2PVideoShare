@@ -1,5 +1,5 @@
 from streamer import StreamFTP
-from threadclient import ThreadClient
+import threadclient
 from server import *
 from pyftpdlib import ftpserver
 import Queue
@@ -18,23 +18,31 @@ class Cache(object):
         """Make the FTP server instance and the Cache Downloader instance.
         Obtain the queue of data from the FTP server."""
 
+        self.chunks = []
+        while len(self.chunks) < 15:
+            x = random.randint(0, 40)
+            if not x in self.chunks:
+                self.chunks.append(x)
+
+        print "Chunks available on this cache: ", self.chunks
         self.authorizer = ftpserver.DummyAuthorizer()
         # allow anonymous login.
         self.authorizer.add_anonymous(path, perm='elr')
         handler = CacheHandler
         handler.authorizer = self.authorizer
-        handler.masquerade_address = '107.21.135.254'
+        # handler.masquerade_address = '107.21.135.254'
         handler.passive_ports = range(60000, 65535)
 
         handler.set_packet_size(packet_size)
+        handler.set_chunks(self.chunks)
         self.mini_server = ThreadServer(address, handler)
+        handler.set_movies_path(path)
 
     def start_cache(self):
         """Start the FTP server and the CacheDownloader instance.
         Every <timestamp>, obtain the recorded data from the FTP server queue
         and ask the server for additional chunks if needed."""
         self.mini_server.start()
-        pass
 
 new_proto_cmds = ftpserver.proto_cmds
 new_proto_cmds['CNKS'] = dict(perm='l', auth=True, arg=None,
@@ -50,48 +58,52 @@ class CacheHandler(StreamHandler):
     A new set of chunks is modified based on the transaction records, and this
     is done in a separate thread.
     """
+    chunks = []
     def __init__(self, conn, server):
         StreamHandler.__init__(self, conn, server)
-        self.chunks = []
         self.transaction_record = Queue.Queue()
-        while len(self.chunks) < 15:
-            x = random.randint(0, 40)
-            if not x in self.chunks:
-                self.chunks.append(x)
         self.proto_cmds = new_proto_cmds
 
+    @staticmethod
+    def set_chunks(chunks):
+        CacheHandler.chunks = chunks
+
     def get_chunks(self):
-        return self.chunks
+        return CacheHandler.chunks
 
     def get_transactions(self):
         return self.transaction_record
 
-    def ftp_CNKS(self):
-        data = str(self.chunks)
+    def ftp_CNKS(self, line):
+        data = str(CacheHandler.chunks)
         self.push_dtp_data(data, isproducer=False, cmd="CNKS")
+        self.transaction_record.put(("CNKS", CacheHandler.chunks))
+
 
     def ftp_RETR(self, file):
         """Retrieve the specified file (transfer from the cache to the
         client).
 
         Accepts filestrings of the form:
-            file-<filename>.<ext>%<framenum>
+            file-<filename>.<ext>.<framenum>
 
         If the file has an integer extension, assume it is asking for a
         file frame. cd into the correct directory and transmit all chunks
         the server has for that frame.
         """
-        framenum = (file.split('%'))[-1]
-        if framenum.isdigit():
+        self.transaction_record.put(("RETR", file))
+        parsedform = threadclient.parse_chunks(file)
+        if parsedform:
+            filename, ext, framenum, chunks = parsedform
+            print "chunks:", chunks
             try:
                 # filename should be prefixed by "file-" in order to be valid.
                 # frame number is expected to exist for this cache.
-                filename=(((file.split('.'))[0]).split('file-'))[1]
                 chunksdir = 'chunks-' + filename
                 framedir = filename + '.' + framenum + '.dir'
                 path = self.movies_path + '/' + chunksdir + '/' + framedir
                 # get chunks list and open up all files
-                files = self.get_chunk_files(path)
+                files = self.get_chunk_files(path, chunks)
             except OSError, err:
                 why = ftpserver._strerror(err)
                 self.respond('550 %s.' % why)
@@ -99,10 +111,35 @@ class CacheHandler(StreamHandler):
             producer = self.chunkproducer(files, self._current_type)
             self.push_dtp_data(producer, isproducer=True, file=None, cmd="RETR")
             return
-        why = "Invalid filename. Usage: RETR file-<filename>.<ext>%<framenum>"
-        self.responsd('554 %s', why)
+        why = "Invalid filename. Usage: RETR file-<filename>.<ext>.<framenum>"
+        self.respond('554 %s.' % why)
 
-class ServerDownloader(ThreadClient, threading.Thread):
+    def get_chunk_files(self, path, chunks=None):
+        """For the specified path, open up all files for reading. and return
+        an array of file objects opened for read.
+        
+        Only return the file objects specified by chunk numbers argument."""
+        if not chunks:
+            chunks = self.chunks
+        iterator = self.run_as_current_user(self.fs.get_list_dir, path)
+        files = Queue.Queue()
+        for x in xrange(self.max_chunks):
+            try:
+                liststr = iterator.next()
+                filename = ((liststr.split(' ')[-1]).split('\r'))[0]
+                chunk_num = (filename.split('_')[0]).split('.')[-1]
+                if chunk_num.isdigit() and int(chunk_num) in chunks:
+                    print "Sending chunk_num", chunk_num
+                    filepath = path + '/' + filename
+                    fd = self.run_as_current_user(self.fs.open, filepath, 'rb')
+                    files.put(fd)
+            except StopIteration, err:
+                why = _strerror(err)
+                self.respond('544 %s' %why)
+                break
+        return files 
+
+class ServerDownloader(threadclient.ThreadClient, threading.Thread):
     """
     Requests new chunks from the server. Is always connected to the server.
 
@@ -115,6 +152,7 @@ class ServerDownloader(ThreadClient, threading.Thread):
 
     def put_instruction(self, cmd_string):
         """Something or other"""
+        pass
 
     def chunkcallback(self, chunk_size, fname):
         # directory name by convention is filename itself.
@@ -135,11 +173,11 @@ class ServerDownloader(ThreadClient, threading.Thread):
         return helper
 
 if __name__ == "__main__":
-    # address = ("10.0.1.2", 24) 
-    # path = "/Users/Lisa/Research"
-
-    path = "/home/ec2-user/"
-    address = ("10.29.147.60", 21)
+    address = ("10.0.1.2", 21)  # home
+    # address = ("10.10.66.227", 21) # airbears
+    path = "/Users/Lisa/Research/"
+    # path = "/home/ec2-user/"
+    # address = ("10.29.147.60", 21) # ec2
 
     print "Arguments:", sys.argv
     packet_size = 2504
