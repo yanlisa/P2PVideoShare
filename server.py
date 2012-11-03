@@ -1,6 +1,7 @@
 import sys, errno
 from pyftpdlib import ftpserver
 import Queue, time, re
+import threading
 
 class ThreadServer(ftpserver.FTPServer, threading.Thread):
     """
@@ -28,7 +29,7 @@ class StreamHandler(ftpserver.FTPHandler):
         self._close_connection = False
         self.dtp_handler = DTPPacketHandler
         self.dtp_handler.set_buffer_size(self.packet_size)
-        self.producer = FileProducer
+        self.producer = ftpserver.FileProducer
         self.chunkproducer = FileChunkProducer
         self.chunkproducer.set_buffer_size(self.packet_size)
         self.movies_path = "/home/ec2-user/movies"
@@ -67,13 +68,13 @@ class StreamHandler(ftpserver.FTPHandler):
             self.push_dtp_data(producer, isproducer=True, file=None, cmd="RETR")
             return
 
-        chunk-prefix = (file.split('-'))[0]
-        if chunk-prefix == "chunk":
+        chunk_prefix = (file.split('-'))[0]
+        if chunk_prefix == "chunk":
             chunknum = (file.split('/'))[-1]
             framenum = (file.split('&')[-1]).split('/')[0]
             if chunknum.isdigit() and framenum.isdigit():
                 try:
-                    filename = ((file.split'.')[0]).split('chunk-')[1]
+                    filename = ((file.split('.'))[0]).split('chunk-')[1]
                     chunksdir = 'chunks-' + filename
                     framedir = filename + '.' + framenum + '.dir'
                     path = self.movies_path + '/' + chunksdir + '/' + framedir
