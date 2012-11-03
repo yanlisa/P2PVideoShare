@@ -70,7 +70,7 @@ class StreamHandler(ftpserver.FTPHandler):
         chunk-prefix = (file.split('-'))[0]
         if chunk-prefix == "chunk":
             chunknum = (file.split('/'))[-1]
-            framenum = (file.split('&')[-1]).split('/')[0]
+            framenum = (file.split('%')[-1]).split('/')[0]
             if chunknum.isdigit() and framenum.isdigit():
                 try:
                     filename = ((file.split'.')[0]).split('chunk-')[1]
