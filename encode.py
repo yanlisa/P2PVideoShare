@@ -61,6 +61,6 @@ if __name__ == "__main__":
         if len(sys.argv) == 4:
             k = int(sys.argv[2])
             n = int(sys.argv[3])
-        movies_path = '/home/ec2-user/movies'
-        os.chdir(movies_path)
+        # movies_path = '/home/ec2-user/movies'
+        # os.chdir(movies_path)
         split_and_encode(filestr, k, n)

@@ -95,7 +95,7 @@ class CacheHandler(StreamHandler):
         parsedform = threadclient.parse_chunks(file)
         if parsedform:
             filename, ext, framenum, chunks = parsedform
-            print "chunks:", chunks
+            print "chunks requested:", chunks
             try:
                 # filename should be prefixed by "file-" in order to be valid.
                 # frame number is expected to exist for this cache.
