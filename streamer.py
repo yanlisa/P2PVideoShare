@@ -5,6 +5,9 @@ import os
 import datetime
 import threading
 import Queue
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
 
 # Import SOCKS module if it exists, else standard socket module socket
 try:
@@ -22,11 +25,15 @@ class StreamFTP(threading.Thread, FTP, object):
         self.resp_queue = Queue.Queue() # responses, in order.
         self.conn = None # connection socket
         self.callback = None
+        self.chunks = []
         FTP.__init__(self, host, user, passwd, acct, timeout)
         threading.Thread.__init__(self)
 
     def set_chunk_size(self, chunk_size):
         self.chunk_size = chunk_size
+
+    def set_chunks(self, chunks):
+        self.chunks = chunks
 
     def get_instr_queue(self):
         return self.instr_queue
@@ -64,7 +71,7 @@ class StreamFTP(threading.Thread, FTP, object):
         Called for all other commands other than file transfer itself.
         """
         response = ''
-        if callback is None: callback = ftplib.print_line
+        # if callback is None: callback = ftplib.print_line
         resp = self.sendcmd('TYPE A')
         self.conn = self.transfercmd(cmd)
         self.conn.settimeout(self.timeout)
@@ -78,7 +85,7 @@ class StreamFTP(threading.Thread, FTP, object):
                 line = line[:-2]
             elif line[-1:] == '\n':
                 line = line[:-1]
-            callback(line)
+        #    callback(line)
             response += line + "\n"
         fp.close()
         self.conn.close()
@@ -111,9 +118,11 @@ class StreamFTP(threading.Thread, FTP, object):
                 try:
                     resp = self.retrbinary(cmd, self.callback(self.chunk_size, fname))
                 except socket.error:
-                    print "Connection closed."
+                    logging.exception("Connection closed.")
+                    break
                 except:
-                   print "Unexpected error:", sys.exc_info()[0]
+                    logging.exception("Unexpected error" + str(sys.exc_info()[0]))
+                    break
             elif fn_name == "LIST":
                 # try:
                 resp = self.retrlines(cmd)
@@ -121,11 +130,13 @@ class StreamFTP(threading.Thread, FTP, object):
                 #     print "Connection closed."
                 # except:
                 #     print "Unexpected error:", sys.exc_info()[0]
+            else: # for any other command, call retrlines.
+                resp = self.retrlines(cmd)
 
 def runrecv(packet_size, fname):
     ftp = StreamFTP('107.21.135.254')
-    ftp.set_packet_size(packet_size)
-    print "StreamFTP now has size ", StreamFTP.packet_size
+    ftp.set_chunk_size(packet_size)
+    print "StreamFTP now has size ", ftp.chunk_size
     ret_status = ftp.retrlines('LIST')
     # file_to_write = open(fname, 'wb')
     # ret_status = ftp.retrbinary('RETR ' + fname, filecallback(fname, file_to_write))

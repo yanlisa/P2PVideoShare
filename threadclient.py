@@ -2,6 +2,22 @@ from streamer import StreamFTP
 import os, sys, errno
 import time
 
+# parse filename to extract filename, ext, framenum, chunks.  
+def parse_chunks(filestr):
+    """Returns file name, extension, chunks, and frame number.
+    File string format:
+        file-<filename>.<ext>.<framenum>.<chunk1>%<chunk2>%<chunk3>
+     """
+    if filestr.find('file-') != -1:
+        filestr = (filestr.split('file-'))[-1]
+        parts = filestr.split('.')
+        filename, ext, framenum = parts[0], parts[1], parts[2]
+        if len(parts) == 4:
+            chunks = map(int, (parts[3]).split('%'))
+        else:
+            chunks = None
+        return (filename, ext, framenum, chunks)
+    
 class ThreadClient(object):
     """Creates a client thread and pushes instructions to it.
     Also can close client socket arbitrarily.
@@ -40,24 +56,49 @@ class ThreadClient(object):
         return False
 
     def get_response(self):
+        """
+            Receive response string from the shared response queue.
+        """
         try:
             response_string = self.resp_queue.get()
             return response_string
         except:
             return None
 
-    def chunkcallback(self, chunk_size, fname):
-        chunk_num_and_data = [0, '']
+    def set_chunks(self, chunks):
+        """
+            Set the expected chunks from the cache.
+            This chunk list is used to save the file names.
+        """
+        start = chunks.find('[')
+        end = chunks.find(']')
+        chunkstr = chunks[start+1:end]
+        self.chunks = sorted(map(int, (chunkstr.split(', '))))
+        self.client.set_chunks(self.chunks)
+
+    def chunkcallback(self, chunk_size, fnamestr):
+        order_and_data = [0, '']
         print "Expected chunk_size:", chunk_size
         header_and_total_chunk = (37, chunk_size) # header is 37B
         expected_threshold = [header_and_total_chunk[1]]
-    
+
+        parsed_form = parse_chunks(fnamestr)
+        if parsed_form:
+            fname, ext, framenum, chunks = parsed_form
+            fname = fname + '.' + framenum
+        else:
+            fname = fnamestr
+
+        if not chunks:
+            chunks = self.chunks
+
         # directory name by convention is filename itself.
-        os.mkdir(fname)
+        if not os.path.isdir(fname):
+            os.mkdir(fname)
     
         def helper(data):
-            filestr = fname + '/' + fname + '.' + str(chunk_num_and_data[0])
-            datastring = data + chunk_num_and_data[1]
+            filestr = fname + '/' + fname + '.' + str(chunks[order_and_data[0]])
+            datastring = data + order_and_data[1]
             curr_bytes = sys.getsizeof(datastring)
             outputStr = "%s: Received %d bytes. Current Total: %d bytes.\n" % \
                 (filestr, sys.getsizeof(data), curr_bytes)
@@ -73,11 +114,11 @@ class ThreadClient(object):
                 file_to_write.write(datastring)
                 file_to_write.close()
                 # reset
-                chunk_num_and_data[1] = '' # new data string
+                order_and_data[1] = '' # new data string
                 expected_threshold[0] = header_and_total_chunk[1] # new threshold.
-                chunk_num_and_data[0] += 1 # new file extension
+                order_and_data[0] += 1 # new file extension
             else:
-                chunk_num_and_data[1] = datastring
+                order_and_data[1] = datastring
                 # expecting one more packet, so add a header size.
                 expected_threshold[0] += header_and_total_chunk[0]
     
@@ -91,9 +132,15 @@ if __name__ == "__main__":
     else:
         chunk_size = int(sys.argv[1])
         fname = sys.argv[2]
-        thread_client = ThreadClient('107.21.135.254', chunk_size)
+        # thread_client = ThreadClient('107.21.135.254', chunk_size) #ec2
+        thread_client = ThreadClient('10.0.1.2', chunk_size) # home
+        # thread_client = ThreadClient('10.10.66.227', chunk_size) # airbears
         thread_client.put_instruction('LIST')
         print thread_client.get_response()
+        thread_client.put_instruction('CNKS')
+        chunks = thread_client.get_response()
+        print chunks
+        thread_client.set_chunks(chunks)
         thread_client.put_instruction('RETR ' + fname)
         time.sleep(3)
         thread_client.kill_transfer()
