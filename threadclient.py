@@ -10,6 +10,7 @@ def parse_chunks(filestr):
      """
     if filestr.find('file-') != -1:
         filestr = (filestr.split('file-'))[-1]
+        print filestr
         parts = filestr.split('.')
         filename, ext, framenum = parts[0], parts[1], parts[2]
         if len(parts) == 4:
@@ -35,6 +36,7 @@ class ThreadClient(object):
         self.instr_queue = self.client.get_instr_queue()
         self.resp_queue = self.client.get_resp_queue()
         self.client.start()
+        self.chunks = None
 
     def put_instruction(self, cmd_string):
         """
@@ -83,6 +85,7 @@ class ThreadClient(object):
         expected_threshold = [header_and_total_chunk[1]]
 
         parsed_form = parse_chunks(fnamestr)
+        chunks = None
         if parsed_form:
             fname, ext, framenum, chunks = parsed_form
             fname = fname + '.' + framenum
@@ -133,7 +136,7 @@ if __name__ == "__main__":
         chunk_size = int(sys.argv[1])
         fname = sys.argv[2]
         # thread_client = ThreadClient('107.21.135.254', chunk_size) #ec2
-        thread_client = ThreadClient('10.0.1.2', chunk_size) # home
+        thread_client = ThreadClient('192.168.0.120', chunk_size) # home
         # thread_client = ThreadClient('10.10.66.227', chunk_size) # airbears
         thread_client.put_instruction('LIST')
         print thread_client.get_response()
