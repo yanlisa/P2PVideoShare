@@ -89,7 +89,7 @@ class CacheHandler(StreamHandler):
         client).
 
         Accepts filestrings of the form:
-            file-<filename>.<ext>.<framenum>
+            file-<filename>.<framenum>.<cnk1>%<cnk2>%<cnk3>
 
         If the file has an integer extension, assume it is asking for a
         file frame. cd into the correct directory and transmit all chunks
@@ -98,7 +98,7 @@ class CacheHandler(StreamHandler):
         self.transaction_record.put(("RETR", file))
         parsedform = threadclient.parse_chunks(file)
         if parsedform:
-            filename, ext, framenum, chunks = parsedform
+            filename, framenum, chunks = parsedform
             print "chunks requested:", chunks
             try:
                 # filename should be prefixed by "file-" in order to be valid.
@@ -115,7 +115,7 @@ class CacheHandler(StreamHandler):
             producer = self.chunkproducer(files, self._current_type)
             self.push_dtp_data(producer, isproducer=True, file=None, cmd="RETR")
             return
-        why = "Invalid filename. Usage: RETR file-<filename>.<ext>.<framenum>"
+        why = "Invalid filename. Usage: RETR file-<filename>.<framenum>.<cnk1>%<cnk2>..."
         self.respond('554 %s.' % why)
 
     def get_chunk_files(self, path, chunks=None):

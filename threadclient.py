@@ -2,24 +2,24 @@ from streamer import StreamFTP
 import os, sys, errno
 import time
 
-# parse filename to extract filename, ext, framenum, chunks.  
+# parse filename to extract filename, framenum, chunks.  
 def parse_chunks(filestr):
-    """Returns file name, extension, chunks, and frame number.
+    """Returns file name, chunks, and frame number.
     File string format:
-        file-<filename>.<ext>.<framenum>.<chunk1>%<chunk2>%<chunk3>
+        file-<filename>.<framenum>.<chunk1>%<chunk2>%<chunk3>
      """
     if filestr.find('file-') != -1:
         filestr = (filestr.split('file-'))[-1]
         print filestr
         parts = filestr.split('.')
-        if len(parts) < 3:
+        if len(parts) < 2:
             return None
-        filename, ext, framenum = parts[0], parts[1], parts[2]
-        if len(parts) == 4:
-            chunks = map(int, (parts[3]).split('%'))
+        filename, framenum = parts[0], parts[1]
+        if len(parts) == 3:
+            chunks = map(int, (parts[2]).split('%'))
         else:
             chunks = None
-        return (filename, ext, framenum, chunks)
+        return (filename, framenum, chunks)
     
 class ThreadClient(object):
     """Creates a client thread and pushes instructions to it.
@@ -90,7 +90,7 @@ class ThreadClient(object):
         parsed_form = parse_chunks(fnamestr)
         chunks = None
         if parsed_form:
-            fname, ext, framenum, chunks = parsed_form
+            fname, framenum, chunks = parsed_form
             fname = fname + '.' + framenum
         else:
             fname = fnamestr
