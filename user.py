@@ -7,10 +7,10 @@ from ftplib import error_perm
 class P2PUser():
 
     def __init__(self):
-        server_ip = '192.168.0.120'
+        server_ip = '10.10.67.94'
         self.clients = []
         for i in xrange(2):
-            self.clients.append(ThreadClient(server_ip, 2504)) # later: ask tracker
+            self.clients.append(ThreadClient(server_ip, 2504, i)) # later: ask tracker
         self.manager = None # TODO: create the manager class to decode/play
         server_ip = '107.21.135.254'
         self.server_client = ThreadClient(server_ip, 2504)
@@ -26,12 +26,13 @@ class P2PUser():
             self.manager.start_playing()
         # TODO: add decoding.
 
-    def download(self, video_name, frame_number):
+    def download(self, video_name, start_frame):
         # ask all clients for all chunks in the next 10 second set
         # after 10 sec, cancel client connections
         available_chunks = set([])
-        done = False
-        while not done:
+        self.clients[0].put_instruction('VLEN file-%s' % (video_name))
+        video_length = int(self.clients[0].get_response())
+        for frame_number in xrange(start_frame, video_length):
             for client in self.clients:
                 filename = 'file-' + video_name + '.' + str(frame_number)
                 inst = 'CNKS ' + filename
@@ -47,13 +48,11 @@ class P2PUser():
                 client.put_instruction(inst)
                 print len(available_chunks)
                 if len(available_chunks) >= 20:
-                    done = True
                     break
             sleep(8)
             if(False): # check if I downloaded enough packets from my peers.
                 server_client.put_instruction(inst)
-            frame_number += 1
 
 if __name__ == "__main__":
     test_user = P2PUser()
-    test_user.download('OO1rH.jpg', 1)
+    test_user.download('OO1rH', 1)

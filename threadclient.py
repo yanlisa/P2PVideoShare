@@ -28,7 +28,7 @@ class ThreadClient(object):
     This class unfortunately crosses the data abstraction layer, but I was not
     sure of a better way to implement this.
     """
-    def __init__(self, address, packet_size):
+    def __init__(self, address, packet_size, client_id = 0):
         """
         Makes a StreamFTP thread and starts it.
         """
@@ -39,6 +39,7 @@ class ThreadClient(object):
         self.resp_queue = self.client.get_resp_queue()
         self.client.start()
         self.chunks = None
+        self.client_id = client_id
 
     def put_instruction(self, cmd_string):
         """
