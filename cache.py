@@ -44,7 +44,7 @@ class Cache(object):
         and ask the server for additional chunks if needed."""
         self.mini_server.start()
 
-new_proto_cmds = ftpserver.proto_cmds
+new_proto_cmds = proto_cmds # from server.py
 new_proto_cmds['CNKS'] = dict(perm='l', auth=True, arg=None,
                               help='Syntax: CNKS (list available chunk nums).')
 
@@ -79,6 +79,10 @@ class CacheHandler(StreamHandler):
         self.push_dtp_data(data, isproducer=False, cmd="CNKS")
         self.transaction_record.put(("CNKS", CacheHandler.chunks))
 
+    def ftp_CNKS(self, line):
+        data = str(CacheHandler.chunks)
+        self.push_dtp_data(data, isproducer=False, cmd="CNKS")
+        self.transaction_record.put(("CNKS", CacheHandler.chunks))
 
     def ftp_RETR(self, file):
         """Retrieve the specified file (transfer from the cache to the
@@ -174,6 +178,7 @@ class ServerDownloader(threadclient.ThreadClient, threading.Thread):
 
 if __name__ == "__main__":
     address = ("10.0.1.2", 21)  # home
+    address = ("10.10.64.49", 21) # airbears
     # address = ("10.10.66.227", 21) # airbears
     path = "/Users/Lisa/Research/"
     # path = "/home/ec2-user/"

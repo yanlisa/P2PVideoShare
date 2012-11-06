@@ -12,6 +12,8 @@ def parse_chunks(filestr):
         filestr = (filestr.split('file-'))[-1]
         print filestr
         parts = filestr.split('.')
+        if len(parts) < 3:
+            return None
         filename, ext, framenum = parts[0], parts[1], parts[2]
         if len(parts) == 4:
             chunks = map(int, (parts[3]).split('%'))
@@ -136,14 +138,17 @@ if __name__ == "__main__":
         chunk_size = int(sys.argv[1])
         fname = sys.argv[2]
         # thread_client = ThreadClient('107.21.135.254', chunk_size) #ec2
-        thread_client = ThreadClient('192.168.0.120', chunk_size) # home
-        # thread_client = ThreadClient('10.10.66.227', chunk_size) # airbears
+        # thread_client = ThreadClient('192.168.0.120', chunk_size) # home
+        thread_client = ThreadClient('10.10.64.49', chunk_size) # airbears
         thread_client.put_instruction('LIST')
         print thread_client.get_response()
         thread_client.put_instruction('CNKS')
         chunks = thread_client.get_response()
         print chunks
         thread_client.set_chunks(chunks)
+        fname_without_chunks = 'file-' + (fname.split('-')[-1]).split('.')[0]
+        thread_client.put_instruction('VLEN ' + fname_without_chunks)
+        print 'Number of frames:', thread_client.get_response()
         thread_client.put_instruction('RETR ' + fname)
         time.sleep(3)
         thread_client.kill_transfer()

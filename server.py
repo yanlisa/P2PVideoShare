@@ -14,6 +14,10 @@ class ThreadServer(ftpserver.FTPServer, threading.Thread):
     def run(self):
         self.serve_forever()
 
+proto_cmds = ftpserver.proto_cmds
+proto_cmds['VLEN'] = dict(perm='l', auth=True, arg=True,
+                              help='Syntax: VLEN (video length: number of frames total).')
+
 class StreamHandler(ftpserver.FTPHandler):
     """The general handler for an FTP Server in this network.
     CacheHandler, a specific Handler to use for Caches, inherits from this one.
@@ -33,6 +37,7 @@ class StreamHandler(ftpserver.FTPHandler):
         self.producer = ftpserver.FileProducer
         self.chunkproducer = FileChunkProducer
         self.chunkproducer.set_buffer_size(self.packet_size)
+        self.proto_cmds = proto_cmds
 
     def get_chunks(self):
         return range(1, 40)
@@ -146,6 +151,30 @@ class StreamHandler(ftpserver.FTPHandler):
                 self.respond('544 %s' %why)
                 break
         return files 
+
+    def ftp_VLEN(self, filename):
+        """Checks the total frames available on this server for the desired
+        movie."""
+        print filename
+        # strip directories and "file-" extension
+        fileformat = ((filename.split('/'))[-1]).split('-')
+        if fileformat[0] != 'file' or len(fileformat) != 2:
+            why = "Format to VLEN should be file-<filename>."
+            self.respond('544 %s' %why)
+            return
+        path = StreamHandler.movies_path + 'chunks-' + fileformat[1]
+        iterator = self.run_as_current_user(self.fs.get_list_dir, path)
+        count = 0
+        loops = 5000
+        for x in xrange(loops):
+            try:
+                next = iterator.next()
+                file_format = next.split('.dir')
+                if len(file_format) > 1:
+                    count += 1
+            except StopIteration:
+                break
+        self.push_dtp_data(str(count), isproducer=False, cmd="VLEN")
 
     def ftp_LIST(self, path):
         """Return a list of files in the specified directory to the
