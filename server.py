@@ -58,6 +58,25 @@ class StreamHandler(ftpserver.FTPHandler):
             chunk-<filename>.<ext>&<framenum>/<chunknum>
             file-<filename>
         """
+        parsedform = threadclient.parse_chunks(file)
+        if parsedform:
+            filename, framenum, chunks = parsedform
+            print "chunks requested:", chunks
+            try:
+                # filename should be prefixed by "file-" in order to be valid.
+                # frame number is expected to exist for this cache.
+                chunksdir = 'chunks-' + filename
+                framedir = filename + '.' + framenum + '.dir'
+                path = self.movies_path + '/' + chunksdir + '/' + framedir
+                # get chunks list and open up all files
+                files = self.get_chunk_files(path, chunks)
+            except OSError, err:
+                why = ftpserver._strerror(err)
+                self.respond('550 %s.' % why)
+
+            producer = self.chunkproducer(files, self._current_type)
+            self.push_dtp_data(producer, isproducer=True, file=None, cmd="RETR")
+            return
         chunk_prefix = (file.split('-'))[0]
         if chunk_prefix == "chunk":
             chunknum = (file.split('/'))[-1]
@@ -134,11 +153,27 @@ class StreamHandler(ftpserver.FTPHandler):
         producer = self.producer(fd, self._current_type)
         self.push_dtp_data(producer, isproducer=True, file=fd, cmd="RETR")
 
-    def get_chunk_files(self, path):
+    def get_chunk_files(self, path, chunks=None):
         """For the specified path, open up all files for reading. and return
         an array of file objects opened for read."""
         iterator = self.run_as_current_user(self.fs.get_list_dir, path)
         files = Queue.Queue()
+        if chunks:
+            for x in xrange(self.max_chunks):
+                try:
+                    liststr = iterator.next()
+                    filename = ((liststr.split(' ')[-1]).split('\r'))[0]
+                    chunk_num = (filename.split('_')[0]).split('.')[-1]
+                    if chunk_num.isdigit() and int(chunk_num) in chunks:
+                        print "Sending chunk_num", chunk_num
+                        filepath = path + '/' + filename
+                        fd = self.run_as_current_user(self.fs.open, filepath, 'rb')
+                        files.put(fd)
+                except StopIteration, err:
+                    why = _strerror(err)
+                    self.respond('544 %s' %why)
+                    break
+            return files 
         for x in xrange(self.max_chunks):
             try:
                 liststr = iterator.next()
