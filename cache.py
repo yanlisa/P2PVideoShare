@@ -24,7 +24,7 @@ class Cache(object):
             if not x in self.chunks:
                 self.chunks.append(x)
 
-        print "Chunks available on this cache: ", self.chunks
+        print "Chunks available on this cache:", self.chunks
         self.authorizer = ftpserver.DummyAuthorizer()
         # allow anonymous login.
         self.authorizer.add_anonymous(path, perm='elr')
@@ -121,26 +121,28 @@ class CacheHandler(StreamHandler):
     def get_chunk_files(self, path, chunks=None):
         """For the specified path, open up all files for reading. and return
         an array of file objects opened for read.
-        
+
         Only return the file objects specified by chunk numbers argument."""
         if not chunks:
             chunks = self.chunks
         iterator = self.run_as_current_user(self.fs.get_list_dir, path)
         files = Queue.Queue()
         for x in xrange(self.max_chunks):
-            try:
-                liststr = iterator.next()
-                filename = ((liststr.split(' ')[-1]).split('\r'))[0]
-                chunk_num = (filename.split('_')[0]).split('.')[-1]
-                if chunk_num.isdigit() and int(chunk_num) in chunks:
-                    print "Sending chunk_num", chunk_num
-                    filepath = path + '/' + filename
-                    fd = self.run_as_current_user(self.fs.open, filepath, 'rb')
-                    files.put(fd)
-            except StopIteration, err:
-                why = _strerror(err)
-                self.respond('544 %s' %why)
-                break
+            #try:
+            liststr = iterator.next()
+            filename = ((liststr.split(' ')[-1]).split('\r'))[0]
+            chunk_num = (filename.split('_')[0]).split('.')[-1]
+            print filename, chunk_num
+            if chunk_num.isdigit() and int(chunk_num) in chunks:
+                print "Sending chunk_num", chunk_num
+                filepath = path + '/' + filename
+                fd = self.run_as_current_user(self.fs.open, filepath, 'rb')
+                files.put(fd)
+            #except StopIteration, err:
+                #print x
+                #why = ftpserver._strerror(err)
+                #self.respond('544 %s' %why)
+                #break
         return files 
 
 class ServerDownloader(threadclient.ThreadClient, threading.Thread):
@@ -151,7 +153,7 @@ class ServerDownloader(threadclient.ThreadClient, threading.Thread):
     """
     def __init__(self, address, packet_size):
         threading.Thread.__init__(self)
-        StreamFTP.__init__(self, address, packet_size)
+        StreamFTP.__init__(self, address, chunk_size=packet_size)
         self.client.set_callback(self.chunkcallback)
 
     def put_instruction(self, cmd_string):
@@ -173,19 +175,18 @@ class ServerDownloader(threadclient.ThreadClient, threading.Thread):
             sys.stdout.flush()
             file_to_write.write(datastring)
             file_to_write.close()
-    
+
         return helper
 
 if __name__ == "__main__":
-    address = ("10.0.1.2", 21)  # home
-    address = ("10.10.64.49", 21) # airbears
-    # address = ("10.10.66.227", 21) # airbears
-    path = "/Users/Lisa/Research/"
+    #address = ("10.0.1.2", 21)  # home
+    address = ("10.10.67.39", 21) # airbears
+    path = "/home/nick/Dropbox/Berkeley 2012-2013/Research/P2PVideoShare/"
     # path = "/home/ec2-user/"
     # address = ("10.29.147.60", 21) # ec2
 
     print "Arguments:", sys.argv
-    packet_size = 2504
+    packet_size = 5 * 1024 * 1024
     if len(sys.argv) > 1:
         packet_size = int(sys.argv[1])
 

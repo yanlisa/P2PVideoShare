@@ -2,7 +2,7 @@ from zfec import filefec
 import os, sys
 
 def split_and_encode(filestr, k, n):
-    chunk_size = 50 * 1000 # kB
+    chunk_size = 5 * 1024 * 1024 / 8 # 5 Mb chunks.  Assuming ~512 Kbps total
     chunk_num = 1
 
     filename = ''

@@ -10,7 +10,7 @@ class ThreadServer(ftpserver.FTPServer, threading.Thread):
     def __init__(self, address, handler):
         ftpserver.FTPServer.__init__(self, address, handler)
         threading.Thread.__init__(self)
-    
+
     def run(self):
         self.serve_forever()
 

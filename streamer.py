@@ -20,12 +20,13 @@ from socket import _GLOBAL_DEFAULT_TIMEOUT
  
 class StreamFTP(threading.Thread, FTP, object):
     def __init__(self, host='', user='', passwd='', acct='',
-                 timeout=10.0):
+                 timeout=10.0, chunk_size=2504):
         self.instr_queue = Queue.Queue()
         self.resp_queue = Queue.Queue() # responses, in order.
         self.conn = None # connection socket
         self.callback = None
         self.chunks = []
+        self.chunk_size = chunk_size
         FTP.__init__(self, host, user, passwd, acct, timeout)
         threading.Thread.__init__(self)
 
@@ -52,10 +53,11 @@ class StreamFTP(threading.Thread, FTP, object):
         self.conn = self.transfercmd(cmd, rest)
         self.conn.settimeout(self.timeout)
         if self.chunk_size:
-	        blocksize = self.chunk_size
+            blocksize = self.chunk_size
         try:
             while 1:
-                data = self.conn.recv(blocksize)
+                #data = self.conn.recv(blocksize)
+                data = self.conn.recv(self.chunk_size)
                 if not data:
                     break
                 callback(data)
@@ -118,36 +120,41 @@ class StreamFTP(threading.Thread, FTP, object):
                 try:
                     resp = self.retrbinary(cmd, self.callback(self.chunk_size, fname))
                 except socket.error:
-                    logging.exception("Connection closed.")
+                    # something strange happened with the connection; most
+                    # likely a cache disconnection.  Ask the tracker to
+                    # conect me to a new cache.
+                    logging.exception("Connection closed.  Related info:" + str(sys.exc_info()[0]))
+                    # (connect to other cache)
                     break
                 except:
+                    # something else happened while running.  Not much is known.
+                    # Let the operator know.
                     logging.exception("Unexpected error" + str(sys.exc_info()[0]))
                     break
-            elif fn_name == "LIST":
-                # try:
-                resp = self.retrlines(cmd)
-                # except socket.error:
-                #     print "Connection closed."
-                # except:
-                #     print "Unexpected error:", sys.exc_info()[0]
             else: # for any other command, call retrlines.
-                resp = self.retrlines(cmd)
+                try:
+                    resp = self.retrlines(cmd)
+                except socket.error:
+                    logging.exception("Connection closed.  Related info: " + str(sys.exc_info()[0]))
+                    break
+                except:
+                    logging.exception("Unexpected error: " + str(sys.exc_info()[0]))
+                    break
 
 def runrecv(packet_size, fname):
-    ftp = StreamFTP('107.21.135.254')
-    ftp.set_chunk_size(packet_size)
+    ftp = StreamFTP('107.21.135.254', chunk_size=packet_size)
     print "StreamFTP now has size ", ftp.chunk_size
     ret_status = ftp.retrlines('LIST')
     # file_to_write = open(fname, 'wb')
     # ret_status = ftp.retrbinary('RETR ' + fname, filecallback(fname, file_to_write))
 
     ret_status = ftp.retrbinary('RETR ' + fname, chunkcallback( \
-            packet_size, fname))
+            32772, fname))
     # file_to_write.close()
     ftp.quit()
 
 if __name__ == "__main__":
-    packet_size = 2500
+    packet_size = 2504
     if len(sys.argv) > 1:
         packet_size = int(sys.argv[1])
     if len(sys.argv) > 2:

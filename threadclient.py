@@ -20,7 +20,7 @@ def parse_chunks(filestr):
         else:
             chunks = None
         return (filename, framenum, chunks)
-    
+
 class ThreadClient(object):
     """Creates a client thread and pushes instructions to it.
     Also can close client socket arbitrarily.
@@ -101,7 +101,7 @@ class ThreadClient(object):
         # directory name by convention is filename itself.
         if not os.path.isdir(fname):
             os.mkdir(fname)
-    
+
         def helper(data):
             filestr = fname + '/' + fname + '.' + str(chunks[order_and_data[0]])
             datastring = data + order_and_data[1]
@@ -127,7 +127,7 @@ class ThreadClient(object):
                 order_and_data[1] = datastring
                 # expecting one more packet, so add a header size.
                 expected_threshold[0] += header_and_total_chunk[0]
-    
+
         return helper
 
 if __name__ == "__main__":

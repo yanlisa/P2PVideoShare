@@ -6,14 +6,15 @@ from ftplib import error_perm
 
 class P2PUser():
 
-    def __init__(self):
-        server_ip = '10.10.65.3'
+    def __init__(self, packet_size=2504):
+        self.packet_size = packet_size
+        server_ip = '10.10.67.39'
         self.clients = []
         for i in xrange(2):
-            self.clients.append(ThreadClient(server_ip, 2504, i)) # ask tracker
+            self.clients.append(ThreadClient(server_ip, self.packet_size, i)) # ask tracker
         self.manager = None # TODO: create the manager class to decode/play
         server_ip = '107.21.135.254'
-        self.server_client = ThreadClient(server_ip, 2504)
+        self.server_client = ThreadClient(server_ip, self.packet_size)
 
     def play(self, video_name, frame_number):
         """ Starts playing the video as identified by either name or number and
@@ -59,7 +60,7 @@ class P2PUser():
             self.clients[1].put_instruction(inst + '.' + client1_request_string)
             #print len(available_chunks)
             sleep(8)
- 
+
             if(True):
                 server_request = chunks_to_request(client0_request + client1_request, range(1, 41), 10)
                 print 'finished downloading from clients.  Requesting %s from server' % (server_request)
@@ -75,7 +76,7 @@ def chunks_to_request(A, B, num_ret):
     Example: A = {1, 3, 5, 7, 9}, B = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14},
     num_ret = 5 possible element sets: {2, 4, 6, 8, 10}, {2, 4, 6, 8, 12}, and
     so on.
-    
+
     For now, it may just be easiest to take the first num_ret elements of the
     non-overlapping set instead of randomizing the elements to choose from the
     non-overlapping set. """
@@ -89,7 +90,12 @@ def chunks_to_request(A, B, num_ret):
     return ret_list
 
 if __name__ == "__main__":
-    test_user = P2PUser()
-    test_user.download('Abracadabra', 1)
+    print "Arguments:", sys.argv
+    packet_size = 5 * 1024 * 1024
+    if len(sys.argv) > 1:
+        packet_size = int(sys.argv[1])
+
+    test_user = P2PUser(packet_size)
+    test_user.download('hyunah', 1)
     for client in self.clients:
         client.put_instruction('QUIT')
