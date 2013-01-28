@@ -7,13 +7,18 @@ from ftplib import error_perm
 class P2PUser():
 
     def __init__(self, packet_size=2504):
+        """ Create a new P2PUser.  Set the packet size, instantiate the manager,
+        and establish clients.  Currently, the clients are static but will
+        become dynamic when the tracker is implemented.
+        """
         self.packet_size = packet_size
-        server_ip = '10.10.67.39'
+        cache_ip = '192.168.1.26' # the IP of the cache to connect to. Temporary
         self.clients = []
         for i in xrange(2):
-            self.clients.append(ThreadClient(server_ip, self.packet_size, i)) # ask tracker
+            self.clients.append(ThreadClient(cache_ip, self.packet_size, i))
+            # later: ask tracker.
         self.manager = None # TODO: create the manager class to decode/play
-        server_ip = '107.21.135.254'
+        server_ip = '107.21.135.254' # the IP of the central server.
         self.server_client = ThreadClient(server_ip, self.packet_size)
 
     def play(self, video_name, frame_number):
