@@ -2,7 +2,6 @@ from streamer import StreamFTP
 import os, sys, errno
 import time
 
-# parse filename to extract filename, framenum, chunks.  
 def parse_chunks(filestr):
     """Returns file name, chunks, and frame number.
     File string format:
@@ -10,7 +9,6 @@ def parse_chunks(filestr):
      """
     if filestr.find('file-') != -1:
         filestr = (filestr.split('file-'))[-1]
-        print filestr
         parts = filestr.split('.')
         if len(parts) < 2:
             return None
@@ -19,6 +17,9 @@ def parse_chunks(filestr):
             chunks = map(int, (parts[2]).split('%'))
         else:
             chunks = None
+
+        if True:
+            print filestr
         return (filename, framenum, chunks)
 
 class ThreadClient(object):
@@ -62,7 +63,7 @@ class ThreadClient(object):
 
     def get_response(self):
         """
-            Receive response string from the shared response queue.
+        Receive response string from the shared response queue.
         """
         try:
             response_string = self.resp_queue.get()
@@ -72,8 +73,8 @@ class ThreadClient(object):
 
     def set_chunks(self, chunks):
         """
-            Set the expected chunks from the cache.
-            This chunk list is used to save the file names.
+        Set the expected chunks from the cache.
+        This chunk list is used to save the file names.
         """
         start = chunks.find('[')
         end = chunks.find(']')
@@ -83,7 +84,6 @@ class ThreadClient(object):
 
     def chunkcallback(self, chunk_size, fnamestr):
         order_and_data = [0, '']
-        print "Expected chunk_size:", chunk_size
         header_and_total_chunk = (37, chunk_size) # header is 37B
         expected_threshold = [header_and_total_chunk[1]]
 
@@ -128,6 +128,9 @@ class ThreadClient(object):
                 # expecting one more packet, so add a header size.
                 expected_threshold[0] += header_and_total_chunk[0]
 
+        if True:
+            print "Expected chunk_size:", chunk_size
+
         return helper
 
 if __name__ == "__main__":
@@ -142,14 +145,17 @@ if __name__ == "__main__":
         # thread_client = ThreadClient('192.168.0.120', chunk_size) # home
         thread_client = ThreadClient('10.10.64.49', chunk_size) # airbears
         thread_client.put_instruction('LIST')
-        print thread_client.get_response()
+        if True:
+            print thread_client.get_response()
         thread_client.put_instruction('CNKS')
         chunks = thread_client.get_response()
-        print chunks
+        if True:
+            print chunks
         thread_client.set_chunks(chunks)
         fname_without_chunks = 'file-' + (fname.split('-')[-1]).split('.')[0]
         thread_client.put_instruction('VLEN ' + fname_without_chunks)
-        print 'Number of frames:', thread_client.get_response()
+        if True:
+            print 'Number of frames:', thread_client.get_response()
         thread_client.put_instruction('RETR ' + fname)
         time.sleep(3)
         thread_client.kill_transfer()

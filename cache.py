@@ -24,7 +24,6 @@ class Cache(object):
             if not x in self.chunks:
                 self.chunks.append(x)
 
-        print "Chunks available on this cache:", self.chunks
         self.authorizer = ftpserver.DummyAuthorizer()
         # allow anonymous login.
         self.authorizer.add_anonymous(path, perm='elr')
@@ -37,6 +36,9 @@ class Cache(object):
         handler.set_chunks(self.chunks)
         self.mini_server = ThreadServer(address, handler)
         handler.set_movies_path(path)
+
+        if (True):
+            print "Chunks available on this cache:", self.chunks
 
     def start_cache(self):
         """Start the FTP server and the CacheDownloader instance.
@@ -66,20 +68,28 @@ class CacheHandler(StreamHandler):
 
     @staticmethod
     def set_chunks(chunks):
+        """
+        Adjusts the set of chunks that this cache holds across all frames.
+        """
         CacheHandler.chunks = chunks
 
     def get_chunks(self):
+        """
+        Returns the set of chunks that this cache holds across all frames.
+        """
         return CacheHandler.chunks
 
     def get_transactions(self):
+        """
+        HAS NOT BEEN IMPLEMENTED YET
+        The record of client transactions on this cache.
+        """
         return self.transaction_record
 
     def ftp_CNKS(self, line):
-        data = str(CacheHandler.chunks)
-        self.push_dtp_data(data, isproducer=False, cmd="CNKS")
-        self.transaction_record.put(("CNKS", CacheHandler.chunks))
-
-    def ftp_CNKS(self, line):
+        """
+        FTP command: Returns this cache's chunk number set.
+        """
         data = str(CacheHandler.chunks)
         self.push_dtp_data(data, isproducer=False, cmd="CNKS")
         self.transaction_record.put(("CNKS", CacheHandler.chunks))
@@ -132,17 +142,19 @@ class CacheHandler(StreamHandler):
             liststr = iterator.next()
             filename = ((liststr.split(' ')[-1]).split('\r'))[0]
             chunk_num = (filename.split('_')[0]).split('.')[-1]
-            print filename, chunk_num
             if chunk_num.isdigit() and int(chunk_num) in chunks:
-                print "Sending chunk_num", chunk_num
                 filepath = path + '/' + filename
                 fd = self.run_as_current_user(self.fs.open, filepath, 'rb')
                 files.put(fd)
+                if (True):
+                    print filename, chunk_num
+                    print "Sending chunk_num", chunk_num
             #except StopIteration, err:
                 #print x
                 #why = ftpserver._strerror(err)
                 #self.respond('544 %s' %why)
                 #break
+
         return files 
 
 class ServerDownloader(threadclient.ThreadClient, threading.Thread):

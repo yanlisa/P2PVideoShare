@@ -14,6 +14,7 @@ class ThreadServer(ftpserver.FTPServer, threading.Thread):
     def run(self):
         self.serve_forever()
 
+# The FTP commands the server understands.
 proto_cmds = ftpserver.proto_cmds
 proto_cmds['VLEN'] = dict(perm='l', auth=True, arg=True,
                               help='Syntax: VLEN (video length: number of frames total).')
@@ -98,7 +99,6 @@ class StreamHandler(ftpserver.FTPHandler):
                 self.push_dtp_data(producer, isproducer=True, file=None, cmd="RETR")
                 return
 
-
         if file.find(StreamHandler.movies_path) == 0:
             file = file[15:]
             print 'request: %s' % file
@@ -119,7 +119,8 @@ class StreamHandler(ftpserver.FTPHandler):
             if found_file == None:
                 raise IOError('file number not found')
             found_file = found_file.group()
-            print('found the file: file-%s' % found_file[len(file) + 2:])
+            if True:
+                print('found the file: file-%s' % found_file[len(file) + 2:])
             found_file = StreamHandler.movies_path + '/file-' + found_file[len(file) + 2 :]
             fd = self.run_as_current_user(self.fs.open, found_file, 'rb')
         except IOError, err:
@@ -165,7 +166,8 @@ class StreamHandler(ftpserver.FTPHandler):
                     filename = ((liststr.split(' ')[-1]).split('\r'))[0]
                     chunk_num = (filename.split('_')[0]).split('.')[-1]
                     if chunk_num.isdigit() and int(chunk_num) in chunks:
-                        print "Sending chunk_num", chunk_num
+                        if True:
+                            print "Sending chunk_num", chunk_num
                         filepath = path + '/' + filename
                         fd = self.run_as_current_user(self.fs.open, filepath, 'rb')
                         files.put(fd)
@@ -229,7 +231,8 @@ class StreamHandler(ftpserver.FTPHandler):
 
     def _on_dtp_connection(self):
         """For debugging purposes."""
-        print "Calling _on_dtp_connection."
+        if True:
+            print "Calling _on_dtp_connection."
         return super(StreamHandler, self)._on_dtp_connection()
 
 class DTPPacketHandler(ftpserver.DTPHandler):

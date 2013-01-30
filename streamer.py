@@ -143,7 +143,8 @@ class StreamFTP(threading.Thread, FTP, object):
 
 def runrecv(packet_size, fname):
     ftp = StreamFTP('107.21.135.254', chunk_size=packet_size)
-    print "StreamFTP now has size ", ftp.chunk_size
+    if True:
+        print "StreamFTP now has size ", ftp.chunk_size
     ret_status = ftp.retrlines('LIST')
     # file_to_write = open(fname, 'wb')
     # ret_status = ftp.retrbinary('RETR ' + fname, filecallback(fname, file_to_write))

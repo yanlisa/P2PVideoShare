@@ -41,7 +41,10 @@ class TrackerHandler(SocketServer.BaseRequestHandler):
                 break
             parsed_data = data.split(' ')
             request_type = parsed_data[0]
-            print parsed_data
+
+            if True:
+                print parsed_data
+
             if len(parsed_data) < 2:
                 continue
             else:
@@ -57,8 +60,10 @@ class TrackerHandler(SocketServer.BaseRequestHandler):
                     TrackerHandler.connections.append((address, port))
                 TrackerHandler.cache_dict[(address, port)] = num_connections
                 TrackerHandler.connections_lock.release()
-                print "Added cache to available connections. (%s, %s)." % (address, port)
-                print TrackerHandler.connections
+
+                if True:
+                    print "Added cache to available connections. (%s, %s)." % (address, port)
+                    print TrackerHandler.connections
             if request_type == 'DEL' and is_cache == "1":
                 # cache wants to be removed from network.
                 TrackerHandler.connections_lock.acquire()
@@ -67,10 +72,12 @@ class TrackerHandler(SocketServer.BaseRequestHandler):
                         TrackerHandler.connections.pop(i)
                 TrackerHandler.cache_dict[(address, port)] = 0
                 TrackerHandler.connections_lock.release()
-                print "Removed cache from available connections. (%s, %s)." % (address, port)
+                if True:
+                    print "Removed cache from available connections. (%s, %s)." % (address, port)
             if request_type == 'CONN' and is_cache == "0":
                 # client requests connection to cache. Randomize and return.
-                print "Current available connections:", TrackerHandler.connections
+                if True:
+                    print "Current available connections:", TrackerHandler.connections
                 TrackerHandler.connections_lock.acquire()
                 if len(TrackerHandler.connections) == 0:
                     line = "FAIL -1"
@@ -102,7 +109,8 @@ class TrackerHandler(SocketServer.BaseRequestHandler):
                     cache_address, cache_port = TrackerHandler.connections.pop(index)
                     TrackerHandler.cache_dict[(cache_address, cache_port)] -= 1
                 TrackerHandler.connections_lock.release()
-                print "Sending IP to (%s, %s): (%s, %s)" % (address, port, cache_address, cache_port)
+                if True:
+                    print "Sending IP to (%s, %s): (%s, %s)" % (address, port, cache_address, cache_port)
                 line = "REPL -1 %s %s" % (cache_address, cache_port)
                 self.request.sendall(line)
 
@@ -134,7 +142,8 @@ class TrackerThread(threading.Thread, object):
         line = cmd + " " + str(self.is_cache)
         for arg in opt_args:
             line += " " + str(arg)
-        print "Sending: " + line
+        if True:
+            print "Sending: " + line
         return line
 
 class TrackerThreadCache(TrackerThread):
@@ -178,7 +187,8 @@ class TrackerThreadClient(TrackerThread):
             line = self.make_command("CONN", opt_args)
             self.sock.sendall(line)
             data = self.sock.recv(1024)
-            print "Received: %s" % data
+            if True:
+                print "Received: %s" % data
             parsed_data = data.split(' ')
             request_type = parsed_data[0]
             if request_type == 'REPL' and len(parsed_data) == 4:
