@@ -18,6 +18,8 @@ class ThreadServer(ftpserver.FTPServer, threading.Thread):
 proto_cmds = ftpserver.proto_cmds
 proto_cmds['VLEN'] = dict(perm='l', auth=True, arg=True,
                               help='Syntax: VLEN (video length: number of frames total).')
+proto_cmds['CNKS'] = dict(perm='l', auth=True, arg=None,
+                              help='Syntax: CNKS (list available chunk nums).')
 
 class StreamHandler(ftpserver.FTPHandler):
     """The general handler for an FTP Server in this network.
@@ -213,6 +215,15 @@ class StreamHandler(ftpserver.FTPHandler):
                 break
         self.push_dtp_data(str(count), isproducer=False, cmd="VLEN")
 
+    def ftp_CNKS(self, line):
+        """
+        FTP command: Returns this cache's chunk number set.
+        """
+        # hard-coded in right now.
+        chunks = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+        data = str(chunks)
+        self.push_dtp_data(data, isproducer=False, cmd="CNKS")
+
     def ftp_LIST(self, path):
         """Return a list of files in the specified directory to the
         client.
@@ -242,6 +253,7 @@ class DTPPacketHandler(ftpserver.DTPHandler):
 
     @staticmethod
     def set_buffer_size(out_buffer_size):
+        # currently the one we use, not FileStreamProducer.
         DTPPacketHandler.ac_out_buffer_size = out_buffer_size
 
 class FileStreamProducer(ftpserver.FileProducer):
