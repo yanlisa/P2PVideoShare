@@ -12,7 +12,8 @@ class P2PUser():
         become dynamic when the tracker is implemented.
         """
         self.packet_size = packet_size
-        cache_ip = '192.168.1.26' # the IP of the cache to connect to. Temporary
+        # cache_ip = '10.0.1.4' # the IP of the cache to connect to. Temporary
+        cache_ip = '107.21.135.254' # the IP of the central server.
         self.clients = []
         for i in xrange(2):
             self.clients.append(ThreadClient(cache_ip, self.packet_size, i))
@@ -59,8 +60,8 @@ class P2PUser():
             #print 'client available chunks: %s' % (str(chunks))
             #available_chunks = available_chunks | set(chunks)
             #client.set_chunks(str(available_chunks & set(chunks)))
-
             inst = 'RETR ' + filename
+            print inst
             self.clients[0].put_instruction(inst + '.' + client0_request_string)
             self.clients[1].put_instruction(inst + '.' + client1_request_string)
             #print len(available_chunks)
@@ -100,7 +101,10 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         packet_size = int(sys.argv[1])
 
+    file_name = 'hyunah'
+    if len(sys.argv) > 2:
+        file_name = sys.argv[2]
     test_user = P2PUser(packet_size)
-    test_user.download('hyunah', 1)
+    test_user.download(file_name, 1)
     for client in self.clients:
         client.put_instruction('QUIT')

@@ -191,9 +191,9 @@ class ServerDownloader(threadclient.ThreadClient, threading.Thread):
         return helper
 
 if __name__ == "__main__":
-    address = ("192.168.1.26", 21)  # home
-    #address = ("10.10.67.39", 21) # airbears
-    path = "/home/nick/Dropbox/Berkeley 2012-2013/Research/P2PVideoShare/"
+    address = ("10.0.1.4", 21)  # home
+    # path = "/home/nick/Dropbox/Berkeley 2012-2013/Research/P2PVideoShare/"
+    path = "/Users/Lisa/Research/"
     # path = "/home/ec2-user/"
     # address = ("10.29.147.60", 21) # ec2
 
