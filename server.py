@@ -2,6 +2,7 @@ import sys, errno
 from pyftpdlib import ftpserver
 import Queue, time, re
 import threading
+import threadclient
 
 class ThreadServer(ftpserver.FTPServer, threading.Thread):
     """
@@ -201,7 +202,7 @@ class StreamHandler(ftpserver.FTPHandler):
             why = "Format to VLEN should be file-<filename>."
             self.respond('544 %s' %why)
             return
-        path = StreamHandler.movies_path + 'chunks-' + fileformat[1]
+        path = StreamHandler.movies_path + '/' + 'chunks-' + fileformat[1]
         iterator = self.run_as_current_user(self.fs.get_list_dir, path)
         count = 0
         loops = 5000
@@ -284,8 +285,8 @@ class FileStreamProducer(ftpserver.FileProducer):
         time.sleep(self.wait_time)
         data = super(FileStreamProducer, self).more()
         outputStr = "Size of packet to send: %d\n" % sys.getsizeof(data)
-        sys.stdout.write(outputStr)
-        sys.stdout.flush()
+        # sys.stdout.write(outputStr)
+        # sys.stdout.flush()
         return data
 
 class FileChunkProducer(FileStreamProducer):
@@ -368,8 +369,8 @@ def main():
         arg3: path
     """
     path = "/home/ec2-user/"
-    address = ("10.190.126.120", 21) # Lisa EC2
-    # address = ("10.29.147.60", 21) # Nick EC2
+    #  address = ("10.190.126.120", 21) # Lisa EC2
+    address = ("10.29.147.60", 21) # Nick EC2
 
     print "Arguments:", sys.argv
     if len(sys.argv) > 1:
@@ -385,8 +386,8 @@ def main():
     authorizer.add_anonymous(path, perm='elr')
     handler = StreamHandler
     handler.authorizer = authorizer
-    # handler.masquerade_address = '107.21.135.254' # Nick EC2
-    handler.masquerade_address = '174.129.174.31' # Lisa EC2 
+    handler.masquerade_address = '107.21.135.254' # Nick EC2
+    # handler.masquerade_address = '174.129.174.31' # Lisa EC2 
     handler.passive_ports = range(60000, 65535)
     ftpd = ftpserver.FTPServer(address, handler)
     ftpd.serve_forever()
