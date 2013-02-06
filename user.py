@@ -12,11 +12,10 @@ class P2PUser():
         become dynamic when the tracker is implemented.
         """
         self.packet_size = packet_size
-        # cache_ip = '10.0.1.4' # the IP of the cache to connect to. Temporary
-        cache_ip = '107.21.135.254' # the IP of the central server.
+        cache_ip = ['174.129.174.31', '10.10.66.187'] # 1: Lisa EC2, local
         self.clients = []
         for i in xrange(2):
-            self.clients.append(ThreadClient(cache_ip, self.packet_size, i))
+            self.clients.append(ThreadClient(cache_ip[i], self.packet_size, i))
             # later: ask tracker.
         self.manager = None # TODO: create the manager class to decode/play
         server_ip = '107.21.135.254' # the IP of the central server.
