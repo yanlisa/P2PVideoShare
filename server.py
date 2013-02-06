@@ -368,7 +368,8 @@ def main():
         arg3: path
     """
     path = "/home/ec2-user/"
-    address = ("10.29.147.60", 21)
+    address = ("10.190.126.120", 21) # Lisa EC2
+    # address = ("10.29.147.60", 21) # Nick EC2
 
     print "Arguments:", sys.argv
     if len(sys.argv) > 1:
@@ -384,7 +385,8 @@ def main():
     authorizer.add_anonymous(path, perm='elr')
     handler = StreamHandler
     handler.authorizer = authorizer
-    handler.masquerade_address = '107.21.135.254'
+    # handler.masquerade_address = '107.21.135.254' # Nick EC2
+    handler.masquerade_address = '174.129.174.31' # Lisa EC2 
     handler.passive_ports = range(60000, 65535)
     ftpd = ftpserver.FTPServer(address, handler)
     ftpd.serve_forever()
