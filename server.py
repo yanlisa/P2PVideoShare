@@ -169,8 +169,6 @@ class StreamHandler(ftpserver.FTPHandler):
                     filename = ((liststr.split(' ')[-1]).split('\r'))[0]
                     chunk_num = (filename.split('_')[0]).split('.')[-1]
                     if chunk_num.isdigit() and int(chunk_num) in chunks:
-                        if True:
-                            print "Sending chunk_num", chunk_num
                         filepath = path + '/' + filename
                         fd = self.run_as_current_user(self.fs.open, filepath, 'rb')
                         files.put(fd)
@@ -221,7 +219,7 @@ class StreamHandler(ftpserver.FTPHandler):
         FTP command: Returns this cache's chunk number set.
         """
         # hard-coded in right now.
-        chunks = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+        chunks = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39]
         data = str(chunks)
         self.push_dtp_data(data, isproducer=False, cmd="CNKS")
 
@@ -284,9 +282,9 @@ class FileStreamProducer(ftpserver.FileProducer):
     def more(self):
         time.sleep(self.wait_time)
         data = super(FileStreamProducer, self).more()
-        outputStr = "Size of packet to send: %d\n" % sys.getsizeof(data)
-        # sys.stdout.write(outputStr)
-        # sys.stdout.flush()
+        if (True):
+            print "Sending part of %s (size: %d)" % \
+                (self.file.name, sys.getsizeof(data))
         return data
 
 class FileChunkProducer(FileStreamProducer):
@@ -315,8 +313,9 @@ class FileChunkProducer(FileStreamProducer):
             data = self.curr_producer.more()
             if not data:
                 if not self.file_queue.empty():
+                    f = self.file_queue.get()
                     self.curr_producer = FileStreamProducer( \
-                        self.file_queue.get(), self.type, self.buffer_size)
+                        f, self.type, self.buffer_size)
                     data = self.curr_producer.more()
             return data
         return None
