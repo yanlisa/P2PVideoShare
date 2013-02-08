@@ -191,11 +191,9 @@ class ServerDownloader(threadclient.ThreadClient, threading.Thread):
         return helper
 
 if __name__ == "__main__":
-    address = ("10.0.1.4", 21)  # home
+    address = ("10.10.66.187", 21) # local airbears
     # path = "/home/nick/Dropbox/Berkeley 2012-2013/Research/P2PVideoShare/"
     path = "/Users/Lisa/Research/"
-    # path = "/home/ec2-user/"
-    # address = ("10.29.147.60", 21) # ec2
 
     print "Arguments:", sys.argv
     packet_size = 5 * 1024 * 1024
