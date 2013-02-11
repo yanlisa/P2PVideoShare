@@ -12,7 +12,9 @@ class P2PUser():
         become dynamic when the tracker is implemented.
         """
         self.packet_size = packet_size
-        cache_ip = ['174.129.174.31', '10.10.66.187'] # 1: Lisa EC2, local
+        # cache_ip = ['107.21.135.254', '107.21.135.254']
+        cache_ip = ['174.129.174.31', '10.10.66.9'] # 1: Lisa EC2, local
+        # cache_ip = ['174.129.174.31', '10.0.1.4'] # 1: Lisa EC2, Lisa home 
         self.clients = []
         for i in xrange(2):
             self.clients.append(ThreadClient(cache_ip[i], self.packet_size, i))
@@ -66,13 +68,15 @@ class P2PUser():
             #print len(available_chunks)
             sleep(8)
 
+            server_request = chunks_to_request(client0_request + client1_request, range(0, 40), 10)
+            server_request_string = '%'.join(server_request)
+            self.server_client.put_instruction(inst + '.' + server_request_string)
             if(True):
-                server_request = chunks_to_request(client0_request + client1_request, range(1, 41), 10)
-                print 'finished downloading from clients.  Requesting %s from server' % (server_request)
-                for i in xrange(len(server_request)):
-                    server_request[i] = str(server_request[i])
-                server_request = '%'.join(server_request)
-                self.server_client.put_instruction(inst + '.' + server_request)
+                print 'Requesting %s from server' % \
+                    (server_request_string)
+                # simple load 1 to 10.
+                # for i in xrange(len(server_request)):
+                #     server_request[i] = str(server_request[i])
 
 def chunks_to_request(A, B, num_ret):
     """ Find the elements in B that are not in A. From these elements, return a
@@ -88,6 +92,8 @@ def chunks_to_request(A, B, num_ret):
     #intersection = set(A) & set(B)
     ret_list = []
     for element in B:
+        if not isinstance(element, str):
+            element = str(element)
         if len(ret_list) >= num_ret:
             break
         if not element in A:

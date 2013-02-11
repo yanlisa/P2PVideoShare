@@ -7,6 +7,26 @@ import threading
 import Queue
 import logging
 
+def parse_chunks(filestr):
+    """Returns file name, chunks, and frame number.
+    File string format:
+        file-<filename>.<framenum>.<chunk1>%<chunk2>%<chunk3>
+     """
+    if filestr.find('file-') != -1:
+        filestr = (filestr.split('file-'))[-1]
+        parts = filestr.split('.')
+        if len(parts) < 2:
+            return None
+        filename, framenum = parts[0], parts[1]
+        if len(parts) == 3:
+            chunks = map(int, (parts[2]).split('%'))
+        else:
+            chunks = None
+
+        if True:
+            print filestr
+        return (filename, framenum, chunks)
+
 logging.basicConfig(level=logging.DEBUG)
 
 # Import SOCKS module if it exists, else standard socket module socket
@@ -119,6 +139,7 @@ class StreamFTP(threading.Thread, FTP, object):
                 fname = cmd.split(' ')[1]
                 try:
                     resp = self.retrbinary(cmd, self.callback(self.chunk_size, fname))
+                    # resp = self.retrbinary(cmd, open(fname, 'wb').write)
                 except socket.error:
                     # something strange happened with the connection; most
                     # likely a cache disconnection.  Ask the tracker to
@@ -150,7 +171,7 @@ def runrecv(packet_size, fname):
     # ret_status = ftp.retrbinary('RETR ' + fname, filecallback(fname, file_to_write))
 
     ret_status = ftp.retrbinary('RETR ' + fname, chunkcallback( \
-            32772, fname))
+            packet_size, fname))
     # file_to_write.close()
     ftp.quit()
 

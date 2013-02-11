@@ -147,8 +147,7 @@ class CacheHandler(StreamHandler):
                 fd = self.run_as_current_user(self.fs.open, filepath, 'rb')
                 files.put(fd)
                 if (True):
-                    print filename, chunk_num
-                    print "Sending chunk_num", chunk_num
+                    print "Sending chunk", filename 
             #except StopIteration, err:
                 #print x
                 #why = ftpserver._strerror(err)
@@ -191,7 +190,8 @@ class ServerDownloader(threadclient.ThreadClient, threading.Thread):
         return helper
 
 if __name__ == "__main__":
-    address = ("10.10.66.187", 21) # local airbears
+    # address = ("10.0.1.4", 21) # lisa home
+    address = ("10.10.66.9", 21) # local airbears
     # path = "/home/nick/Dropbox/Berkeley 2012-2013/Research/P2PVideoShare/"
     path = "/Users/Lisa/Research/"
 

@@ -98,24 +98,27 @@ class ThreadClient(object):
         if not chunks:
             chunks = self.chunks
 
+        dirname = fname
         # directory name by convention is filename itself.
-        if not os.path.isdir(fname):
-            os.mkdir(fname)
+        if not os.path.isdir(dirname):
+            os.mkdir(dirname)
+
 
         def helper(data):
             filestr = fname + '/' + fname + '.' + str(chunks[order_and_data[0]])
-            datastring = data + order_and_data[1]
+            datastring = ''.join([order_and_data[1], data])
             curr_bytes = sys.getsizeof(datastring)
-            outputStr = "%s: Received %d bytes. Current Total: %d bytes.\n" % \
-                (filestr, sys.getsizeof(data), curr_bytes)
-            sys.stdout.write(outputStr)
-            sys.stdout.flush()
+            # outputStr = "%s: Received %d bytes. Current Total: %d bytes.\n" % \
+            #     (filestr, sys.getsizeof(data), curr_bytes)
+            # sys.stdout.write(outputStr)
+            # sys.stdout.flush()
             # print "Current", str(curr_bytes), "vs. expected", str(expected_threshold[0])
             if curr_bytes >= expected_threshold[0]:
-                outputStr = "Writing %d bytes to %s.\n" % \
-                    (curr_bytes, filestr)
-                sys.stdout.write(outputStr)
-                sys.stdout.flush()
+                if (True):  
+                    outputStr = "Writing %s (actual: %d, expected: %d).\n" % \
+                        (filestr, curr_bytes, chunk_size)
+                    sys.stdout.write(outputStr)
+                    sys.stdout.flush()
                 file_to_write = open(filestr, 'wb')
                 file_to_write.write(datastring)
                 file_to_write.close()
@@ -126,10 +129,7 @@ class ThreadClient(object):
             else:
                 order_and_data[1] = datastring
                 # expecting one more packet, so add a header size.
-                expected_threshold[0] += header_and_total_chunk[0]
-
-        if True:
-            print "Expected chunk_size:", chunk_size
+                # expected_threshold[0] += header_and_total_chunk[0]
 
         return helper
 
