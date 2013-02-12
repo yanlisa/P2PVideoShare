@@ -100,6 +100,7 @@ class StreamHandler(ftpserver.FTPHandler):
 
                 producer = self.chunkproducer(files, self._current_type)
                 self.push_dtp_data(producer, isproducer=True, file=None, cmd="RETR")
+                print self._current_type
                 return
 
         if file.find(StreamHandler.movies_path) == 0:
@@ -282,9 +283,6 @@ class FileStreamProducer(ftpserver.FileProducer):
     def more(self):
         time.sleep(self.wait_time)
         data = super(FileStreamProducer, self).more()
-        if (True):
-            print "Sending part of %s (size: %d)" % \
-                (self.file.name, sys.getsizeof(data))
         return data
 
 class FileChunkProducer(FileStreamProducer):
