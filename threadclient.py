@@ -99,8 +99,10 @@ class ThreadClient(object):
 
         dirname = fname
         # directory name by convention is filename itself.
-        if not os.path.isdir(dirname):
+        try:
             os.mkdir(dirname)
+        except:
+            pass
 
         def helper(data):
             filestr = fname + '/' + fname + '.' + str(chunks[order_and_data[0]])
@@ -111,7 +113,7 @@ class ThreadClient(object):
             else:
                 trunc_data = data
                 if extra_bytes > 0:
-                    trunc_data = data[:chunk_size]
+                    trunc_data = data[:len(data)-extra_bytes]
                 datastring = ''.join([order_and_data[1], trunc_data])
                 if (True):  
                     # outputStr = "%s: Received %d bytes. Current Total: %d bytes.\n" % \
@@ -131,7 +133,7 @@ class ThreadClient(object):
                 order_and_data[0] += 1 # new file extension
 
                 if extra_bytes > 0:
-                    order_and_data[1] = data[extra_bytes:]
+                    order_and_data[1] = data[len(data)-extra_bytes:]
 
         return helper
 

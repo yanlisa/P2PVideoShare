@@ -152,6 +152,8 @@ class StreamFTP(threading.Thread, FTP, object):
                     # Let the operator know.
                     logging.exception("Unexpected error" + str(sys.exc_info()[0]))
                     break
+            elif fn_name == "ABOR":
+                resp = self.abort()
             else: # for any other command, call retrlines.
                 try:
                     resp = self.retrlines(cmd)

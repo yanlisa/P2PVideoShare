@@ -15,7 +15,7 @@ class P2PUser():
         self.packet_size = packet_size
         # cache_ip = ['107.21.135.254', '107.21.135.254']
         #cache_ip = ['174.129.174.31', '10.0.0.10'] # 1: Lisa EC2, local
-        cache_ip = ['107.21.135.254', '10.10.66.101']
+        cache_ip = ['107.21.135.254', '10.10.67.107']
         # cache_ip = ['174.129.174.31', '10.0.1.4'] # 1: Lisa EC2, Lisa home 
         self.clients = []
         for i in xrange(2):
@@ -43,7 +43,8 @@ class P2PUser():
         available_chunks = set([])
         self.clients[0].put_instruction('VLEN file-%s' % (video_name))
         video_length = int(self.clients[0].get_response())
-        base_file_name = video_name + '.1/' + video_name
+        base_file_name = video_name + '.flv'
+        base_file = open(base_file_name, 'ab')
         for frame_number in xrange(start_frame, video_length):
             filename = 'file-' + video_name + '.' + str(frame_number)
 
@@ -52,13 +53,15 @@ class P2PUser():
             self.clients[0].put_instruction(inst)
             chunks = self.clients[0].get_response()
             chunks = chunks[1:-2].split(', ')
-            client0_request = chunks_to_request([], chunks, 5)
+            # Number of chunks requested.
+            client0_request = chunks_to_request([], chunks, 30)
             client0_request_string = '%'.join(client0_request)
 
             self.clients[1].put_instruction(inst)
             chunks = self.clients[1].get_response()
             chunks = chunks[1:-2].split(', ')
-            client1_request = chunks_to_request(client0_request, chunks, 5)
+            # Number of chunks requested.
+            client1_request = chunks_to_request(client0_request, chunks, 30)
             client1_request_string = '%'.join(client1_request)
 
             #print 'client available chunks: %s' % (str(chunks))
@@ -71,7 +74,11 @@ class P2PUser():
             #print len(available_chunks)
             sleep(8)
 
-            server_request = chunks_to_request(client0_request + client1_request, range(0, 40), 10)
+            (self.clients[0]).client.abort()
+            (self.clients[1]).client.abort()
+
+            # Number of chunks requested.
+            server_request = chunks_to_request(client0_request + client1_request, range(0, 40), 2)
             server_request_string = '%'.join(server_request)
             self.server_client.put_instruction(inst + '.' + server_request_string)
             if(True):
@@ -91,7 +98,6 @@ class P2PUser():
                 chunksList.append(chunkFile)
             if frame_number != start_frame:
                 print 'size of base file:', os.path.getsize(base_file_name)
-            base_file = open(base_file_name, 'ab')
             print 'trying to decode'
             filefec.decode_from_files(base_file, chunksList)
             print 'decoded.  Size of base file =', os.path.getsize(base_file_name)
