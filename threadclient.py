@@ -103,20 +103,27 @@ class ThreadClient(object):
         if not os.path.isdir(dirname):
             os.mkdir(dirname)
 
-
         def helper(data):
             filestr = fname + '/' + fname + '.' + str(chunks[order_and_data[0]])
-            datastring = ''.join([order_and_data[1], data])
-            curr_bytes = sys.getsizeof(datastring)
-            # outputStr = "%s: Received %d bytes. Current Total: %d bytes.\n" % \
-            #     (filestr, sys.getsizeof(data), curr_bytes)
-            # sys.stdout.write(outputStr)
-            # sys.stdout.flush()
-            # print "Current", str(curr_bytes), "vs. expected", str(expected_threshold[0])
-            if curr_bytes >= expected_threshold[0]:
+            prev_bytes = len(order_and_data[1])
+            curr_bytes = len(data)
+            total_curr_bytes = prev_bytes + curr_bytes
+            extra_bytes = total_curr_bytes - expected_threshold[0]
+            if extra_bytes < 0: # expecting more tcp packets
+                order_and_data[1] = ''.join([order_and_data[1], data])
+            else:
+                trunc_data = data
+                if extra_bytes > 0:
+                    trunc_data = data[:extra_bytes]
+                datastring = ''.join([order_and_data[1], trunc_data])
                 if (True):  
+                    # outputStr = "%s: Received %d bytes. Current Total: %d bytes.\n" % \
+                    #     (filestr, sys.getsizeof(data), curr_bytes)
+                    # sys.stdout.write(outputStr)
+                    # sys.stdout.flush()
+                    # print "Current", str(curr_bytes), "vs. expected", str(expected_threshold[0])
                     outputStr = "Writing %s (actual: %d, expected: %d).\n" % \
-                        (filestr, curr_bytes, chunk_size)
+                        (filestr, len(datastring), chunk_size)
                     sys.stdout.write(outputStr)
                     sys.stdout.flush()
                 file_to_write = open(filestr, 'wb')
@@ -126,10 +133,9 @@ class ThreadClient(object):
                 order_and_data[1] = '' # new data string
                 expected_threshold[0] = header_and_total_chunk[1] # new threshold.
                 order_and_data[0] += 1 # new file extension
-            else:
-                order_and_data[1] = datastring
-                # expecting one more packet, so add a header size.
-                # expected_threshold[0] += header_and_total_chunk[0]
+
+                if extra_bytes > 0:
+                    order_and_data[1] = data[extra_bytes:]
 
         return helper
 
