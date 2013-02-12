@@ -84,8 +84,7 @@ class ThreadClient(object):
 
     def chunkcallback(self, chunk_size, fnamestr):
         order_and_data = [0, '']
-        header_and_total_chunk = (37, chunk_size) # header is 37B
-        expected_threshold = [header_and_total_chunk[1]]
+        expected_threshold = [chunk_size]
 
         parsed_form = parse_chunks(fnamestr)
         chunks = None
@@ -105,16 +104,14 @@ class ThreadClient(object):
 
         def helper(data):
             filestr = fname + '/' + fname + '.' + str(chunks[order_and_data[0]])
-            prev_bytes = len(order_and_data[1])
-            curr_bytes = len(data)
-            total_curr_bytes = prev_bytes + curr_bytes
+            total_curr_bytes = len(order_and_data[1]) + len(data)
             extra_bytes = total_curr_bytes - expected_threshold[0]
             if extra_bytes < 0: # expecting more tcp packets
                 order_and_data[1] = ''.join([order_and_data[1], data])
             else:
                 trunc_data = data
                 if extra_bytes > 0:
-                    trunc_data = data[:extra_bytes]
+                    trunc_data = data[:chunk_size]
                 datastring = ''.join([order_and_data[1], trunc_data])
                 if (True):  
                     # outputStr = "%s: Received %d bytes. Current Total: %d bytes.\n" % \
@@ -122,8 +119,8 @@ class ThreadClient(object):
                     # sys.stdout.write(outputStr)
                     # sys.stdout.flush()
                     # print "Current", str(curr_bytes), "vs. expected", str(expected_threshold[0])
-                    outputStr = "Writing %s (actual: %d, expected: %d).\n" % \
-                        (filestr, len(datastring), chunk_size)
+                    outputStr = "Writing %s (actual: %d, expected: %d, totalCurrBytes: %d).\n" % \
+                        (filestr, len(datastring), chunk_size, total_curr_bytes)
                     sys.stdout.write(outputStr)
                     sys.stdout.flush()
                 file_to_write = open(filestr, 'wb')
@@ -131,7 +128,6 @@ class ThreadClient(object):
                 file_to_write.close()
                 # reset
                 order_and_data[1] = '' # new data string
-                expected_threshold[0] = header_and_total_chunk[1] # new threshold.
                 order_and_data[0] += 1 # new file extension
 
                 if extra_bytes > 0:

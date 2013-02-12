@@ -25,7 +25,7 @@ def split_and_encode(filestr, k, n):
     forig = open(filestr, 'rb')
     data = forig.read(chunk_size)
     while data:
-        subfilestr = filename + '.' + str(chunk_num)
+        subfilestr = filename.replace('_', '-') + '.' + str(chunk_num)
         subfile = open(dirname + '/' + subfilestr, 'wb')
         subfile.write(data)
         subfile.close()

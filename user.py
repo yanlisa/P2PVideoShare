@@ -3,6 +3,7 @@ from time import sleep
 import re
 from threadclient import ThreadClient
 from ftplib import error_perm
+from zfec import filefec
 
 class P2PUser():
 
@@ -13,7 +14,8 @@ class P2PUser():
         """
         self.packet_size = packet_size
         # cache_ip = ['107.21.135.254', '107.21.135.254']
-        cache_ip = ['174.129.174.31', '10.10.66.9'] # 1: Lisa EC2, local
+        #cache_ip = ['174.129.174.31', '10.0.0.10'] # 1: Lisa EC2, local
+        cache_ip = ['107.21.135.254', '10.10.66.101']
         # cache_ip = ['174.129.174.31', '10.0.1.4'] # 1: Lisa EC2, Lisa home 
         self.clients = []
         for i in xrange(2):
@@ -41,6 +43,7 @@ class P2PUser():
         available_chunks = set([])
         self.clients[0].put_instruction('VLEN file-%s' % (video_name))
         video_length = int(self.clients[0].get_response())
+        base_file_name = video_name + '.1/' + video_name
         for frame_number in xrange(start_frame, video_length):
             filename = 'file-' + video_name + '.' + str(frame_number)
 
@@ -77,6 +80,21 @@ class P2PUser():
                 # simple load 1 to 10.
                 # for i in xrange(len(server_request)):
                 #     server_request[i] = str(server_request[i])
+
+            # put together chunks into single frame; then concatenate onto original file.
+            sleep(2)
+            print 'about to decode...'
+            folder_name = video_name + '.' + str(frame_number) + '/'
+            chunksList = []
+            for chunk in os.listdir(folder_name):
+                chunkFile = open(folder_name + chunk, 'rb')
+                chunksList.append(chunkFile)
+            if frame_number != start_frame:
+                print 'size of base file:', os.path.getsize(base_file_name)
+            base_file = open(base_file_name, 'ab')
+            print 'trying to decode'
+            filefec.decode_from_files(base_file, chunksList)
+            print 'decoded.  Size of base file =', os.path.getsize(base_file_name)
 
 def chunks_to_request(A, B, num_ret):
     """ Find the elements in B that are not in A. From these elements, return a
