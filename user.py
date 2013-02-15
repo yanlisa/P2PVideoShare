@@ -74,10 +74,15 @@ class P2PUser():
             #print len(available_chunks)
             sleep(8)
 
+            # immediately stop cache downloads.
             (self.clients[0]).client.abort()
             (self.clients[1]).client.abort()
 
-            # Number of chunks requested.
+            # Request from server remaining chunks missing
+
+            # TODO: Find the chunks received so far using OS.
+            # First argument: chunks received, Second: server chunks (everything), Third: # chunks needed 
+            # third arg: k (= 20) - len(first arg)
             server_request = chunks_to_request(client0_request + client1_request, range(0, 40), 2)
             server_request_string = '%'.join(server_request)
             self.server_client.put_instruction(inst + '.' + server_request_string)
