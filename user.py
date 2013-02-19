@@ -1,6 +1,7 @@
 from streamer import *
 from time import sleep
 import re
+import sets
 from threadclient import ThreadClient
 from ftplib import error_perm
 from zfec import filefec
@@ -11,6 +12,7 @@ DEBUGGING_MSG = True
 # Global parameters
 CACHE_DOWNLOAD_DURATION = 12 # sec
 SERVER_DOWNLOAD_DURATION = 2 # sec
+DECODE_WAIT_DURATION = 0.1 # sec
 
 # IP Table
 ip_local = 'localhost'
@@ -18,8 +20,8 @@ ip_ec2_lisa = '174.129.174.31'
 ip_ec2_nick = '107.21.135.254'
 
 # IP Configuration
-cache_ip_address = [(ip_ec2_lisa, 21), (ip_local, 22)]
-server_ip_address = (ip_ec2_nick, 21)
+cache_ip_address = [(ip_ec2_lisa, 25), (ip_local, 22)]
+server_ip_address = (ip_ec2_nick, 25)
 
 class P2PUser():
 
@@ -60,6 +62,8 @@ class P2PUser():
         base_file = open(base_file_name, 'ab')
         for frame_number in xrange(start_frame, video_length):
             filename = 'file-' + video_name + '.' + str(frame_number)
+            # directory for this frame
+            folder_name = video_name + '.' + str(frame_number) + '/'
 
             # get available chunks lists from cache A and B.
             inst = 'CNKS ' + filename
@@ -75,7 +79,7 @@ class P2PUser():
             chunks = self.clients[1].get_response()
             chunks = chunks[1:-2].split(', ')
             # Number of chunks requested.
-            client1_request = chunks_to_request(client0_request, chunks, 16)
+            client1_request = chunks_to_request(client0_request, chunks, 10)
             client1_request_string = '%'.join(client1_request)
             print client1_request_string
 
@@ -94,44 +98,76 @@ class P2PUser():
             (self.clients[1]).client.abort()
 
             # Look up the download directory and count the downloaded chunks
-
+            chunk_nums_rx = chunk_nums_in_frame_dir(folder_name)
+            if (DEBUGGING_MSG):
+                print "%d chunks received from caches for frame %d: " % (len(chunk_nums_rx), frame_number)
+                print chunk_nums_rx
 
             # Request from server remaining chunks missing
 
             # TODO: Find the chunks received so far using OS.
             # First argument: chunks received, Second: server chunks (everything), Third: # chunks needed
             # third arg: k (= 20) - len(first arg)
-            total_num_of_chunks_rx = len(client0_request + client1_request)
-            if (total_num_of_chunks_rx >= 1000):
+            num_chunks_rx = len(chunk_nums_rx)
+            if (num_chunks_rx >= 20):
                 print 'Nothing to download from the server :D'
             else:
-                server_request = chunks_to_request(client0_request + client1_request, range(0, 40), 5)
-                server_request_string = '%'.join(server_request)
-                self.server_client.put_instruction(inst + '.' + server_request_string)
-                if(DEBUGGING_MSG):
-                    print 'Requesting %s from server' % \
-                        (server_request_string)
-                    # simple load 1 to 10.
-                    # for i in xrange(len(server_request)):
-                    #     server_request[i] = str(server_request[i])
+                server_request = chunks_to_request(chunk_nums_rx, range(0, 40), 20 - num_chunks_rx)
+                if server_request:
+                    server_request_string = '%'.join(server_request)
+                    self.server_client.put_instruction(inst + '.' + server_request_string)
+                    if(DEBUGGING_MSG):
+                        print 'Requesting %s from server' % \
+                            (server_request_string)
+                elif (DEBUGGING_MSG):
+                    print "No unique chunks from server requested."
 
-                # put together chunks into single frame; then concatenate onto original file.
             sleep(SERVER_DOWNLOAD_DURATION)
 
+            if (DEBUGGING_MSG):
+                print "[user.py] Waiting to receive all elements from server."
+            while True:
+                chunk_nums = chunk_nums_in_frame_dir(folder_name)
+                num_chunks_rx = len(chunk_nums)
+                if num_chunks_rx >= 20:
+                    break
+                sleep(DECODE_WAIT_DURATION)
+
+            if (DEBUGGING_MSG):
+                print "[user.py] Received 20 packets"
+            
             # abort the connection to the server
             self.server_client.client.abort()
 
+            # put together chunks into single frame; then concatenate onto original file.
             print 'about to decode...'
-            folder_name = video_name + '.' + str(frame_number) + '/'
-            chunksList = []
-            for chunk in os.listdir(folder_name):
-                chunkFile = open(folder_name + chunk, 'rb')
-                chunksList.append(chunkFile)
+            chunksList = chunk_files_in_frame_dir(folder_name)
+
             if frame_number != start_frame:
                 print 'size of base file:', os.path.getsize(base_file_name)
             print 'trying to decode'
             filefec.decode_from_files(base_file, chunksList)
             print 'decoded.  Size of base file =', os.path.getsize(base_file_name)
+
+def chunk_nums_in_frame_dir(folder_name):
+    # returns an array of chunk numbers (ints) in this frame.
+    # folder_name ends in '/'.
+    # assumes chunk filenames end in chunk number.
+    chunksNums = [] 
+    for chunk_name in os.listdir(folder_name):
+        chunk_suffix = (chunk_name.split('.'))[-1]
+        if chunk_suffix.isdigit():
+            chunksNums.append(chunk_suffix)
+    return chunksNums
+
+def chunk_files_in_frame_dir(folder_name):
+    # opens file objects for each file in the directory.
+    # folder_name ends in '/'.
+    chunksList = []
+    for chunk_name in os.listdir(folder_name):
+        chunkFile = open(folder_name + chunk_name, 'rb')
+        chunksList.append(chunkFile)
+    return chunksList
 
 def chunks_to_request(A, B, num_ret):
     """ Find the elements in B that are not in A. From these elements, return a
@@ -144,16 +180,10 @@ def chunks_to_request(A, B, num_ret):
     For now, it may just be easiest to take the first num_ret elements of the
     non-overlapping set instead of randomizing the elements to choose from the
     non-overlapping set. """
-    #intersection = set(A) & set(B)
-    ret_list = []
-    for element in B:
-        if not isinstance(element, str):
-            element = str(element)
-        if len(ret_list) >= num_ret:
-            break
-        if not element in A:
-            ret_list.append(element)
-    return ret_list
+    set_A, set_B = sets.Set(map(str, A)), sets.Set(map(str, B)) # map all elts to str
+    list_diff = list(set_B - set_A)
+    list_diff.sort()
+    return list_diff[:min(len(set_B - set_A), num_ret)]
 
 if __name__ == "__main__":
     print "Arguments:", sys.argv

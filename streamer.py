@@ -48,7 +48,6 @@ class StreamFTP(threading.Thread, FTP, object):
         self.callback = None
         self.chunks = []
         self.chunk_size = chunk_size
-        print 'hi'
         FTP.__init__(self)
         host_ip_address = host[0]
         host_port_num = host[1]
