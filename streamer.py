@@ -37,17 +37,23 @@ try:
 except ImportError:
     import socket
 from socket import _GLOBAL_DEFAULT_TIMEOUT
- 
+
 class StreamFTP(threading.Thread, FTP, object):
     def __init__(self, host='', user='', passwd='', acct='',
                  timeout=10.0, chunk_size=2504):
+        print "DEBUG, host : ", host
         self.instr_queue = Queue.Queue()
         self.resp_queue = Queue.Queue() # responses, in order.
         self.conn = None # connection socket
         self.callback = None
         self.chunks = []
         self.chunk_size = chunk_size
-        FTP.__init__(self, host, user, passwd, acct, timeout)
+        print 'hi'
+        FTP.__init__(self)
+        host_ip_address = host[0]
+        host_port_num = host[1]
+        FTP.connect(self, host_ip_address, host_port_num, 3)
+        #FTP.__init__(self, host, user, passwd, acct, timeout)
         threading.Thread.__init__(self)
 
     def set_chunk_size(self, chunk_size):

@@ -5,6 +5,22 @@ from threadclient import ThreadClient
 from ftplib import error_perm
 from zfec import filefec
 
+# Debugging MSG
+DEBUGGING_MSG = True
+
+# Global parameters
+CACHE_DOWNLOAD_DURATION = 12 # sec
+SERVER_DOWNLOAD_DURATION = 2 # sec
+
+# IP Table
+ip_local = 'localhost'
+ip_ec2_lisa = '174.129.174.31'
+ip_ec2_nick = '107.21.135.254'
+
+# IP Configuration
+cache_ip_address = [(ip_ec2_lisa, 21), (ip_local, 22)]
+server_ip_address = (ip_ec2_nick, 21)
+
 class P2PUser():
 
     def __init__(self, packet_size=2504):
@@ -13,16 +29,13 @@ class P2PUser():
         become dynamic when the tracker is implemented.
         """
         self.packet_size = packet_size
-        # cache_ip = ['107.21.135.254', '107.21.135.254']
-        #cache_ip = ['174.129.174.31', '10.0.0.10'] # 1: Lisa EC2, local
-        cache_ip = ['107.21.135.254', '10.10.67.107']
-        # cache_ip = ['174.129.174.31', '10.0.1.4'] # 1: Lisa EC2, Lisa home 
+        cache_ip = cache_ip_address
         self.clients = []
-        for i in xrange(2):
+        for i in xrange(len(cache_ip)):
             self.clients.append(ThreadClient(cache_ip[i], self.packet_size, i))
             # later: ask tracker.
         self.manager = None # TODO: create the manager class to decode/play
-        server_ip = '107.21.135.254' # the IP of the central server.
+        server_ip = server_ip_address
         self.server_client = ThreadClient(server_ip, self.packet_size)
 
     def play(self, video_name, frame_number):
@@ -54,15 +67,17 @@ class P2PUser():
             chunks = self.clients[0].get_response()
             chunks = chunks[1:-2].split(', ')
             # Number of chunks requested.
-            client0_request = chunks_to_request([], chunks, 30)
+            client0_request = chunks_to_request([], chunks, 6)
             client0_request_string = '%'.join(client0_request)
+            print client0_request_string
 
             self.clients[1].put_instruction(inst)
             chunks = self.clients[1].get_response()
             chunks = chunks[1:-2].split(', ')
             # Number of chunks requested.
-            client1_request = chunks_to_request(client0_request, chunks, 30)
+            client1_request = chunks_to_request(client0_request, chunks, 16)
             client1_request_string = '%'.join(client1_request)
+            print client1_request_string
 
             #print 'client available chunks: %s' % (str(chunks))
             #available_chunks = available_chunks | set(chunks)
@@ -72,29 +87,40 @@ class P2PUser():
             self.clients[0].put_instruction(inst + '.' + client0_request_string)
             self.clients[1].put_instruction(inst + '.' + client1_request_string)
             #print len(available_chunks)
-            sleep(8)
+            sleep(CACHE_DOWNLOAD_DURATION)
 
             # immediately stop cache downloads.
             (self.clients[0]).client.abort()
             (self.clients[1]).client.abort()
 
+            # Look up the download directory and count the downloaded chunks
+
+
             # Request from server remaining chunks missing
 
             # TODO: Find the chunks received so far using OS.
-            # First argument: chunks received, Second: server chunks (everything), Third: # chunks needed 
+            # First argument: chunks received, Second: server chunks (everything), Third: # chunks needed
             # third arg: k (= 20) - len(first arg)
-            server_request = chunks_to_request(client0_request + client1_request, range(0, 40), 2)
-            server_request_string = '%'.join(server_request)
-            self.server_client.put_instruction(inst + '.' + server_request_string)
-            if(True):
-                print 'Requesting %s from server' % \
-                    (server_request_string)
-                # simple load 1 to 10.
-                # for i in xrange(len(server_request)):
-                #     server_request[i] = str(server_request[i])
+            total_num_of_chunks_rx = len(client0_request + client1_request)
+            if (total_num_of_chunks_rx >= 1000):
+                print 'Nothing to download from the server :D'
+            else:
+                server_request = chunks_to_request(client0_request + client1_request, range(0, 40), 5)
+                server_request_string = '%'.join(server_request)
+                self.server_client.put_instruction(inst + '.' + server_request_string)
+                if(DEBUGGING_MSG):
+                    print 'Requesting %s from server' % \
+                        (server_request_string)
+                    # simple load 1 to 10.
+                    # for i in xrange(len(server_request)):
+                    #     server_request[i] = str(server_request[i])
 
-            # put together chunks into single frame; then concatenate onto original file.
-            sleep(2)
+                # put together chunks into single frame; then concatenate onto original file.
+            sleep(SERVER_DOWNLOAD_DURATION)
+
+            # abort the connection to the server
+            self.server_client.client.abort()
+
             print 'about to decode...'
             folder_name = video_name + '.' + str(frame_number) + '/'
             chunksList = []

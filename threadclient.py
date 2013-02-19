@@ -33,6 +33,7 @@ class ThreadClient(object):
         """
         Makes a StreamFTP thread and starts it.
         """
+        print "DEBUG, address : " , address
         self.client = StreamFTP(address)
         self.client.set_chunk_size(packet_size)
         self.client.set_callback(self.chunkcallback)
@@ -115,7 +116,7 @@ class ThreadClient(object):
                 if extra_bytes > 0:
                     trunc_data = data[:len(data)-extra_bytes]
                 datastring = ''.join([order_and_data[1], trunc_data])
-                if (True):  
+                if (True):
                     # outputStr = "%s: Received %d bytes. Current Total: %d bytes.\n" % \
                     #     (filestr, sys.getsizeof(data), curr_bytes)
                     # sys.stdout.write(outputStr)
