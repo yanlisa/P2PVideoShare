@@ -1,5 +1,6 @@
 from streamer import *
 from time import sleep
+import os
 import re
 import sets
 from threadclient import ThreadClient
@@ -10,7 +11,7 @@ from zfec import filefec
 DEBUGGING_MSG = True
 
 # Global parameters
-CACHE_DOWNLOAD_DURATION = 12 # sec
+CACHE_DOWNLOAD_DURATION = 8 # sec
 SERVER_DOWNLOAD_DURATION = 2 # sec
 DECODE_WAIT_DURATION = 0.1 # sec
 
@@ -20,8 +21,12 @@ ip_ec2_lisa = '174.129.174.31'
 ip_ec2_nick = '107.21.135.254'
 
 # IP Configuration
-cache_ip_address = [(ip_ec2_lisa, 25), (ip_local, 22)]
-server_ip_address = (ip_ec2_nick, 25)
+#cache_ip_address = [(ip_ec2_lisa, 25), (ip_local, 22)]
+cache_ip_address = []
+num_of_caches = 7
+for i in range(num_of_caches):
+    cache_ip_address.append((ip_ec2_lisa, 60000+i))
+server_ip_address = (ip_ec2_nick, 21)
 
 class P2PUser():
 
@@ -61,41 +66,35 @@ class P2PUser():
         base_file_name = video_name + '.flv'
         base_file = open(base_file_name, 'ab')
         for frame_number in xrange(start_frame, video_length):
+            print '[user.py] frame_number : ', frame_number
             filename = 'file-' + video_name + '.' + str(frame_number)
             # directory for this frame
             folder_name = video_name + '.' + str(frame_number) + '/'
 
             # get available chunks lists from cache A and B.
-            inst = 'CNKS ' + filename
-            self.clients[0].put_instruction(inst)
-            chunks = self.clients[0].get_response()
-            chunks = chunks[1:-2].split(', ')
-            # Number of chunks requested.
-            client0_request = chunks_to_request([], chunks, 6)
-            client0_request_string = '%'.join(client0_request)
-            print client0_request_string
+            inst_CNKS = 'CNKS ' + filename
+            inst_RETR = 'RETR ' + filename
 
-            self.clients[1].put_instruction(inst)
-            chunks = self.clients[1].get_response()
-            chunks = chunks[1:-2].split(', ')
-            # Number of chunks requested.
-            client1_request = chunks_to_request(client0_request, chunks, 10)
-            client1_request_string = '%'.join(client1_request)
-            print client1_request_string
+            req_so_far = []
+            for client in self.clients:
+                client.put_instruction(inst_CNKS)
+                chunks = client.get_response()
+                chunks = chunks[1:-2].split(', ')
+                client_request = chunks_to_request(req_so_far, chunks, 3)
+                req_so_far = list( set(req_so_far) | set(client_request) )
+                client_request_string = '%'.join(client_request)
+                client.put_instruction(inst_RETR + '.' + client_request_string)
+                print client_request_string
+            sleep(CACHE_DOWNLOAD_DURATION)
 
             #print 'client available chunks: %s' % (str(chunks))
             #available_chunks = available_chunks | set(chunks)
             #client.set_chunks(str(available_chunks & set(chunks)))
-            inst = 'RETR ' + filename
-            print inst
-            self.clients[0].put_instruction(inst + '.' + client0_request_string)
-            self.clients[1].put_instruction(inst + '.' + client1_request_string)
             #print len(available_chunks)
-            sleep(CACHE_DOWNLOAD_DURATION)
 
             # immediately stop cache downloads.
-            (self.clients[0]).client.abort()
-            (self.clients[1]).client.abort()
+            for client in self.clients:
+                client.client.abort()
 
             # Look up the download directory and count the downloaded chunks
             chunk_nums_rx = chunk_nums_in_frame_dir(folder_name)
@@ -115,7 +114,7 @@ class P2PUser():
                 server_request = chunks_to_request(chunk_nums_rx, range(0, 40), 20 - num_chunks_rx)
                 if server_request:
                     server_request_string = '%'.join(server_request)
-                    self.server_client.put_instruction(inst + '.' + server_request_string)
+                    self.server_client.put_instruction(inst_RETR + '.' + server_request_string)
                     if(DEBUGGING_MSG):
                         print 'Requesting %s from server' % \
                             (server_request_string)
@@ -135,7 +134,7 @@ class P2PUser():
 
             if (DEBUGGING_MSG):
                 print "[user.py] Received 20 packets"
-            
+
             # abort the connection to the server
             self.server_client.client.abort()
 
@@ -148,12 +147,15 @@ class P2PUser():
             print 'trying to decode'
             filefec.decode_from_files(base_file, chunksList)
             print 'decoded.  Size of base file =', os.path.getsize(base_file_name)
+            if frame_number == 1:
+                # Open VLC Player
+                os.system('/Applications/VLC.app/Contents/MacOS/VLC2 OnePiece575.flv &')
 
 def chunk_nums_in_frame_dir(folder_name):
     # returns an array of chunk numbers (ints) in this frame.
     # folder_name ends in '/'.
     # assumes chunk filenames end in chunk number.
-    chunksNums = [] 
+    chunksNums = []
     for chunk_name in os.listdir(folder_name):
         chunk_suffix = (chunk_name.split('.'))[-1]
         if chunk_suffix.isdigit():
