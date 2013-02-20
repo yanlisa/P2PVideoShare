@@ -8,7 +8,9 @@ Important: chunk_size: specifies size of chunk.
 """
 
 def split_and_encode(filestr, k, n):
-    chunk_size = 10* 10 * 1024 * 1024 / 8 # Size of Frame (10s each) 
+    chunk_size_in_Mbps = 3
+    chunk_size = 10* chunk_size_in_Mbps * 1024 * 1024 / 8 # Size of Frame (10s each) 
+
     chunk_num = 1
 
     filename = ''

@@ -19,7 +19,7 @@ class Cache(object):
         Obtain the queue of data from the FTP server."""
 
         self.chunks = []
-        while len(self.chunks) < 15:
+        while len(self.chunks) < 35:
             x = random.randint(0, 40)
             if not x in self.chunks:
                 self.chunks.append(x)
@@ -115,7 +115,8 @@ class CacheHandler(StreamHandler):
                 # frame number is expected to exist for this cache.
                 chunksdir = 'chunks-' + filename
                 framedir = filename + '.' + framenum + '.dir'
-                path = self.movies_path + '/' + chunksdir + '/' + framedir
+                path = self.movies_path + '/movies/' + chunksdir + '/' + framedir
+                print path
                 # get chunks list and open up all files
                 files = self.get_chunk_files(path, chunks)
             except OSError, err:
@@ -191,14 +192,20 @@ class ServerDownloader(threadclient.ThreadClient, threading.Thread):
 
 if __name__ == "__main__":
     # address = ("10.0.1.4", 21) # lisa home
-    address = ("10.10.66.9", 21) # local airbears
     # path = "/home/nick/Dropbox/Berkeley 2012-2013/Research/P2PVideoShare/"
-    path = "/Users/Lisa/Research/"
+    # path = "/Users/Lisa/Research/"
+    path = "/home/ec2-user/"
+    default_port = 21
 
     print "Arguments:", sys.argv
     packet_size = 5 * 1024 * 1024
-    if len(sys.argv) > 1:
+    if len(sys.argv) == 2:
         packet_size = int(sys.argv[1])
+        port_num = default_port
+    elif len(sys.argv) == 3:
+        packet_size = int(sys.argv[1])
+        port_num = int(sys.argv[2])
 
+    address = ("10.190.126.120", port_num) # local airbears
     cache = Cache(address, path, packet_size)
     cache.start_cache()
