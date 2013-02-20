@@ -5,6 +5,22 @@ from pyftpdlib import ftpserver
 import Queue
 import random
 
+# Debugging MSG
+DEBUGGING_MSG = True
+
+# Global parameters
+NUM_OF_CHUNKS_CACHE_STORES = 35
+
+# IP Table
+ip_local = 'localhost'
+ip_ec2_lisa = '174.129.174.31'
+ip_ec2_nick = '107.21.135.254'
+
+# IP Configuration
+cache_ip_address = 'localhost'
+cache_port = 22
+video_path = "/Users/kangwooklee/Dropbox/P2PVideoShare-git"
+
 class Cache(object):
     """
     Manages the cache as a whole. Has 3 main functions:
@@ -17,9 +33,10 @@ class Cache(object):
     def __init__(self, address, path, packet_size=2504):
         """Make the FTP server instance and the Cache Downloader instance.
         Obtain the queue of data from the FTP server."""
+        print 'Cache is initiated. Address : ', address
 
         self.chunks = []
-        while len(self.chunks) < 35:
+        while len(self.chunks) < NUM_OF_CHUNKS_CACHE_STORES:
             x = random.randint(0, 40)
             if not x in self.chunks:
                 self.chunks.append(x)
@@ -37,7 +54,7 @@ class Cache(object):
         self.mini_server = ThreadServer(address, handler)
         handler.set_movies_path(path)
 
-        if (True):
+        if (DEBUGGING_MSG):
             print "Chunks available on this cache:", self.chunks
 
     def start_cache(self):
@@ -115,8 +132,7 @@ class CacheHandler(StreamHandler):
                 # frame number is expected to exist for this cache.
                 chunksdir = 'chunks-' + filename
                 framedir = filename + '.' + framenum + '.dir'
-                path = self.movies_path + '/movies/' + chunksdir + '/' + framedir
-                print path
+                path = self.movies_path + '/' + chunksdir + '/' + framedir
                 # get chunks list and open up all files
                 files = self.get_chunk_files(path, chunks)
             except OSError, err:
@@ -147,15 +163,15 @@ class CacheHandler(StreamHandler):
                 filepath = path + '/' + filename
                 fd = self.run_as_current_user(self.fs.open, filepath, 'rb')
                 files.put(fd)
-                if (True):
-                    print "Sending chunk", filename 
+                if (DEBUGGING_MSG):
+                    print "Sending chunk", filename
             #except StopIteration, err:
                 #print x
                 #why = ftpserver._strerror(err)
                 #self.respond('544 %s' %why)
                 #break
 
-        return files 
+        return files
 
 class ServerDownloader(threadclient.ThreadClient, threading.Thread):
     """
@@ -191,21 +207,16 @@ class ServerDownloader(threadclient.ThreadClient, threading.Thread):
         return helper
 
 if __name__ == "__main__":
-    # address = ("10.0.1.4", 21) # lisa home
-    # path = "/home/nick/Dropbox/Berkeley 2012-2013/Research/P2PVideoShare/"
-    # path = "/Users/Lisa/Research/"
-    path = "/home/ec2-user/"
-    default_port = 21
-
-    print "Arguments:", sys.argv
-    packet_size = 5 * 1024 * 1024
     if len(sys.argv) == 2:
         packet_size = int(sys.argv[1])
-        port_num = default_port
     elif len(sys.argv) == 3:
         packet_size = int(sys.argv[1])
-        port_num = int(sys.argv[2])
+        cache_port = int(sys.argv[2])
 
-    address = ("10.190.126.120", port_num) # local airbears
+    path = video_path
+    packet_size = 5 * 1024 * 1024
+
+    address = (cache_ip_address, cache_port)
+
     cache = Cache(address, path, packet_size)
     cache.start_cache()

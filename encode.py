@@ -8,9 +8,7 @@ Important: chunk_size: specifies size of chunk.
 """
 
 def split_and_encode(filestr, k, n):
-    chunk_size_in_Mbps = 3
-    chunk_size = 10* chunk_size_in_Mbps * 1024 * 1024 / 8 # Size of Frame (10s each) 
-
+    chunk_size = 10 * 3 * 1024 * 1024 / 8 # Size of Frame (10s each)
     chunk_num = 1
 
     filename = ''
@@ -27,7 +25,7 @@ def split_and_encode(filestr, k, n):
     forig = open(filestr, 'rb')
     data = forig.read(chunk_size)
     while data:
-        subfilestr = filename + '.' + str(chunk_num)
+        subfilestr = filename.replace('_', '-') + '.' + str(chunk_num)
         subfile = open(dirname + '/' + subfilestr, 'wb')
         subfile.write(data)
         subfile.close()
