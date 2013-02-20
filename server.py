@@ -31,7 +31,7 @@ class StreamHandler(ftpserver.FTPHandler):
     """
     packet_size = 100 # default (in bytes)
     max_chunks = 40
-    movies_path='/home/ec2-user/movies'
+    movies_path='/home/ec2-user/movies/'
 
     def __init__(self, conn, server):
         (super(StreamHandler, self)).__init__(conn, server)
@@ -62,6 +62,7 @@ class StreamHandler(ftpserver.FTPHandler):
             chunk-<filename>.<ext>&<framenum>/<chunknum>
             file-<filename>
         """
+        print file
         parsedform = threadclient.parse_chunks(file)
         if parsedform:
             filename, framenum, chunks = parsedform
@@ -72,6 +73,9 @@ class StreamHandler(ftpserver.FTPHandler):
                 chunksdir = 'chunks-' + filename
                 framedir = filename + '.' + framenum + '.dir'
                 path = self.movies_path + '/' + chunksdir + '/' + framedir
+                print 'chunksdir', chunksdir
+                print 'framedir', framedir
+                print 'path', path
                 # get chunks list and open up all files
                 files = self.get_chunk_files(path, chunks)
             except OSError, err:
@@ -201,7 +205,8 @@ class StreamHandler(ftpserver.FTPHandler):
             why = "Format to VLEN should be file-<filename>."
             self.respond('544 %s' %why)
             return
-        path = StreamHandler.movies_path + '/' + 'chunks-' + fileformat[1]
+          # /home/ec2-user//movies chunks-OnePiece575/OnePiece575.1.dir
+        path = '/home/ec2-user/movies/chunks-' + fileformat[1]
         iterator = self.run_as_current_user(self.fs.get_list_dir, path)
         count = 0
         loops = 5000
@@ -346,9 +351,9 @@ def main_no_stream(user_params):
     pw = "1"
 
     authorizer = ftpserver.DummyAuthorizer()
-    authorizer.add_user(user, pw, "/home/ec2-user", perm='elr')
+    authorizer.add_user(user, pw, "/home/ec2-user/movies/", perm='elr')
     # allow anonymous login.
-    authorizer.add_anonymous("/home/ec2-user", perm='elr')
+    authorizer.add_anonymous("/home/ec2-user/movies/", perm='elr')
 
     handler = ftpserver.FTPHandler
     handler.authorizer = authorizer
@@ -365,7 +370,7 @@ def main():
         arg2: IP address 
         arg3: path
     """
-    path = "/home/ec2-user/"
+    path = "/home/ec2-user/movies/"
     #  address = ("10.190.126.120", 21) # Lisa EC2
     address = ("10.29.147.60", 21) # Nick EC2
 
