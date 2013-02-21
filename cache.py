@@ -18,7 +18,6 @@ ip_ec2_nick = '107.21.135.254'
 
 # IP Configuration
 cache_ip_address = 'localhost'
-cache_port = 22
 video_path = "/Users/kangwooklee/Dropbox/P2PVideoShare-git"
 
 class Cache(object):
@@ -40,6 +39,7 @@ class Cache(object):
             x = random.randint(0, 40)
             if not x in self.chunks:
                 self.chunks.append(x)
+
 
         self.authorizer = ftpserver.DummyAuthorizer()
         # allow anonymous login.
@@ -126,6 +126,7 @@ class CacheHandler(StreamHandler):
         parsedform = threadclient.parse_chunks(file)
         if parsedform:
             filename, framenum, chunks = parsedform
+            print '[cache.py] filename = ', filename
             print "chunks requested:", chunks
             try:
                 # filename should be prefixed by "file-" in order to be valid.
@@ -207,8 +208,10 @@ class ServerDownloader(threadclient.ThreadClient, threading.Thread):
         return helper
 
 if __name__ == "__main__":
+    cache_default_port = 21
     if len(sys.argv) == 2:
         packet_size = int(sys.argv[1])
+        cache_port = cache_default_port
     elif len(sys.argv) == 3:
         packet_size = int(sys.argv[1])
         cache_port = int(sys.argv[2])

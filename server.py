@@ -4,6 +4,9 @@ import Queue, time, re
 import threading
 import threadclient
 
+server_address = ("localhost", 22)
+path = "./"
+
 class ThreadServer(ftpserver.FTPServer, threading.Thread):
     """
         A threaded server. Requires a Handler.
@@ -27,11 +30,11 @@ class StreamHandler(ftpserver.FTPHandler):
     CacheHandler, a specific Handler to use for Caches, inherits from this one.
 
     Has two different responses for ftp_RETR:
-    -If type is of the form 'chunk-<filename>.<int>', send all 
+    -If type is of the form 'chunk-<filename>.<int>', send all
     """
     packet_size = 100 # default (in bytes)
     max_chunks = 40
-    movies_path='/home/ec2-user/movies/'
+    movies_path=path
 
     def __init__(self, conn, server):
         (super(StreamHandler, self)).__init__(conn, server)
@@ -181,7 +184,7 @@ class StreamHandler(ftpserver.FTPHandler):
                     why = _strerror(err)
                     self.respond('544 %s' %why)
                     break
-            return files 
+            return files
         for x in xrange(self.max_chunks):
             try:
                 liststr = iterator.next()
@@ -193,7 +196,7 @@ class StreamHandler(ftpserver.FTPHandler):
                 why = _strerror(err)
                 self.respond('544 %s' %why)
                 break
-        return files 
+        return files
 
     def ftp_VLEN(self, filename):
         """Checks the total frames available on this server for the desired
@@ -206,7 +209,7 @@ class StreamHandler(ftpserver.FTPHandler):
             self.respond('544 %s' %why)
             return
           # /home/ec2-user//movies chunks-OnePiece575/OnePiece575.1.dir
-        path = '/home/ec2-user/movies/chunks-' + fileformat[1]
+        path = path + '/chunks-' + fileformat[1]
         iterator = self.run_as_current_user(self.fs.get_list_dir, path)
         count = 0
         loops = 5000
@@ -264,7 +267,7 @@ class DTPPacketHandler(ftpserver.DTPHandler):
 class FileStreamProducer(ftpserver.FileProducer):
     """
     This class is not currently in use, but we will keep it here.
-    
+
     Wraps around FileProducer such that reading is limited by
     packet_size.
     Wait 0.1 s before calling more().
@@ -293,7 +296,7 @@ class FileStreamProducer(ftpserver.FileProducer):
 class FileChunkProducer(FileStreamProducer):
     """Takes a queue of file chunk objects and attempts to send
     one with each call to self.more().
-    
+
     If the network is limited, just send as much of each file chunk object
     as possible at a time, then send the remaining part of that file chunk
     on the next iteration and close the file chunk object. On the
@@ -351,9 +354,9 @@ def main_no_stream(user_params):
     pw = "1"
 
     authorizer = ftpserver.DummyAuthorizer()
-    authorizer.add_user(user, pw, "/home/ec2-user/movies/", perm='elr')
+    authorizer.add_user(user, pw, path, perm='elr')
     # allow anonymous login.
-    authorizer.add_anonymous("/home/ec2-user/movies/", perm='elr')
+    authorizer.add_anonymous(path, perm='elr')
 
     handler = ftpserver.FTPHandler
     handler.authorizer = authorizer
@@ -367,21 +370,11 @@ def main():
     """Parameters:
         No parameters: run with defaults (assume on ec2server)
         arg1: Packet_size
-        arg2: IP address 
-        arg3: path
     """
-    path = "/home/ec2-user/movies/"
-    #  address = ("10.190.126.120", 21) # Lisa EC2
-    address = ("10.29.147.60", 21) # Nick EC2
-
-    print "Arguments:", sys.argv
-    if len(sys.argv) > 1:
+    if len(sys.argv) == 2:
         packet_size = int(sys.argv[1])
         StreamHandler.set_packet_size(packet_size)
         print "StreamHandler now has size ", StreamHandler.packet_size
-    if len(sys.argv) == 4:
-        address = (sys.argv[2], 21)
-        path = sys.argv[3]
 
     authorizer = ftpserver.DummyAuthorizer()
     # allow anonymous login.
@@ -389,10 +382,11 @@ def main():
     handler = StreamHandler
     handler.authorizer = authorizer
     handler.masquerade_address = '107.21.135.254' # Nick EC2
-    # handler.masquerade_address = '174.129.174.31' # Lisa EC2 
+    # handler.masquerade_address = '174.129.174.31' # Lisa EC2
     handler.passive_ports = range(60000, 65535)
-    ftpd = ftpserver.FTPServer(address, handler)
+    ftpd = ftpserver.FTPServer(server_address, handler)
     ftpd.serve_forever()
 
 if __name__ == "__main__":
+    print path
     main()

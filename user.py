@@ -23,10 +23,11 @@ ip_ec2_nick = '107.21.135.254'
 # IP Configuration
 #cache_ip_address = [(ip_ec2_lisa, 25), (ip_local, 22)]
 cache_ip_address = []
-num_of_caches = 7
+num_of_caches = 1
+base_port = 21
 for i in range(num_of_caches):
-    cache_ip_address.append((ip_ec2_lisa, 60000+i))
-server_ip_address = (ip_ec2_nick, 21)
+    cache_ip_address.append((ip_local, base_port+i))
+server_ip_address = (ip_local, 23)
 
 class P2PUser():
 
