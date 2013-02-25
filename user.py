@@ -193,14 +193,23 @@ def chunks_to_request(A, B, num_ret):
 
 if __name__ == "__main__":
     print "Arguments:", sys.argv
-    packet_size = 5 * 1024 * 1024
-    if len(sys.argv) > 1:
-        packet_size = int(sys.argv[1])
 
-    file_name = 'hyunah'
-    if len(sys.argv) > 2:
-        file_name = sys.argv[2]
+    packet_size_LUT = {'hyunah':194829, 'OnePiece575':169433}
+
+    if len(sys.argv) == 2:
+        file_name = sys.argv[1]
+        if file_name in packet_size_LUT:
+            packet_size = packet_size_LUT[file_name]
+        else:
+            print '[user.py] The video ', file_name, ' does not exist.'
+            sys.exit()
+    else:
+        print '[user.py] user.py requires one argument'
+        sys.exit()
+
     test_user = P2PUser(packet_size)
     test_user.download(file_name, 1)
+
+    # 'self' does not exist here
     for client in self.clients:
         client.put_instruction('QUIT')
