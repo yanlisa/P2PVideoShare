@@ -2499,6 +2499,7 @@ class FTPHandler(object, asynchat.async_chat):
          - (file) file: the file[-like] object to send (if any).
         """
         if self.data_channel is not None:
+            print file
             self.respond("125 Data connection already open. Transfer starting.")
             if file:
                 self.data_channel.file_obj = file

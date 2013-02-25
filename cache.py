@@ -8,19 +8,14 @@ import csv
 
 # Debugging MSG
 DEBUGGING_MSG = True
-
-
 # Cache Configuration
-cache_config_file = 'config/cache_config.csv'
+cache_config_file = '../../config/cache_config.csv'
 
 # IP Table
-ip_local = 'localhost'
-ip_ec2_lisa = '174.129.174.31'
-ip_ec2_nick = '107.21.135.254'
-
-# IP Configuration
-cache_ip_address = 'localhost'
-video_path = "/Users/kangwooklee/Dropbox/P2PVideoShare-git"
+#ip_local = 'localhost'
+#ip_ec2_lisa = '174.129.174.31'
+#ip_ec2_nick = '107.21.135.254'
+video_path = '../../videos'
 
 class Cache(object):
     """
@@ -39,25 +34,21 @@ class Cache(object):
         # [ cache_id,
         #   private_ip, port #,
         #   masq_ip,
-        #   cache_path,
         #   packet_size,
         #   num_of_chunks_cache_stores ]
 
-        cache_id = cache_config[0]
-        address = (cache_config[1], cache_config[2])
+        cache_id = int(cache_config[0])
+        address = (cache_config[1], int(cache_config[2]))
+        print '[cache.py] Address : ', address
         masq_address = cache_config[3]
-        path = cache_config[4]
-        packet_size = cache_config[5]
-        num_of_chunks_cache_stores = cache_config[6]
-
-        print 'Cache is initiated. Address : ', address
+        packet_size = int(cache_config[4])
+        num_of_chunks_cache_stores = int(cache_config[5])
 
         self.chunks = []
         while len(self.chunks) < num_of_chunks_cache_stores:
             x = random.randint(0, 40)
             if not x in self.chunks:
                 self.chunks.append(x)
-
 
         self.authorizer = ftpserver.DummyAuthorizer()
         # allow anonymous login.
@@ -79,7 +70,9 @@ class Cache(object):
         """Start the FTP server and the CacheDownloader instance.
         Every <timestamp>, obtain the recorded data from the FTP server queue
         and ask the server for additional chunks if needed."""
+        print 'Trying to run a cache...'
         self.mini_server.start()
+        print 'Cache is running...'
 
 new_proto_cmds = proto_cmds # from server.py
 new_proto_cmds['CNKS'] = dict(perm='l', auth=True, arg=None,

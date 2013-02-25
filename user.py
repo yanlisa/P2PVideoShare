@@ -9,6 +9,7 @@ from zfec import filefec
 
 # Debugging MSG
 DEBUGGING_MSG = True
+VLC_PLAYER_USE = False
 
 # Global parameters
 CACHE_DOWNLOAD_DURATION = 8 # sec
@@ -23,8 +24,8 @@ ip_ec2_nick = '107.21.135.254'
 # IP Configuration
 #cache_ip_address = [(ip_ec2_lisa, 25), (ip_local, 22)]
 cache_ip_address = []
-num_of_caches = 1
-base_port = 60000
+num_of_caches = 2
+base_port = 60001
 for i in range(num_of_caches):
     cache_ip_address.append((ip_local, base_port+i))
 server_ip_address = (ip_local, 61000)
@@ -37,14 +38,16 @@ class P2PUser():
         become dynamic when the tracker is implemented.
         """
         self.packet_size = packet_size
+        # Connect to the server
+        server_ip = server_ip_address
+        self.server_client = ThreadClient(server_ip, self.packet_size)
+        # Connect to the caches
         cache_ip = cache_ip_address
         self.clients = []
         for i in xrange(len(cache_ip)):
             self.clients.append(ThreadClient(cache_ip[i], self.packet_size, i))
             # later: ask tracker.
         self.manager = None # TODO: create the manager class to decode/play
-        server_ip = server_ip_address
-        self.server_client = ThreadClient(server_ip, self.packet_size)
 
     def play(self, video_name, frame_number):
         """ Starts playing the video as identified by either name or number and
@@ -148,7 +151,7 @@ class P2PUser():
             print 'trying to decode'
             filefec.decode_from_files(base_file, chunksList)
             print 'decoded.  Size of base file =', os.path.getsize(base_file_name)
-            if frame_number == 1:
+            if frame_number == 1 and VLC_PLAYER_USE:
                 # Open VLC Player
                 os.system('/Applications/VLC.app/Contents/MacOS/VLC2 OnePiece575.flv &')
 

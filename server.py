@@ -5,7 +5,7 @@ import threading
 import threadclient
 
 server_address = ("localhost", 61000)
-path = "./"
+path = "."
 
 class ThreadServer(ftpserver.FTPServer, threading.Thread):
     """
@@ -98,6 +98,7 @@ class StreamHandler(ftpserver.FTPHandler):
                     chunksdir = 'chunks-' + filename
                     framedir = filename + '.' + framenum + '.dir'
                     path = StreamHandler.movies_path + '/' + chunksdir + '/' + framedir
+                    print path
                     filepath = path + '/' # INCOMPLETE. Need to decide on file format.
                     # get chunks list and open up all files
                     files = self.get_chunk_files(path)
@@ -178,6 +179,7 @@ class StreamHandler(ftpserver.FTPHandler):
                     chunk_num = (filename.split('_')[0]).split('.')[-1]
                     if chunk_num.isdigit() and int(chunk_num) in chunks:
                         filepath = path + '/' + filename
+                        print filepath
                         fd = self.run_as_current_user(self.fs.open, filepath, 'rb')
                         files.put(fd)
                 except StopIteration, err:
@@ -190,6 +192,7 @@ class StreamHandler(ftpserver.FTPHandler):
                 liststr = iterator.next()
                 filename = ((liststr.split(' ')[-1]).split('\r'))[0]
                 filepath = path + '/' + filename
+                print filepath
                 fd = self.run_as_current_user(self.fs.open, filepath, 'rb')
                 files.put(fd)
             except StopIteration, err:
@@ -210,6 +213,7 @@ class StreamHandler(ftpserver.FTPHandler):
             return
           # /home/ec2-user//movies chunks-OnePiece575/OnePiece575.1.dir
         path2 = path + '/chunks-' + fileformat[1]
+        print path2
         iterator = self.run_as_current_user(self.fs.get_list_dir, path2)
         count = 0
         loops = 5000
@@ -369,19 +373,18 @@ def main_no_stream(user_params):
 def main():
     """Parameters:
         No parameters: run with defaults (assume on ec2server)
-        arg1: Packet_size
     """
-    if len(sys.argv) == 2:
-        packet_size = int(sys.argv[1])
-        StreamHandler.set_packet_size(packet_size)
-        print "StreamHandler now has size ", StreamHandler.packet_size
+    packet_size = 300000
+    StreamHandler.set_packet_size(packet_size)
+    print "StreamHandler now has size ", StreamHandler.packet_size
 
     authorizer = ftpserver.DummyAuthorizer()
     # allow anonymous login.
+    print path
     authorizer.add_anonymous(path, perm='elr')
     handler = StreamHandler
     handler.authorizer = authorizer
-    handler.masquerade_address = '107.21.135.254' # Nick EC2
+    # handler.masquerade_address = '107.21.135.254' # Nick EC2
     # handler.masquerade_address = '174.129.174.31' # Lisa EC2
     handler.passive_ports = range(60000, 65535)
     ftpd = ftpserver.FTPServer(server_address, handler)
