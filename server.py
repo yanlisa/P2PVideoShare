@@ -4,7 +4,7 @@ import Queue, time, re
 import threading
 import threadclient
 
-server_address = ("localhost", 22)
+server_address = ("localhost", 61000)
 path = "./"
 
 class ThreadServer(ftpserver.FTPServer, threading.Thread):
@@ -209,8 +209,8 @@ class StreamHandler(ftpserver.FTPHandler):
             self.respond('544 %s' %why)
             return
           # /home/ec2-user//movies chunks-OnePiece575/OnePiece575.1.dir
-        path = path + '/chunks-' + fileformat[1]
-        iterator = self.run_as_current_user(self.fs.get_list_dir, path)
+        path2 = path + '/chunks-' + fileformat[1]
+        iterator = self.run_as_current_user(self.fs.get_list_dir, path2)
         count = 0
         loops = 5000
         for x in xrange(loops):

@@ -4,12 +4,14 @@ from server import *
 from pyftpdlib import ftpserver
 import Queue
 import random
+import csv
 
 # Debugging MSG
 DEBUGGING_MSG = True
 
-# Global parameters
-NUM_OF_CHUNKS_CACHE_STORES = 35
+
+# Cache Configuration
+cache_config_file = 'config/cache_config.csv'
 
 # IP Table
 ip_local = 'localhost'
@@ -29,13 +31,29 @@ class Cache(object):
     If not, use ServerDownloader to request different chunks from the server.
     """
 
-    def __init__(self, address, path, packet_size=2504):
+    def __init__(self, cache_config):
         """Make the FTP server instance and the Cache Downloader instance.
         Obtain the queue of data from the FTP server."""
+
+        # Parse cache configuration
+        # [ cache_id,
+        #   private_ip, port #,
+        #   masq_ip,
+        #   cache_path,
+        #   packet_size,
+        #   num_of_chunks_cache_stores ]
+
+        cache_id = cache_config[0]
+        address = (cache_config[1], cache_config[2])
+        masq_address = cache_config[3]
+        path = cache_config[4]
+        packet_size = cache_config[5]
+        num_of_chunks_cache_stores = cache_config[6]
+
         print 'Cache is initiated. Address : ', address
 
         self.chunks = []
-        while len(self.chunks) < NUM_OF_CHUNKS_CACHE_STORES:
+        while len(self.chunks) < num_of_chunks_cache_stores:
             x = random.randint(0, 40)
             if not x in self.chunks:
                 self.chunks.append(x)
@@ -207,19 +225,26 @@ class ServerDownloader(threadclient.ThreadClient, threading.Thread):
 
         return helper
 
+def load_cache_config(cache_id):
+    f = open(cache_config_file)
+    fs = csv.reader(f, delimiter = ' ')
+    for row in fs:
+        if int(row[0]) == cache_id:
+            if (DEBUGGING_MSG): print '[cache.py] Cache configuration : ', row
+            return row
+    # If not found
+    return None
+
 if __name__ == "__main__":
-    cache_default_port = 21
     if len(sys.argv) == 2:
-        packet_size = int(sys.argv[1])
-        cache_port = cache_default_port
-    elif len(sys.argv) == 3:
-        packet_size = int(sys.argv[1])
-        cache_port = int(sys.argv[2])
+        config = load_cache_config(int(sys.argv[1])) # Look up configuration of the given cache ID
+        if config == None:
+            print '[cache.py] cache_id not found'
+            sys.exit()
+    else:
+        print '[cache.py] cache.py needs an argument "cache_id"'
+        sys.exit()
 
-    path = video_path
-    packet_size = 5 * 1024 * 1024
-
-    address = (cache_ip_address, cache_port)
-
-    cache = Cache(address, path, packet_size)
+    cache = Cache(config)
     cache.start_cache()
+
