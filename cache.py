@@ -34,14 +34,14 @@ class Cache(object):
         # [ cache_id,
         #   private_ip, port #,
         #   masq_ip,
-        #   packet_size,
+        #   stream_rate,
         #   num_of_chunks_cache_stores ]
 
         cache_id = int(cache_config[0])
         address = (cache_config[1], int(cache_config[2]))
         print '[cache.py] Address : ', address
         masq_address = cache_config[3]
-        packet_size = int(cache_config[4])
+        stream_rate = int(cache_config[4])
         num_of_chunks_cache_stores = int(cache_config[5])
 
         self.chunks = []
@@ -58,7 +58,7 @@ class Cache(object):
         # handler.masquerade_address = '107.21.135.254'
         handler.passive_ports = range(60000, 65535)
 
-        handler.set_packet_size(packet_size)
+        handler.set_stream_rate(stream_rate)
         handler.set_chunks(self.chunks)
         self.mini_server = ThreadServer(address, handler)
         handler.set_movies_path(path)

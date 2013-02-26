@@ -32,26 +32,26 @@ class StreamHandler(ftpserver.FTPHandler):
     Has two different responses for ftp_RETR:
     -If type is of the form 'chunk-<filename>.<int>', send all
     """
-    packet_size = 100 # default (in bytes)
+    stream_rate = 10*1024 # default (10 Kbps)
     max_chunks = 40
-    movies_path=path
+    movies_path = path
 
     def __init__(self, conn, server):
         (super(StreamHandler, self)).__init__(conn, server)
         self._close_connection = False
-        self.dtp_handler = DTPPacketHandler
-        self.dtp_handler.set_buffer_size(self.packet_size)
+        self.dtp_handler = ftpserver.ThrottledDTPHandler 
         self.producer = ftpserver.FileProducer
+        self.dtp_handler.read_limit = self.stream_rate  # b/sec (ex 30Kbps = 30*1024)
+        self.dtp_handler.write_limit = self.stream_rate # b/sec (ex 30Kbps = 30*1024)
         self.chunkproducer = FileChunkProducer
-        self.chunkproducer.set_buffer_size(self.packet_size)
         self.proto_cmds = proto_cmds
 
     def get_chunks(self):
         return range(1, 40)
 
     @staticmethod
-    def set_packet_size(packet_size):
-        StreamHandler.packet_size = packet_size
+    def set_stream_rate(stream_rate):
+        StreamHandler.stream_rate = stream_rate
 
     @staticmethod
     def set_movies_path(path):
@@ -258,20 +258,8 @@ class StreamHandler(ftpserver.FTPHandler):
             print "Calling _on_dtp_connection."
         return super(StreamHandler, self)._on_dtp_connection()
 
-class DTPPacketHandler(ftpserver.DTPHandler):
-    def __init__(self, sock_obj, cmd_channel, out_buffer_size=65536):
-        super(DTPPacketHandler, self).__init__(sock_obj, cmd_channel)
-        DTPPacketHandler.ac_out_buffer_size = out_buffer_size
-
-    @staticmethod
-    def set_buffer_size(out_buffer_size):
-        # currently the one we use, not FileStreamProducer.
-        DTPPacketHandler.ac_out_buffer_size = out_buffer_size
-
 class FileStreamProducer(ftpserver.FileProducer):
     """
-    This class is not currently in use, but we will keep it here.
-
     Wraps around FileProducer such that reading is limited by
     packet_size.
     Wait 0.1 s before calling more().
@@ -286,6 +274,13 @@ class FileStreamProducer(ftpserver.FileProducer):
 
     @staticmethod
     def set_buffer_size(buffer_size):
+        """
+        No longer need to restrict the buffer, as ThrottledDTPHandler
+        takes care of streaming rate.
+
+        This function sets the size of data to be sent across the TCP conn.
+        That is, it is the size of the TCP packet (minus header).
+        """
         FileStreamProducer.buffer_size = buffer_size
 
     @staticmethod
@@ -316,6 +311,13 @@ class FileChunkProducer(FileStreamProducer):
 
     @staticmethod
     def set_buffer_size(buffer_size):
+        """
+        No longer need to restrict the buffer, as ThrottledDTPHandler
+        takes care of streaming rate.
+
+        This function sets the size of data to be sent across the TCP conn.
+        That is, it is the size of the TCP packet (minus header).
+        """
         FileChunkProducer.buffer_size = buffer_size
 
     def more(self):
@@ -374,9 +376,9 @@ def main():
     """Parameters:
         No parameters: run with defaults (assume on ec2server)
     """
-    packet_size = 300000
-    StreamHandler.set_packet_size(packet_size)
-    print "StreamHandler now has size ", StreamHandler.packet_size
+    stream_rate = 300000
+    StreamHandler.set_stream_rate(stream_rate)
+    print "StreamHandler now has size ", StreamHandler.stream_rate
 
     authorizer = ftpserver.DummyAuthorizer()
     # allow anonymous login.
