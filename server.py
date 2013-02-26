@@ -39,7 +39,7 @@ class StreamHandler(ftpserver.FTPHandler):
     def __init__(self, conn, server):
         (super(StreamHandler, self)).__init__(conn, server)
         self._close_connection = False
-        self.dtp_handler = ftpserver.ThrottledDTPHandler 
+        self.dtp_handler = ftpserver.ThrottledDTPHandler
         self.producer = ftpserver.FileProducer
         self.dtp_handler.read_limit = self.stream_rate  # b/sec (ex 30Kbps = 30*1024)
         self.dtp_handler.write_limit = self.stream_rate # b/sec (ex 30Kbps = 30*1024)

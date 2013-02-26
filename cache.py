@@ -5,6 +5,7 @@ from pyftpdlib import ftpserver
 import Queue
 import random
 import csv
+import time
 
 # Debugging MSG
 DEBUGGING_MSG = True
@@ -12,10 +13,6 @@ DEBUGGING_MSG = True
 cache_config_file = '../../config/cache_config.csv'
 
 # IP Table
-#ip_local = 'localhost'
-#ip_ec2_lisa = '174.129.174.31'
-#ip_ec2_nick = '107.21.135.254'
-video_path = '../../videos'
 
 class Cache(object):
     """

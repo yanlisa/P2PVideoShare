@@ -38,6 +38,7 @@ python ftplib.py -d localhost -l -p -l
 
 import os
 import sys
+import time
 
 # Import SOCKS module if it exists, else standard socket module socket
 try:
@@ -181,7 +182,16 @@ class FTP:
     # Internal: return one line from the server, stripping CRLF.
     # Raise EOFError if the connection is closed
     def getline(self):
-        line = self.file.readline()
+        while True:
+            try:
+                line = self.file.readline()
+                break
+            except socket.error as ex:
+                if str(ex) == "[Errno 35] Resource temporarily unavailable":
+                    print "[ftplib.py] [Errno 35] Resource temporarily unavailable. Retrying."
+                    time.sleep(0)
+                    continue
+                raise ex
         if self.debugging > 1:
             print '*get*', self.sanitize(line)
         if not line: raise EOFError
