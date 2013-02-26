@@ -376,7 +376,7 @@ def main():
     """Parameters:
         No parameters: run with defaults (assume on ec2server)
     """
-    stream_rate = 300000
+    stream_rate = 10000 # 10KB per sec
     StreamHandler.set_stream_rate(stream_rate)
     print "StreamHandler now has size ", StreamHandler.stream_rate
 
