@@ -55,9 +55,9 @@ class Cache(object):
         # handler.masquerade_address = '107.21.135.254'
         handler.passive_ports = range(60000, 65535)
 
-        handler.set_stream_rate(stream_rate)
         handler.set_chunks(self.chunks)
-        self.mini_server = ThreadServer(address, handler)
+        self.mini_server = ThreadServer(address, handler, stream_rate)
+        print "Cache streaming rate set to ", self.mini_server.stream_rate
         handler.set_movies_path(path)
 
         if (DEBUGGING_MSG):
@@ -86,8 +86,9 @@ class CacheHandler(StreamHandler):
     is done in a separate thread.
     """
     chunks = []
-    def __init__(self, conn, server):
-        StreamHandler.__init__(self, conn, server)
+    stream_rate = 10*1024 # Default is 10 Kbps
+    def __init__(self, conn, server, spec_rate=0):
+        super(CacheHandler, self).__init__(conn, server, spec_rate)
         self.transaction_record = Queue.Queue()
         self.proto_cmds = new_proto_cmds
 

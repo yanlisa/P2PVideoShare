@@ -1,18 +1,118 @@
+import asyncore
+import traceback
 import sys, errno
 from pyftpdlib import ftpserver
 import Queue, time, re
 import threading
 import threadclient
 
+# Debugging MSG
+DEBUGGING_MSG = True
+# Cache Configuration
 server_address = ("localhost", 61000)
 path = "."
 
-class ThreadServer(ftpserver.FTPServer, threading.Thread):
+class StreamFTPServer(ftpserver.FTPServer):
+    """One instance of the server is created every time this file is run.
+    On a new client connection, the server makes a new FTP connection handler.
+    Here, that handler is called StreamHandler.
+
+    For each FTP connection handler, when a new transfer request is made, 
+    PASV mode is set (passive conn handler created), and then on transfer
+    instantiation a DTP handler is created.
+
+    handle_accept: on new client connection.
+    """
+    stream_rate = 10000 # default rate
+
+    def __init__(self, address, handler, spec_rate=0):
+        super(StreamFTPServer, self).__init__(address, handler)
+        if spec_rate != 0:
+            self.stream_rate = spec_rate
+            if DEBUGGING_MSG:
+                print "StreamFTPServer stream rate:", self.stream_rate
+
+    def handle_accept(self):
+        """Mainly copy-pasted from FTPServer code. Added stream_rate parameter
+        to passive_dtp instantiator.
+        """
+        """Called when remote client initiates a connection."""
+        try:
+            sock, addr = self.accept()
+        except TypeError:
+            # sometimes accept() might return None (see issue 91)
+            return
+        except socket.error, err:
+            # ECONNABORTED might be thrown on *BSD (see issue 105)
+            if err.args[0] != errno.ECONNABORTED:
+                ftpserver.logerror(traceback.format_exc())
+            return
+        else:
+            # sometimes addr == None instead of (ip, port) (see issue 104)
+            if addr is None:
+                return
+
+        handler = None
+        ip = None
+        try:
+            """
+            *********************
+            handle = StreamHandler, which specifies stream_rate for the overall
+            tcp connection.
+
+            stream_rate is adjusted with handler.set_stream_rate.
+            *********************
+            """
+            handler = self.handler(sock, self, self.stream_rate)
+            if not handler.connected:
+                return
+            ftpserver.log("[]%s:%s Connected." % addr[:2])
+            ip = addr[0]
+            self.ip_map.append(ip)
+
+            # For performance and security reasons we should always set a
+            # limit for the number of file descriptors that socket_map
+            # should contain.  When we're running out of such limit we'll
+            # use the last available channel for sending a 421 response
+            # to the client before disconnecting it.
+            if self.max_cons and (len(asyncore.socket_map) > self.max_cons):
+                handler.handle_max_cons()
+                return
+
+            # accept only a limited number of connections from the same
+            # source address.
+            if self.max_cons_per_ip:
+                if self.ip_map.count(ip) > self.max_cons_per_ip:
+                    handler.handle_max_cons_per_ip()
+                    return
+
+            try:
+                handler.handle()
+            except:
+                handler.handle_error()
+        except (KeyboardInterrupt, SystemExit, asyncore.ExitNow):
+            raise
+        except:
+            # This is supposed to be an application bug that should
+            # be fixed. We do not want to tear down the server though
+            # (DoS). We just log the exception, hoping that someone
+            # will eventually file a bug. References:
+            # - http://code.google.com/p/pyftpdlib/issues/detail?id=143
+            # - http://code.google.com/p/pyftpdlib/issues/detail?id=166
+            # - https://groups.google.com/forum/#!topic/pyftpdlib/h7pPybzAx14
+            ftpserver.logerror(traceback.format_exc())
+            if handler is not None:
+                handler.close()
+            else:
+                if ip is not None and ip in self.ip_map:
+                    self.ip_map.remove(ip)
+
+class ThreadServer(StreamFTPServer, threading.Thread):
     """
         A threaded server. Requires a Handler.
     """
-    def __init__(self, address, handler):
-        ftpserver.FTPServer.__init__(self, address, handler)
+    def __init__(self, address, handler, spec_rate=0):
+        StreamFTPServer.__init__(self, address, handler, spec_rate)
         threading.Thread.__init__(self)
 
     def run(self):
@@ -36,26 +136,68 @@ class StreamHandler(ftpserver.FTPHandler):
     max_chunks = 40
     movies_path = path
 
-    def __init__(self, conn, server):
+    # Change PassiveDTP connection handler to handle variable streaming rate.
+    # On every PASV request (all requested DLs for anon users), create a new
+    # VariablePassiveDTP connection handler. On every transfer start, PassiveDTP
+    # connection handler creates a ThrottledDTPHandler. Here, again, to
+    # accommodate variable streaming rate, use VariableThrottledDTPHandler.
+
+    def __init__(self, conn, server, spec_rate=0):
         (super(StreamHandler, self)).__init__(conn, server)
         self._close_connection = False
-        self.dtp_handler = ftpserver.ThrottledDTPHandler
         self.producer = ftpserver.FileProducer
+        self.passive_dtp = VariablePassiveDTP
+        self.dtp_handler = VariableThrottledDTPHandler
         self.dtp_handler.read_limit = self.stream_rate  # b/sec (ex 30Kbps = 30*1024)
         self.dtp_handler.write_limit = self.stream_rate # b/sec (ex 30Kbps = 30*1024)
         self.chunkproducer = FileChunkProducer
         self.proto_cmds = proto_cmds
 
+        if spec_rate != 0:
+            self.stream_rate = spec_rate
+            if DEBUGGING_MSG:
+                print "Streaming FTP Handler stream rate:", self.stream_rate
+
     def get_chunks(self):
         return range(1, 40)
 
-    @staticmethod
-    def set_stream_rate(stream_rate):
-        StreamHandler.stream_rate = stream_rate
+    def set_stream_rate(self, spec_rate):
+        if spec_rate != 0:
+            self.stream_rate = spec_rate
+            if DEBUGGING_MSG:
+                print "Streaming FTP Handler stream rate changed to:", self.stream_rate
 
     @staticmethod
     def set_movies_path(path):
         StreamHandler.movies_path = path
+
+    def _make_epasv(self, extmode=False):
+        """Mainly copy-pasted from FTPServer code. Added stream_rate parameter
+        to passive_dtp instantiator.
+        """
+        """Initialize a passive data channel with remote client which
+        issued a PASV or EPSV command.
+        If extmode argument is True we assume that client issued EPSV in
+        which case extended passive mode will be used (see RFC-2428).
+        """
+        # close establishing DTP instances, if any
+        self._shutdown_connecting_dtp()
+
+        # close established data connections, if any
+        if self.data_channel is not None:
+            self.data_channel.close()
+            self.data_channel = None
+
+        # make sure we are not hitting the max connections limit
+        if self.server.max_cons:
+            if len(asyncore.socket_map) >= self.server.max_cons:
+                msg = "Too many connections. Can't open data channel."
+                self.respond("425 %s" %msg)
+                self.log(msg)
+                return
+
+        # open data channel
+        self._dtp_acceptor = self.passive_dtp(self, extmode, self.stream_rate)
 
     def ftp_RETR(self, file):
         """Retrieve the specified file (transfer from the server to the
@@ -65,22 +207,24 @@ class StreamHandler(ftpserver.FTPHandler):
             chunk-<filename>.<ext>&<framenum>/<chunknum>
             file-<filename>
         """
-        print file
+        if DEBUGGING_MSG:
+            print file
         parsedform = threadclient.parse_chunks(file)
         if parsedform:
             filename, framenum, chunks = parsedform
-            print "chunks requested:", chunks
             try:
                 # filename should be prefixed by "file-" in order to be valid.
                 # frame number is expected to exist for this cache.
                 chunksdir = 'chunks-' + filename
                 framedir = filename + '.' + framenum + '.dir'
                 path = self.movies_path + '/' + chunksdir + '/' + framedir
-                print 'chunksdir', chunksdir
-                print 'framedir', framedir
-                print 'path', path
                 # get chunks list and open up all files
                 files = self.get_chunk_files(path, chunks)
+                if DEBUGGING_MSG:
+                    print "chunks requested:", chunks
+                    print 'chunksdir', chunksdir
+                    print 'framedir', framedir
+                    print 'path', path
             except OSError, err:
                 why = ftpserver._strerror(err)
                 self.respond('550 %s.' % why)
@@ -88,83 +232,6 @@ class StreamHandler(ftpserver.FTPHandler):
             producer = self.chunkproducer(files, self._current_type)
             self.push_dtp_data(producer, isproducer=True, file=None, cmd="RETR")
             return
-        chunk_prefix = (file.split('-'))[0]
-        if chunk_prefix == "chunk":
-            chunknum = (file.split('/'))[-1]
-            framenum = (file.split('.')[-1]).split('/')[0]
-            if chunknum.isdigit() and framenum.isdigit():
-                try:
-                    filename = ((file.split('.'))[0]).split('chunk-')[1]
-                    chunksdir = 'chunks-' + filename
-                    framedir = filename + '.' + framenum + '.dir'
-                    path = StreamHandler.movies_path + '/' + chunksdir + '/' + framedir
-                    print path
-                    filepath = path + '/' # INCOMPLETE. Need to decide on file format.
-                    # get chunks list and open up all files
-                    files = self.get_chunk_files(path)
-                except OSError, err:
-                    why = ftpserver._strerror(err)
-                    self.respond('550 %s.' % why)
-
-                producer = self.chunkproducer(files, self._current_type)
-                self.push_dtp_data(producer, isproducer=True, file=None, cmd="RETR")
-                print self._current_type
-                return
-
-        if file.find(StreamHandler.movies_path) == 0:
-            file = file[15:]
-            print 'request: %s' % file
-
-        rest_pos = self._restart_position
-        self._restart_position = 0
-        try:
-            iterator = self.run_as_current_user(self.fs.get_list_dir,
-                                                StreamHandler.movies_path)
-            files = (MovieLister(iterator)).more() + '\n'
-            files_list = files.split('\r\n')[:-1]
-            regex = re.compile(file + '.*')
-            found_file = None
-            for file_entry in files_list:
-                found_file = regex.match(file_entry)
-                if found_file:
-                    break
-            if found_file == None:
-                raise IOError('file number not found')
-            found_file = found_file.group()
-            if True:
-                print('found the file: file-%s' % found_file[len(file) + 2:])
-            found_file = StreamHandler.movies_path + '/file-' + found_file[len(file) + 2 :]
-            fd = self.run_as_current_user(self.fs.open, found_file, 'rb')
-        except IOError, err:
-            try:
-                fd = self.run_as_current_user(self.fs.open, StreamHandler.movies_path + '/' + file, 'rb')
-            except IOError, err:
-                #why = _strerror(err)
-                why = str(err)
-                self.respond('550 %s.' % why)
-                return
-
-        if rest_pos:
-            # Make sure that the requested offset is valid (within the
-            # size of the file being resumed).
-            # According to RFC-1123 a 554 reply may result in case that
-            # the existing file cannot be repositioned as specified in
-            # the REST.
-            ok = 0
-            try:
-                if rest_pos > self.fs.getsize(file):
-                    raise ValueError
-                fd.seek(rest_pos)
-                ok = 1
-            except ValueError:
-                why = "Invalid REST parameter"
-            except IOError, err:
-                why = _strerror(err)
-            if not ok:
-                self.respond('554 %s' % why)
-                return
-        producer = self.producer(fd, self._current_type)
-        self.push_dtp_data(producer, isproducer=True, file=fd, cmd="RETR")
 
     def get_chunk_files(self, path, chunks=None):
         """For the specified path, open up all files for reading. and return
@@ -257,6 +324,113 @@ class StreamHandler(ftpserver.FTPHandler):
         if True:
             print "Calling _on_dtp_connection."
         return super(StreamHandler, self)._on_dtp_connection()
+
+
+class VariablePassiveDTP(ftpserver.PassiveDTP):
+    """
+    Inherits from PassiveDTP; can specify streaming rate.
+    """
+
+    stream_rate = 10*1024
+    def __init__(self, cmd_channel, extmode=False, spec_rate=0):
+        super(VariablePassiveDTP, self).__init__(cmd_channel, extmode)
+        if spec_rate != 0:
+            self.stream_rate = spec_rate
+            if DEBUGGING_MSG:
+                print "VariablePassiveDTP stream rate:", self.stream_rate
+
+    def handle_accept(self):
+        """
+        ON PASSIVE DTP CREATION, NOT ON INITIAL TCP CONNECTION.
+        For Initial TCP connection, see handle_accept in StreamFTPServer.
+        Mainly copy-pasted from PassiveDTP, except that dtp_handler is run
+        with a stream_rate.
+        """
+        """Called when remote client initiates a connection."""
+        if not self.cmd_channel.connected:
+            return self.close()
+        try:
+            sock, addr = self.accept()
+        except TypeError:
+            # sometimes accept() might return None (see issue 91)
+            return
+        except socket.error, err:
+            # ECONNABORTED might be thrown on *BSD (see issue 105)
+            if err.args[0] != errno.ECONNABORTED:
+                self.log_exception(self)
+            return
+        else:
+            # sometimes addr == None instead of (ip, port) (see issue 104)
+            if addr == None:
+                return
+
+        # Check the origin of data connection.  If not expressively
+        # configured we drop the incoming data connection if remote
+        # IP address does not match the client's IP address.
+        if self.cmd_channel.remote_ip != addr[0]:
+            if not self.cmd_channel.permit_foreign_addresses:
+                try:
+                    sock.close()
+                except socket.error:
+                    pass
+                msg = 'Rejected data connection from foreign address %s:%s.' \
+                        %(addr[0], addr[1])
+                self.cmd_channel.respond("425 %s" % msg)
+                self.log(msg)
+                # do not close listening socket: it couldn't be client's blame
+                return
+            else:
+                # site-to-site FTP allowed
+                msg = 'Established data connection with foreign address %s:%s.'\
+                        % (addr[0], addr[1])
+                self.log(msg)
+        # Immediately close the current channel (we accept only one
+        # connection at time) and avoid running out of max connections
+        # limit.
+        self.close()
+        # delegate such connection to DTP handler
+        if self.cmd_channel.connected:
+            handler = self.cmd_channel.dtp_handler(sock, self.cmd_channel, self.stream_rate)
+            if handler.connected:
+                self.cmd_channel.data_channel = handler
+                self.cmd_channel._on_dtp_connection()
+
+class VariableThrottledDTPHandler(ftpserver.ThrottledDTPHandler):
+    """
+    Inherits from ThrottledDTPHandler; can specify streaming rate.
+    """
+    def __init__(self, sock_obj, cmd_channel, spec_rate=0):
+        super(VariableThrottledDTPHandler, self).__init__(sock_obj, cmd_channel)
+        if spec_rate != 0:
+            self.read_limit = spec_rate
+            self.write_limit = spec_rate
+            if DEBUGGING_MSG:
+                print "VariableThrottledDTP stream rate:", self.write_limit
+
+    def auto_size_buffers(self, spec_rate):
+        if self.read_limit:
+            while self.ac_in_buffer_size > self.read_limit:
+                self.ac_in_buffer_size /= 2
+        if self.write_limit:
+            while self.ac_out_buffer_size > self.write_limit:
+                self.ac_out_buffer_size /= 2
+
+    def recv(self, buffer_size, spec_rate=0):
+        if spec_rate != 0:
+            self.read_limit = spec_rate
+            self.write_limit = spec_rate
+            if self.auto_sized_buffers:
+                self.auto_size_buffers(spec_rate)
+        return super(VariableThrottledDTPHandler, self).recv(buffer_size)
+
+    def send(self, data, spec_rate=0):
+        if spec_rate != 0:
+            self.read_limit = spec_rate
+            self.write_limit = spec_rate
+            if self.auto_sized_buffers:
+                self.auto_size_buffers(spec_rate)
+        return super(VariableThrottledDTPHandler, self).send(data)
+
 
 class FileStreamProducer(ftpserver.FileProducer):
     """
@@ -355,30 +529,11 @@ class MovieLister(ftpserver.BufferedIteratorProducer):
                 break
         return ''.join(buffer)[:-1]
 
-def main_no_stream(user_params):
-    user = "user" + "1"
-    pw = "1"
-
-    authorizer = ftpserver.DummyAuthorizer()
-    authorizer.add_user(user, pw, path, perm='elr')
-    # allow anonymous login.
-    authorizer.add_anonymous(path, perm='elr')
-
-    handler = ftpserver.FTPHandler
-    handler.authorizer = authorizer
-    handler.masquerade_address = '107.21.135.254'
-    handler.passive_ports = range(60000, 65535)
-    address = ("10.29.147.60", 21)
-    ftpd = ftpserver.FTPServer(address, handler)
-    ftpd.serve_forever()
-
 def main():
     """Parameters:
         No parameters: run with defaults (assume on ec2server)
     """
-    stream_rate = 10000 # 10KB per sec
-    StreamHandler.set_stream_rate(stream_rate)
-    print "StreamHandler now has size ", StreamHandler.stream_rate
+    stream_rate = 3000000 # 30KB per sec
 
     authorizer = ftpserver.DummyAuthorizer()
     # allow anonymous login.
@@ -389,7 +544,8 @@ def main():
     # handler.masquerade_address = '107.21.135.254' # Nick EC2
     # handler.masquerade_address = '174.129.174.31' # Lisa EC2
     handler.passive_ports = range(60000, 65535)
-    ftpd = ftpserver.FTPServer(server_address, handler)
+    ftpd = StreamFTPServer(server_address, handler, stream_rate)
+    print "Streaming Server now has size ", ftpd.stream_rate
     ftpd.serve_forever()
 
 if __name__ == "__main__":
