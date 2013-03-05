@@ -65,7 +65,7 @@ class StreamFTPServer(ftpserver.FTPServer):
             stream_rate is adjusted with handler.set_stream_rate.
             *********************
             """
-            handler = self.handler(sock, self, self.stream_rate)
+            handler = self.handler(sock, self, len(self.handlers), self.stream_rate)
             if not handler.connected:
                 return
             ftpserver.log("[]%s:%s Connected." % addr[:2])
@@ -135,7 +135,7 @@ class StreamHandler(ftpserver.FTPHandler):
     # connection handler creates a ThrottledDTPHandler. Here, again, to
     # accommodate variable streaming rate, use VariableThrottledDTPHandler.
 
-    def __init__(self, conn, server, spec_rate=0):
+    def __init__(self, conn, server, index=0, spec_rate=0):
         (super(StreamHandler, self)).__init__(conn, server)
         self._close_connection = False
         self.producer = ftpserver.FileProducer
@@ -145,6 +145,7 @@ class StreamHandler(ftpserver.FTPHandler):
         self.dtp_handler.write_limit = self.stream_rate # b/sec (ex 30Kbps = 30*1024)
         self.chunkproducer = FileChunkProducer
         self.proto_cmds = proto_cmds
+        self.index = index # user connection number
 
         if spec_rate != 0:
             self.stream_rate = spec_rate
@@ -204,7 +205,7 @@ class StreamHandler(ftpserver.FTPHandler):
             print file
         parsedform = threadclient.parse_chunks(file)
         if parsedform:
-            filename, framenum, chunks = parsedform
+            filename, framenum, binary_g, chunks = parsedform
             try:
                 # filename should be prefixed by "file-" in order to be valid.
                 # frame number is expected to exist for this cache.
@@ -213,6 +214,7 @@ class StreamHandler(ftpserver.FTPHandler):
                 path = self.movies_path + '/' + chunksdir + '/' + framedir
                 # get chunks list and open up all files
                 files = self.get_chunk_files(path, chunks)
+    
                 if DEBUGGING_MSG:
                     print "chunks requested:", chunks
                     print 'chunksdir', chunksdir

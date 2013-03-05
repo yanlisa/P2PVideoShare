@@ -2,25 +2,29 @@ from streamer import StreamFTP
 import os, sys, errno
 import time
 
-def parse_chunks(filestr):
+def parse_chunks(arg):
     """Returns file name, chunks, and frame number.
     File string format:
-        file-<filename>.<framenum>.<chunk1>%<chunk2>%<chunk3>
-     """
+        file-<filename>.<framenum>.<chunk1>%<chunk2>%<chunk3>&binary_g
+
+    """
+    filestr = arg.split('&')[0]
+    print "filestr: ", filestr
+    binarystr = arg.split('&')[1]
+    print "binarystr: ", binarystr
     if filestr.find('file-') != -1:
         filestr = (filestr.split('file-'))[-1]
-        parts = filestr.split('.')
-        if len(parts) < 2:
-            return None
-        filename, framenum = parts[0], parts[1]
-        if len(parts) == 3:
-            chunks = map(int, (parts[2]).split('%'))
-        else:
-            chunks = None
 
-        if True:
-            print filestr
-        return (filename, framenum, chunks)
+    parts = filestr.split('.')
+    if len(parts) < 2:
+            return None
+    filename, framenum = parts[0], parts[1]
+    rettuple = (filename, framenum, int(binarystr))
+    if len(parts[2]) == 0:
+        return (filename, framenum, int(binarystr), [])
+    else:
+        chunks = map(int, (parts[2]).split('%'))
+        return (filename, framenum, int(binarystr), chunks)
 
 class ThreadClient(object):
     """Creates a client thread and pushes instructions to it.
@@ -88,15 +92,9 @@ class ThreadClient(object):
         expected_threshold = [chunk_size]
 
         parsed_form = parse_chunks(fnamestr)
-        chunks = None
         if parsed_form:
-            fname, framenum, chunks = parsed_form
+            fname, framenum, binary_g, chunks = parsed_form
             fname = fname + '.' + framenum
-        else:
-            fname = fnamestr
-
-        if not chunks:
-            chunks = self.chunks
 
         dirname = fname
         # directory name by convention is filename itself.
@@ -136,7 +134,12 @@ class ThreadClient(object):
                 if extra_bytes > 0:
                     order_and_data[1] = data[len(data)-extra_bytes:]
 
-        return helper
+        if len(chunks) == 0: 
+            # If empty chunks, just do nothing with received data from RETR.
+            return lambda data : None 
+        else:
+            # Save received chunks to files inside directory.
+            return helper
 
 if __name__ == "__main__":
     packet_size = 2500

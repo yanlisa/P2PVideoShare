@@ -6,6 +6,7 @@ import sets
 from threadclient import ThreadClient
 from ftplib import error_perm
 from zfec import filefec
+import random
 
 # Debugging MSG
 DEBUGGING_MSG = True
@@ -79,14 +80,32 @@ class P2PUser():
             inst_CNKS = 'CNKS ' + filename
             inst_RETR = 'RETR ' + filename
 
-            req_so_far = []
-            for client in self.clients:
+            available_chunks = [0]*len(self.clients) # available_chunks[i] = cache i's availble chunks
+            rates = [0]*len(self.clients) # rates[i] = cache i's offered rate
+            union_chunks = [] # union of all available indices
+            for i in range(len(self.clients)):
+                client = self.clients[i]
                 client.put_instruction(inst_CNKS)
-                chunks = client.get_response()
-                chunks = chunks[1:-2].split(', ')
-                client_request = chunks_to_request(req_so_far, chunks, 3)
-                req_so_far = list( set(req_so_far) | set(client_request) )
-                client_request_string = '%'.join(client_request)
+                return_str = client.get_response().split('&')
+                available_chunks[i] = return_str[0][1:-2].split(', ')
+                rates[i] = int(return_str[1])
+                union_chunks = list( set(union_chunks) | set(available_chunks[i]) )
+
+            flag_deficit = (sum(rates) < 20) # True if user needs more rate from caches
+
+            assigned_chunks = [0]*len(self.clients)
+            # index assignment here
+            chosen_chunks = set([])
+            for i in range(len(self.clients)):
+                assigned_chunks[i] = random.sample(list(set(available_chunks[i]) - chosen_chunks), rates[i])
+                chosen_chunks = (chosen_chunks | set(assigned_chunks[i]))
+
+            # request assigned chunks
+            for i in range(len(self.clients)):
+                client = self.clients[i]
+                client_request_string = '%'.join(assigned_chunks[i])
+                print "flag_deficit:", flag_deficit
+                client_request_string = client_request_string + '&' + str(int(flag_deficit))
                 client.put_instruction(inst_RETR + '.' + client_request_string)
                 print client_request_string
             sleep(CACHE_DOWNLOAD_DURATION)
@@ -118,6 +137,8 @@ class P2PUser():
                 server_request = chunks_to_request(chunk_nums_rx, range(0, 40), 20 - num_chunks_rx)
                 if server_request:
                     server_request_string = '%'.join(server_request)
+                    # server should always be set with flag_deficit = 0 (has all chunks)
+                    server_request_string = server_request_string + '&' + str(0)
                     self.server_client.put_instruction(inst_RETR + '.' + server_request_string)
                     if(DEBUGGING_MSG):
                         print 'Requesting %s from server' % \

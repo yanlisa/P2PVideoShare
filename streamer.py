@@ -142,6 +142,7 @@ class StreamFTP(threading.Thread, FTP, object):
                 break
             elif fn_name == "RETR":
                 fname = cmd.split(' ')[1]
+                print fname
                 try:
                     resp = self.retrbinary(cmd, self.callback(self.chunk_size, fname))
                     # resp = self.retrbinary(cmd, open(fname, 'wb').write)
