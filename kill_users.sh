@@ -4,5 +4,6 @@ pids=`ps -a | grep "python ../../user.py" | awk '{print $1}'`
 # is being killed
 for pid in $pids
 do
+    echo Killing user with PID $pid ...
     sudo kill $pid
 done
