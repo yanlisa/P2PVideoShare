@@ -6,6 +6,7 @@ import Queue
 import random
 import csv
 import time
+import threading
 
 # Debugging MSG
 DEBUGGING_MSG = True
@@ -13,6 +14,22 @@ DEBUGGING_MSG = True
 cache_config_file = '../../config/cache_config.csv'
 
 # IP Table
+class ThreadStreamFTPServer(StreamFTPServer, threading.Thread):
+    """
+        A threaded server. Requires a Handler.
+    """
+    def __init__(self, address, handler, spec_rate=0):
+        StreamFTPServer.__init__(self, address, handler, spec_rate)
+        threading.Thread.__init__(self)
+
+    def run(self):
+        self.serve_forever()
+
+    def get_conns(self):
+        return self.conns
+
+    def get_handlers(self):
+        return self.handlers
 
 class Cache(object):
     """
@@ -56,7 +73,7 @@ class Cache(object):
         handler.passive_ports = range(60000, 65535)
 
         handler.set_chunks(self.chunks)
-        self.mini_server = ThreadServer(address, handler, stream_rate)
+        self.mini_server = ThreadStreamFTPServer(address, handler, stream_rate)
         print "Cache streaming rate set to ", self.mini_server.stream_rate
         handler.set_movies_path(path)
 
@@ -71,6 +88,12 @@ class Cache(object):
         self.mini_server.start()
         print 'Cache is running...'
 
+    def get_conns(self):
+        return self.mini_server.get_conns()
+
+    def set_conns(self, index, spec_rate):
+        self.mini_server.get_handlers()[index].set_stream_rate(spec_rate)
+
 new_proto_cmds = proto_cmds # from server.py
 new_proto_cmds['CNKS'] = dict(perm='l', auth=True, arg=None,
                               help='Syntax: CNKS (list available chunk nums).')
@@ -81,15 +104,11 @@ class CacheHandler(StreamHandler):
 
     The mini-server only stores a particular set of chunks per frame,
     and that set will be what it sends to the user per frame requested.
-
-    A new set of chunks is modified based on the transaction records, and this
-    is done in a separate thread.
     """
     chunks = []
     stream_rate = 10*1024 # Default is 10 Kbps
     def __init__(self, conn, server, spec_rate=0):
         super(CacheHandler, self).__init__(conn, server, spec_rate)
-        self.transaction_record = Queue.Queue()
         self.proto_cmds = new_proto_cmds
 
     @staticmethod
@@ -105,20 +124,12 @@ class CacheHandler(StreamHandler):
         """
         return CacheHandler.chunks
 
-    def get_transactions(self):
-        """
-        HAS NOT BEEN IMPLEMENTED YET
-        The record of client transactions on this cache.
-        """
-        return self.transaction_record
-
     def ftp_CNKS(self, line):
         """
         FTP command: Returns this cache's chunk number set.
         """
         data = str(CacheHandler.chunks)
         self.push_dtp_data(data, isproducer=False, cmd="CNKS")
-        self.transaction_record.put(("CNKS", CacheHandler.chunks))
 
     def ftp_RETR(self, file):
         """Retrieve the specified file (transfer from the cache to the
@@ -131,7 +142,6 @@ class CacheHandler(StreamHandler):
         file frame. cd into the correct directory and transmit all chunks
         the server has for that frame.
         """
-        self.transaction_record.put(("RETR", file))
         parsedform = threadclient.parse_chunks(file)
         if parsedform:
             filename, framenum, chunks = parsedform
@@ -226,6 +236,14 @@ def load_cache_config(cache_id):
     # If not found
     return None
 
+def test_bw(cache):
+    while not cache.get_conns():
+        pass
+    single_conn = cache.get_conns()[0]
+    print "Conn accepted with address", single_conn
+    spec_rate = 100000
+    cache.set_conns(0, spec_rate)
+
 if __name__ == "__main__":
     if len(sys.argv) == 2:
         config = load_cache_config(int(sys.argv[1])) # Look up configuration of the given cache ID
@@ -238,4 +256,5 @@ if __name__ == "__main__":
 
     cache = Cache(config)
     cache.start_cache()
+    test_bw(cache)
 

@@ -31,6 +31,8 @@ class StreamFTPServer(ftpserver.FTPServer):
             self.stream_rate = spec_rate
             if DEBUGGING_MSG:
                 print "StreamFTPServer stream rate:", self.stream_rate
+        self.conns = []
+        self.handlers = []
 
     def handle_accept(self):
         """Mainly copy-pasted from FTPServer code. Added stream_rate parameter
@@ -57,7 +59,7 @@ class StreamFTPServer(ftpserver.FTPServer):
         try:
             """
             *********************
-            handle = StreamHandler, which specifies stream_rate for the overall
+            handler = StreamHandler, which specifies stream_rate for the overall
             tcp connection.
 
             stream_rate is adjusted with handler.set_stream_rate.
@@ -106,17 +108,8 @@ class StreamFTPServer(ftpserver.FTPServer):
             else:
                 if ip is not None and ip in self.ip_map:
                     self.ip_map.remove(ip)
-
-class ThreadServer(StreamFTPServer, threading.Thread):
-    """
-        A threaded server. Requires a Handler.
-    """
-    def __init__(self, address, handler, spec_rate=0):
-        StreamFTPServer.__init__(self, address, handler, spec_rate)
-        threading.Thread.__init__(self)
-
-    def run(self):
-        self.serve_forever()
+        self.conns.append((handler.remote_ip, handler.remote_port))
+        self.handlers.append(handler)
 
 # The FTP commands the server understands.
 proto_cmds = ftpserver.proto_cmds
@@ -321,8 +314,6 @@ class StreamHandler(ftpserver.FTPHandler):
 
     def _on_dtp_connection(self):
         """For debugging purposes."""
-        if True:
-            print "Calling _on_dtp_connection."
         return super(StreamHandler, self)._on_dtp_connection()
 
 
