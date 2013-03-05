@@ -12,7 +12,7 @@ do
         mkdir "user"$i
     fi
     cd "user"$i
-    sudo python ../../user.py OnePiece575 & > log.txt
+    sudo python ../../user.py OnePiece575 > log.txt &
     cd ..
     sleep 5
 done
