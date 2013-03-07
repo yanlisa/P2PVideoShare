@@ -5,6 +5,7 @@ from pyftpdlib import ftpserver
 import Queue, time, re
 import threading
 import threadclient
+from helper import parse_chunks
 
 # Debugging MSG
 DEBUGGING_MSG = True
@@ -78,6 +79,7 @@ class StreamFTPServer(ftpserver.FTPServer):
             # use the last available channel for sending a 421 response
             # to the client before disconnecting it.
             if self.max_cons and (len(asyncore.socket_map) > self.max_cons):
+                print "Connection accepted for max_cons"
                 handler.handle_max_cons()
                 return
 
@@ -86,6 +88,7 @@ class StreamFTPServer(ftpserver.FTPServer):
             if self.max_cons_per_ip:
                 if self.ip_map.count(ip) > self.max_cons_per_ip:
                     handler.handle_max_cons_per_ip()
+                    print "Connection accepted for max_cons_per_ip"
                     return
 
             try:
@@ -108,6 +111,7 @@ class StreamFTPServer(ftpserver.FTPServer):
             else:
                 if ip is not None and ip in self.ip_map:
                     self.ip_map.remove(ip)
+        print "Connection accepted."
         self.conns.append((handler.remote_ip, handler.remote_port))
         self.handlers.append(handler)
 
@@ -152,8 +156,10 @@ class StreamHandler(ftpserver.FTPHandler):
             if DEBUGGING_MSG:
                 print "Streaming FTP Handler stream rate:", self.stream_rate
 
+        self.chunks = range(0, self.max_chunks)
+
     def get_chunks(self):
-        return range(1, 40)
+        return self.chunks
 
     def set_stream_rate(self, spec_rate):
         if spec_rate != 0:
@@ -203,7 +209,7 @@ class StreamHandler(ftpserver.FTPHandler):
         """
         if DEBUGGING_MSG:
             print file
-        parsedform = threadclient.parse_chunks(file)
+        parsedform = parse_chunks(file)
         if parsedform:
             filename, framenum, binary_g, chunks = parsedform
             try:
@@ -294,8 +300,8 @@ class StreamHandler(ftpserver.FTPHandler):
         FTP command: Returns this cache's chunk number set.
         """
         # hard-coded in right now.
-        chunks = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39]
-        data = str(chunks)
+        data = str(self.chunks)
+        data = data + '&' + str(self.max_chunks)
         self.push_dtp_data(data, isproducer=False, cmd="CNKS")
 
     def ftp_LIST(self, path):

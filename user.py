@@ -87,7 +87,7 @@ class P2PUser():
                 client = self.clients[i]
                 client.put_instruction(inst_CNKS)
                 return_str = client.get_response().split('&')
-                available_chunks[i] = return_str[0][1:-2].split(', ')
+                available_chunks[i] = return_str[0][1:-2].split('%')
                 rates[i] = int(return_str[1])
                 union_chunks = list( set(union_chunks) | set(available_chunks[i]) )
 
@@ -97,7 +97,7 @@ class P2PUser():
             # index assignment here
             chosen_chunks = set([])
             for i in range(len(self.clients)):
-                assigned_chunks[i] = random.sample(list(set(available_chunks[i]) - chosen_chunks), rates[i])
+                assigned_chunks[i] = list(set(random.sample(list(set(available_chunks[i]) - chosen_chunks), rates[i])))
                 chosen_chunks = (chosen_chunks | set(assigned_chunks[i]))
 
             # request assigned chunks
@@ -106,8 +106,9 @@ class P2PUser():
                 client_request_string = '%'.join(assigned_chunks[i])
                 print "flag_deficit:", flag_deficit
                 client_request_string = client_request_string + '&' + str(int(flag_deficit))
+                print "Assigned chunks: ", assigned_chunks[i]
+                print "Client request string: ", client_request_string
                 client.put_instruction(inst_RETR + '.' + client_request_string)
-                print client_request_string
             sleep(CACHE_DOWNLOAD_DURATION)
 
             #print 'client available chunks: %s' % (str(chunks))

@@ -1,30 +1,9 @@
 from streamer import StreamFTP
 import os, sys, errno
 import time
+from helper import parse_chunks
 
-def parse_chunks(arg):
-    """Returns file name, chunks, and frame number.
-    File string format:
-        file-<filename>.<framenum>.<chunk1>%<chunk2>%<chunk3>&binary_g
-
-    """
-    filestr = arg.split('&')[0]
-    print "filestr: ", filestr
-    binarystr = arg.split('&')[1]
-    print "binarystr: ", binarystr
-    if filestr.find('file-') != -1:
-        filestr = (filestr.split('file-'))[-1]
-
-    parts = filestr.split('.')
-    if len(parts) < 2:
-            return None
-    filename, framenum = parts[0], parts[1]
-    rettuple = (filename, framenum, int(binarystr))
-    if len(parts[2]) == 0:
-        return (filename, framenum, int(binarystr), [])
-    else:
-        chunks = map(int, (parts[2]).split('%'))
-        return (filename, framenum, int(binarystr), chunks)
+DEBUGGING_MSG = True
 
 class ThreadClient(object):
     """Creates a client thread and pushes instructions to it.
@@ -37,7 +16,6 @@ class ThreadClient(object):
         """
         Makes a StreamFTP thread and starts it.
         """
-        print "DEBUG, address : " , address
         self.client = StreamFTP(address)
         self.client.set_chunk_size(packet_size)
         self.client.set_callback(self.chunkcallback)
@@ -62,7 +40,8 @@ class ThreadClient(object):
             try:
                 self.client.conn.close()
             except:
-                print "Socket closed. Errors:", sys.exc_info()[0]
+                if DEBUGGING_MSG:
+                    print "Socket closed. Errors:", sys.exc_info()[0]
                 return True
         return False
 
@@ -115,11 +94,6 @@ class ThreadClient(object):
                     trunc_data = data[:len(data)-extra_bytes]
                 datastring = ''.join([order_and_data[1], trunc_data])
                 if (True):
-                    # outputStr = "%s: Received %d bytes. Current Total: %d bytes.\n" % \
-                    #     (filestr, sys.getsizeof(data), curr_bytes)
-                    # sys.stdout.write(outputStr)
-                    # sys.stdout.flush()
-                    # print "Current", str(curr_bytes), "vs. expected", str(expected_threshold[0])
                     outputStr = "Writing %s (actual: %d, expected: %d, totalCurrBytes: %d).\n" % \
                         (filestr, len(datastring), chunk_size, total_curr_bytes)
                     sys.stdout.write(outputStr)
@@ -140,31 +114,3 @@ class ThreadClient(object):
         else:
             # Save received chunks to files inside directory.
             return helper
-
-if __name__ == "__main__":
-    packet_size = 2500
-    fname = "file-Abracadabra.1"
-    if len(sys.argv) != 3:
-        print "Usage: python threadclient.py <chunk_size> <filename>"
-    else:
-        chunk_size = int(sys.argv[1])
-        fname = sys.argv[2]
-        # thread_client = ThreadClient('107.21.135.254', chunk_size) #ec2
-        # thread_client = ThreadClient('192.168.0.120', chunk_size) # home
-        thread_client = ThreadClient('10.10.64.49', chunk_size) # airbears
-        thread_client.put_instruction('LIST')
-        if True:
-            print thread_client.get_response()
-        thread_client.put_instruction('CNKS')
-        chunks = thread_client.get_response()
-        if True:
-            print chunks
-        thread_client.set_chunks(chunks)
-        fname_without_chunks = 'file-' + (fname.split('-')[-1]).split('.')[0]
-        thread_client.put_instruction('VLEN ' + fname_without_chunks)
-        if True:
-            print 'Number of frames:', thread_client.get_response()
-        thread_client.put_instruction('RETR ' + fname)
-        time.sleep(3)
-        thread_client.kill_transfer()
-        thread_client.put_instruction('QUIT')

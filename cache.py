@@ -7,6 +7,7 @@ import random
 import csv
 import time
 import threading
+from helper import parse_chunks
 
 # Debugging MSG
 DEBUGGING_MSG = True
@@ -14,6 +15,7 @@ DEBUGGING_MSG = True
 cache_config_file = '../../config/cache_config.csv'
 
 MAX_CONNS = 10
+path = "."
 
 # IP Table
 class ThreadStreamFTPServer(StreamFTPServer, threading.Thread):
@@ -100,17 +102,15 @@ class Cache(object):
     def get_conns(self):
         return self.mini_server.get_conns()
 
-    def set_conns(self, index, spec_rate):
-        self.mini_server.get_handlers()[index].set_stream_rate(spec_rate)
+    def set_conn_rate(self, index, new_rate):
+        self.rates[index] = new_rate
+        self.mini_server.get_handlers()[index].set_packet_rate(new_rate)
+        print "Packet rate attempt set for: %d conn to rate %d" % (index, new_rate)
 
     def get_g(self, index):
         return self.mini_server.get_g()[index]
 
 ###### HANDLER FOR EACH CONNECTION TO THIS CACHE######
-
-new_proto_cmds = proto_cmds # from server.py
-new_proto_cmds['CNKS'] = dict(perm='l', auth=True, arg=None,
-                              help='Syntax: CNKS (list available chunk nums).')
 
 class CacheHandler(StreamHandler):
     """
@@ -123,14 +123,7 @@ class CacheHandler(StreamHandler):
     rates = []
     stream_rate = 10*1024 # Default is 10 Kbps
     def __init__(self, conn, server, index=0, spec_rate=0):
-        self.proto_cmds = new_proto_cmds
         super(CacheHandler, self).__init__(conn, server, index, spec_rate)
-
-    def set_rates(self, new_rate):
-        """
-        Adjusts the list of rate that this cache holds across all frames.
-        """
-        CacheHandler.rates[self.index] = new_rate
 
     def set_chunks(self, new_chunks):
         """
@@ -144,13 +137,18 @@ class CacheHandler(StreamHandler):
         """
         CacheHandler.binary_g[self.index] = new_g
 
+    def set_packet_rate(self, new_rate):
+        CacheHandler.rates[self.index] = new_rate
+        print "Packet rate has been set within CacheHandler for: %d conn to rate %d" % (self.index, new_rate)
+
     def ftp_CNKS(self, line):
         """
         FTP command: Returns this cache's chunk number set.
         """
         print "index:", self.index
-        data = str(CacheHandler.chunks[self.index])
+        data = '%'.join(map(str, CacheHandler.chunks[self.index]))
         data = data + '&' + str(CacheHandler.rates[self.index])
+        print "Sending CNKS: ", data
         self.push_dtp_data(data, isproducer=False, cmd="CNKS")
 
     def ftp_RETR(self, file):
@@ -163,7 +161,7 @@ class CacheHandler(StreamHandler):
         """
         if DEBUGGING_MSG:
             print file
-        parsedform = threadclient.parse_chunks(file)
+        parsedform = parse_chunks(file)
         if parsedform:
             filename, framenum, binary_g, chunks = parsedform
             try:
@@ -252,11 +250,10 @@ def start_control(cache):
     single_conn = cache.get_conns()[conn_index]
     print "Conn accepted with address", single_conn
     for i in range(5):
-        cache.rates[conn_index] = i
+        cache.set_conn_rate(conn_index, i)
+
         print 'Set rate as ', i
         time.sleep(10)
-    # spec_rate = 100000
-    # cache.set_conns(conn_index, spec_rate)
 
 def load_cache_config(cache_id):
     f = open(cache_config_file)

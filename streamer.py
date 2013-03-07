@@ -7,26 +7,7 @@ import threading
 import Queue
 import logging
 
-def parse_chunks(filestr):
-    """Returns file name, chunks, and frame number.
-    File string format:
-        file-<filename>.<framenum>.<chunk1>%<chunk2>%<chunk3>
-     """
-    if filestr.find('file-') != -1:
-        filestr = (filestr.split('file-'))[-1]
-        parts = filestr.split('.')
-        if len(parts) < 2:
-            return None
-        filename, framenum = parts[0], parts[1]
-        if len(parts) == 3:
-            chunks = map(int, (parts[2]).split('%'))
-        else:
-            chunks = None
-
-        if True:
-            print filestr
-        return (filename, framenum, chunks)
-
+DEBUGGING_MSG = True
 logging.basicConfig(level=logging.DEBUG)
 
 # Import SOCKS module if it exists, else standard socket module socket
@@ -41,7 +22,8 @@ from socket import _GLOBAL_DEFAULT_TIMEOUT
 class StreamFTP(threading.Thread, FTP, object):
     def __init__(self, host='', user='', passwd='', acct='',
                  timeout=10.0, chunk_size=2504):
-        print "DEBUG, host : ", host
+        if DEBUGGING_MSG:
+            print "DEBUG, host : ", host
         self.instr_queue = Queue.Queue()
         self.resp_queue = Queue.Queue() # responses, in order.
         self.conn = None # connection socket
@@ -87,7 +69,8 @@ class StreamFTP(threading.Thread, FTP, object):
                     break
                 callback(data)
         except:
-            print "Unexpected error:", sys.exc_info()[0]
+            if DEBUGGING_MSG:
+                print "Unexpected error:", sys.exc_info()[0]
             raise
         self.conn.close()
         self.conn = None
@@ -98,7 +81,6 @@ class StreamFTP(threading.Thread, FTP, object):
         Called for all other commands other than file transfer itself.
         """
         response = ''
-        # if callback is None: callback = ftplib.print_line
         resp = self.sendcmd('TYPE A')
         self.conn = self.transfercmd(cmd)
         self.conn.settimeout(self.timeout)
@@ -142,7 +124,8 @@ class StreamFTP(threading.Thread, FTP, object):
                 break
             elif fn_name == "RETR":
                 fname = cmd.split(' ')[1]
-                print fname
+                if DEBUGGING_MSG:
+                    print "Next RETR instruction: ", fname
                 try:
                     resp = self.retrbinary(cmd, self.callback(self.chunk_size, fname))
                     # resp = self.retrbinary(cmd, open(fname, 'wb').write)
