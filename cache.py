@@ -1,5 +1,5 @@
 from streamer import StreamFTP
-import threadclient
+from threadclient import *
 from server import *
 from pyftpdlib import ftpserver
 import Queue
@@ -7,7 +7,7 @@ import random
 import csv
 import time
 import threading
-from helper import parse_chunks
+from helper import *
 
 # Debugging MSG
 DEBUGGING_MSG = True
@@ -15,7 +15,10 @@ DEBUGGING_MSG = True
 cache_config_file = '../../config/cache_config.csv'
 
 MAX_CONNS = 10
+MAX_VIDEOS = 10
+BUFFER_LENGTH = 10
 path = "."
+server_ip_address = ('localhost', 61000)
 
 # IP Table
 class ThreadStreamFTPServer(StreamFTPServer, threading.Thread):
@@ -54,6 +57,8 @@ class Cache(object):
         #   masq_ip,
         #   stream_rate,
         #   num_of_chunks_cache_stores ]
+        self.packet_size = 2504
+        self.server_client = ThreadClient(server_ip_address, self.packet_size)
 
         cache_id = int(cache_config[0])
         address = (cache_config[1], int(cache_config[2]))
@@ -62,11 +67,33 @@ class Cache(object):
         stream_rate = int(cache_config[4])
         num_of_chunks_cache_stores = int(cache_config[5])
 
+        # Variables for algorithms
+        self.delta_x = 1
+        self.delta_f = 1
+        self.delta_la = 1
+        self.delta_mu = 1
+        self.delta_k = 1
+
+        self.bandwidth_cap = 5000 # (Kbps)
+        self.storage_cap_in_MB = 500 # (MB)
+        self.storage_cap = self.storage_cap_in_MB * 1000 * 1000 # (Bytes)
+
+        self.dual_la = 0 # dual variable for ST
+        self.dual_mu = 0 # dual variable for BW
+
+        self.primal_x = [] * MAX_CONNS
+        self.primal_f = [] * MAX_VIDEOS
+        self.dual_k = [] * MAX_VIDEOS
+
         chunks = []
-        while len(chunks) < num_of_chunks_cache_stores:
-            x = random.randint(0, 40)
-            if not x in chunks:
-                chunks.append(x)
+
+        self.sum_rate = 0
+        self.sum_storage = 0
+
+        #while len(chunks) < num_of_chunks_cache_stores:
+        #    x = random.randint(0, 40)
+        #    if not x in chunks:
+        #        chunks.append(x)
 
         self.authorizer = ftpserver.DummyAuthorizer()
         # allow anonymous login.
@@ -76,13 +103,10 @@ class Cache(object):
         # handler.masquerade_address = '107.21.135.254'
         handler.passive_ports = range(60000, 65535)
 
-        self.rates = [0]*MAX_CONNS # in chunks per frame
-        self.chunks = [chunks]*MAX_CONNS
-        self.binary_g = [0]*MAX_CONNS # binary: provided chunks sufficient for conn
-
-        handler.chunks = self.chunks # static
-        handler.rates = self.rates # static
-        handler.binary_g = self.binary_g # static
+        handler.rates = [0]*MAX_CONNS # in chunks per frame
+        handler.chunks = [chunks]*MAX_VIDEOS
+        handler.binary_g = [0]*MAX_CONNS # binary: provided chunks sufficient for conn
+        handler.watching_video = ['']*MAX_CONNS
 
         self.mini_server = ThreadStreamFTPServer(address, handler, stream_rate)
         print "Cache streaming rate set to ", self.mini_server.stream_rate
@@ -97,18 +121,145 @@ class Cache(object):
         and ask the server for additional chunks if needed."""
         print 'Trying to run a cache...'
         self.mini_server.start()
+        self.start_control()
         print 'Cache is running...'
 
     def get_conns(self):
         return self.mini_server.get_conns()
 
     def set_conn_rate(self, index, new_rate):
-        self.rates[index] = new_rate
         self.mini_server.get_handlers()[index].set_packet_rate(new_rate)
-        print "Packet rate attempt set for: %d conn to rate %d" % (index, new_rate)
+
+    def get_conn_rate(self, index):
+        return CacheHandler.rates[index]
+
+    def get_chunks(self, index):
+        return CacheHandler.chunks[index]
+
+    def set_chunks(self, index, new_chunks):
+        print '[[[cache.py]]]', new_chunks
+        self.mini_server.get_handlers()[index].set_chunks(new_chunks)
 
     def get_g(self, index):
-        return self.mini_server.get_g()[index]
+        return CacheHandler.binary_g[index]
+
+    def get_watching_video(self, index):
+        return CacheHandler.watching_video[index]
+
+    def packet_size_lookup(self, video_name):
+        packet_size_LUT = {'hyunah':194829, 'OnePiece575':169433}
+        if video_name in packet_size_LUT:
+            return packet_size_LUT[video_name]
+        else:
+            print '[cache.py] The video ', video_name, ' does not exist.'
+            return 0
+
+    def frame_num_lookup(self, video_name):
+        frame_num_LUT = {'hyunah':10, 'OnePiece575':71}
+        if video_name in frame_num_LUT:
+            return frame_num_LUT[video_name]
+        else:
+            print '[cache.py] The video ', video_name, ' does not exist.'
+            return 0
+
+    def rate_update(self):
+        print '[cache.py] rate updating'
+        conns = self.get_conns()
+
+        if len(conns) == 0:
+            print '[cache.py] No user is connected'
+        else:
+            for i in range(len(conns)):
+                video_name = cache.get_watching_video(i)
+                packet_size = cache.packet_size_lookup(video_name)
+                if packet_size == 0:
+                    continue
+                additional_rate_needed = packet_size / 1000 / BUFFER_LENGTH * 8 # (Kbps)
+
+                current_rate = cache.get_conn_rate(i)
+                max_possible_rate = len(cache.get_chunks(i)) # FIX : it should be video(i)
+
+                g = self.get_g(i)
+                if g == 1 and current_rate < max_possible_rate + 1 and self.sum_rate + additional_rate_needed < self.bandwidth_cap:
+                    # Increase rate assigned to this link.
+                    cache.set_conn_rate(i, current_rate + 1)
+                    self.sum_rate = self.sum_rate + additional_rate_needed
+                    print '[cache.py] BW updated'
+                    print '[cache.py] BW Usage', self.sum_rate , '(Kbps) /' , self.bandwidth_cap , '(Kbps)'
+
+    def download_one_chunk_from_server(self, video_name, index):
+        print '[cache.py] Caching chunk', index , 'of' , video_name
+        packet_size = cache.packet_size_lookup(video_name)
+        frame_num = cache.frame_num_lookup(video_name)
+        if packet_size == 0: # This must not happen.
+            return True
+
+        self.server_client.client.set_chunk_size(packet_size)
+
+        chosen_chunks = index
+        server_request = map(str, chosen_chunks)
+        server_request_string = '%'.join(server_request)
+        server_request_string = server_request_string + '&' + str(0)
+        for i in range(1, frame_num):
+            print '[cache.py] downloading frame ', i
+            filename = 'file-' + video_name + '.' + str(i)
+            inst_RETR = 'RETR ' + filename
+            self.server_client.put_instruction(inst_RETR + '.' + server_request_string)
+            # wait till download is completed
+            while True:
+                time.sleep(5)
+                folder_name = 'video-' + video_name + '/' + video_name + '.' + str(i) + '.dir/'
+                if chunk_exists_in_frame_dir(folder_name, index) == True:
+                    break
+        return True
+
+    def storage_update(self):
+        print '[cache.py] storage updating'
+        conns = self.get_conns()
+
+        # Currently assuming 'a single movie'. It needs to be generalized
+        for i in range(len(conns)):
+            current_rate = cache.get_conn_rate(i)
+            video_name = cache.get_watching_video(i)
+            packet_size = cache.packet_size_lookup(video_name)
+            frame_num = cache.frame_num_lookup(video_name)
+            if packet_size == 0:
+                continue
+
+            max_possible_rate = len(cache.get_chunks(i))
+            additional_storage_needed = packet_size * 20
+            if current_rate > max_possible_rate and self.sum_storage + additional_storage_needed < self.storage_cap:
+                # Download one more chunk across all frames
+                chunk_index = random.sample(range(0, 40), 1)
+                if self.download_one_chunk_from_server(video_name, chunk_index) == True:
+                    cache.set_chunks(i, list(set(cache.get_chunks(i)) | set(map(str, chunk_index))))
+                    self.sum_storage = self.sum_storage + additional_storage_needed
+                    print '[cache.py] storage update done'
+                    print '[cache.py] storage Usage' , int(self.sum_storage/1000/1000) , '(MB) /' , int(self.storage_cap/1000/1000) , '(MB)'
+
+    def topology_update(self):
+        print '[cache.py] topology updating'
+
+    def start_control(self):
+        T_rate = 5
+        T_storage = 10
+        T_topology = 30
+
+        T_gcd = 5
+        T_lcm = 30
+
+        T_ct = 0
+
+        while True:
+            print '[cache.py] T_ct = ', T_ct
+            time.sleep(T_gcd)
+            T_ct = T_ct + T_gcd
+            if T_ct % T_rate == 0:
+                self.rate_update()
+            if T_ct % T_storage == 0:
+                self.storage_update()
+            if T_ct & T_topology == 0:
+                self.topology_update()
 
 ###### HANDLER FOR EACH CONNECTION TO THIS CACHE######
 
@@ -121,6 +272,7 @@ class CacheHandler(StreamHandler):
     """
     chunks = []
     rates = []
+    watching_video = []
     stream_rate = 10*1024 # Default is 10 Kbps
     def __init__(self, conn, server, index=0, spec_rate=0):
         super(CacheHandler, self).__init__(conn, server, index, spec_rate)
@@ -129,7 +281,7 @@ class CacheHandler(StreamHandler):
         """
         Adjusts the set of chunks that this cache holds across all frames.
         """
-        CacheHandler.chunks[self.index] = new_chunks 
+        CacheHandler.chunks[self.index] = new_chunks
 
     def set_binary_g(self, new_g):
         """
@@ -146,6 +298,9 @@ class CacheHandler(StreamHandler):
         FTP command: Returns this cache's chunk number set.
         """
         print "index:", self.index
+        print '[[[cache.py]]] cacheH_chunks', CacheHandler.chunks
+        print '[[[cache.py]]] cacheH_chunks[idx]', CacheHandler.chunks[self.index]
+
         data = '%'.join(map(str, CacheHandler.chunks[self.index]))
         data = data + '&' + str(CacheHandler.rates[self.index])
         print "Sending CNKS: ", data
@@ -167,12 +322,13 @@ class CacheHandler(StreamHandler):
             try:
                 # filename should be prefixed by "file-" in order to be valid.
                 # frame number is expected to exist for this cache.
-                chunksdir = 'chunks-' + filename
+                chunksdir = 'video-' + filename
                 framedir = filename + '.' + framenum + '.dir'
                 path = self.movies_path + '/' + chunksdir + '/' + framedir
                 # get chunks list and open up all files
                 files = self.get_chunk_files(path, chunks)
-    
+                # return CacheHandler.chunks[index]
+
                 if DEBUGGING_MSG:
                     print "chunks requested:", chunks
                     print 'chunksdir', chunksdir
@@ -183,7 +339,8 @@ class CacheHandler(StreamHandler):
                 why = ftpserver._strerror(err)
                 self.respond('550 %s.' % why)
 
-            CacheHandler.binary_g[self.index] = binary_g 
+            CacheHandler.binary_g[self.index] = binary_g
+            CacheHandler.watching_video[self.index] = filename
             producer = self.chunkproducer(files, self._current_type)
             self.push_dtp_data(producer, isproducer=True, file=None, cmd="RETR")
             return
@@ -195,14 +352,17 @@ class CacheHandler(StreamHandler):
         Only return the file objects specified by chunk numbers argument."""
         files = Queue.Queue()
         if not chunks:
-            return files 
+            return files
         iterator = self.run_as_current_user(self.fs.get_list_dir, path)
-        for x in xrange(self.max_chunks):
+
+        print "[cache.py]", chunks
+        for x in range(len(chunks)):
             liststr = iterator.next()
             filename = ((liststr.split(' ')[-1]).split('\r'))[0]
             chunk_num = (filename.split('_')[0]).split('.')[-1]
             if chunk_num.isdigit() and int(chunk_num) in chunks:
                 filepath = path + '/' + filename
+                print "filepath ", filepath
                 fd = self.run_as_current_user(self.fs.open, filepath, 'rb')
                 files.put(fd)
                 if (DEBUGGING_MSG):
@@ -240,20 +400,7 @@ class ServerDownloader(threadclient.ThreadClient, threading.Thread):
             sys.stdout.flush()
             file_to_write.write(datastring)
             file_to_write.close()
-
         return helper
-
-def start_control(cache):
-    while not cache.get_conns():
-        pass
-    conn_index = 0
-    single_conn = cache.get_conns()[conn_index]
-    print "Conn accepted with address", single_conn
-    for i in range(5):
-        cache.set_conn_rate(conn_index, i)
-
-        print 'Set rate as ', i
-        time.sleep(10)
 
 def load_cache_config(cache_id):
     f = open(cache_config_file)
@@ -277,4 +424,3 @@ if __name__ == "__main__":
 
     cache = Cache(config)
     cache.start_cache()
-    start_control(cache)

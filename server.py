@@ -18,7 +18,7 @@ class StreamFTPServer(ftpserver.FTPServer):
     On a new client connection, the server makes a new FTP connection handler.
     Here, that handler is called StreamHandler.
 
-    For each FTP connection handler, when a new transfer request is made, 
+    For each FTP connection handler, when a new transfer request is made,
     PASV mode is set (passive conn handler created), and then on transfer
     instantiation a DTP handler is created.
 
@@ -215,12 +215,12 @@ class StreamHandler(ftpserver.FTPHandler):
             try:
                 # filename should be prefixed by "file-" in order to be valid.
                 # frame number is expected to exist for this cache.
-                chunksdir = 'chunks-' + filename
+                chunksdir = 'video-' + filename
                 framedir = filename + '.' + framenum + '.dir'
                 path = self.movies_path + '/' + chunksdir + '/' + framedir
                 # get chunks list and open up all files
                 files = self.get_chunk_files(path, chunks)
-    
+
                 if DEBUGGING_MSG:
                     print "chunks requested:", chunks
                     print 'chunksdir', chunksdir
@@ -272,28 +272,35 @@ class StreamHandler(ftpserver.FTPHandler):
     def ftp_VLEN(self, filename):
         """Checks the total frames available on this server for the desired
         movie."""
-        print filename
-        # strip directories and "file-" extension
+
+        frame_num_LUT = {'hyunah':11, 'OnePiece575':71}
         fileformat = ((filename.split('/'))[-1]).split('-')
-        if fileformat[0] != 'file' or len(fileformat) != 2:
-            why = "Format to VLEN should be file-<filename>."
-            self.respond('544 %s' %why)
-            return
-          # /home/ec2-user//movies chunks-OnePiece575/OnePiece575.1.dir
-        path2 = path + '/chunks-' + fileformat[1]
-        print path2
-        iterator = self.run_as_current_user(self.fs.get_list_dir, path2)
-        count = 0
-        loops = 5000
-        for x in xrange(loops):
-            try:
-                next = iterator.next()
-                file_format = next.split('.dir')
-                if len(file_format) > 1:
-                    count += 1
-            except StopIteration:
-                break
-        self.push_dtp_data(str(count), isproducer=False, cmd="VLEN")
+        video_name = fileformat[1]
+        self.push_dtp_data(str(frame_num_LUT[video_name]), isproducer=False, cmd="VLEN")
+
+        if False:
+            print filename
+            # strip directories and "file-" extension
+            fileformat = ((filename.split('/'))[-1]).split('-')
+            if fileformat[0] != 'file' or len(fileformat) != 2:
+                why = "Format to VLEN should be file-<filename>."
+                self.respond('544 %s' %why)
+                return
+              # /home/ec2-user//movies chunks-OnePiece575/OnePiece575.1.dir
+            path2 = path + '/video-' + fileformat[1]
+            print path2
+            iterator = self.run_as_current_user(self.fs.get_list_dir, path2)
+            count = 0
+            loops = 5000
+            for x in xrange(loops):
+                try:
+                    next = iterator.next()
+                    file_format = next.split('.dir')
+                    if len(file_format) > 1:
+                        count += 1
+                except StopIteration:
+                    break
+            self.push_dtp_data(str(count), isproducer=False, cmd="VLEN")
 
     def ftp_CNKS(self, line):
         """
@@ -532,7 +539,7 @@ def main():
     """Parameters:
         No parameters: run with defaults (assume on ec2server)
     """
-    stream_rate = 3000000 # 30KB per sec
+    stream_rate = 100000000 # 30KB per sec
 
     authorizer = ftpserver.DummyAuthorizer()
     # allow anonymous login.

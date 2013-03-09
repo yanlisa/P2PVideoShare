@@ -73,44 +73,53 @@ class ThreadClient(object):
         parsed_form = parse_chunks(fnamestr)
         if parsed_form:
             fname, framenum, binary_g, chunks = parsed_form
+            video_name = fname
             fname = fname + '.' + framenum
 
-        dirname = fname
-        # directory name by convention is filename itself.
+        video_dirname = 'video-' + video_name
+        dirname = video_dirname + '/' + fname + '.dir'
+        try:
+            os.mkdir(video_dirname)
+        except:
+            pass
+
         try:
             os.mkdir(dirname)
         except:
             pass
 
         def helper(data):
-            filestr = fname + '/' + fname + '.' + str(chunks[order_and_data[0]])
-            total_curr_bytes = len(order_and_data[1]) + len(data)
-            extra_bytes = total_curr_bytes - expected_threshold[0]
-            if extra_bytes < 0: # expecting more tcp packets
-                order_and_data[1] = ''.join([order_and_data[1], data])
+            if order_and_data[0] >= len(chunks):
+                pass
             else:
-                trunc_data = data
-                if extra_bytes > 0:
-                    trunc_data = data[:len(data)-extra_bytes]
-                datastring = ''.join([order_and_data[1], trunc_data])
-                if (True):
-                    outputStr = "Writing %s (actual: %d, expected: %d, totalCurrBytes: %d).\n" % \
-                        (filestr, len(datastring), chunk_size, total_curr_bytes)
-                    sys.stdout.write(outputStr)
-                    sys.stdout.flush()
-                file_to_write = open(filestr, 'wb')
-                file_to_write.write(datastring)
-                file_to_write.close()
-                # reset
-                order_and_data[1] = '' # new data string
-                order_and_data[0] += 1 # new file extension
+                filestr = dirname + '/' + fname + '.' + str(chunks[order_and_data[0]]).zfill(2) + '_40.chunk'
+                total_curr_bytes = len(order_and_data[1]) + len(data)
+                extra_bytes = total_curr_bytes - expected_threshold[0]
+                if extra_bytes < 0: # expecting more tcp packets
+                    order_and_data[1] = ''.join([order_and_data[1], data])
+                else:
+                    trunc_data = data
+                    if extra_bytes > 0:
+                        trunc_data = data[:len(data)-extra_bytes]
+                    datastring = ''.join([order_and_data[1], trunc_data])
+                    if (True):
+                        outputStr = "Writing %s (actual: %d, expected: %d, totalCurrBytes: %d).\n" % \
+                            (filestr, len(datastring), chunk_size, total_curr_bytes)
+                        sys.stdout.write(outputStr)
+                        sys.stdout.flush()
+                    file_to_write = open(filestr, 'wb')
+                    file_to_write.write(datastring)
+                    file_to_write.close()
+                    # reset
+                    order_and_data[1] = '' # new data string
+                    order_and_data[0] += 1 # new file extension
 
-                if extra_bytes > 0:
-                    order_and_data[1] = data[len(data)-extra_bytes:]
+                    if extra_bytes > 0:
+                        order_and_data[1] = data[len(data)-extra_bytes:]
 
-        if len(chunks) == 0: 
+        if len(chunks) == 0:
             # If empty chunks, just do nothing with received data from RETR.
-            return lambda data : None 
+            return lambda data : None
         else:
             # Save received chunks to files inside directory.
             return helper

@@ -1,5 +1,6 @@
 from streamer import *
 from time import sleep
+from helper import *
 import os
 import re
 import sets
@@ -40,8 +41,7 @@ class P2PUser():
         """
         self.packet_size = packet_size
         # Connect to the server
-        server_ip = server_ip_address
-        self.server_client = ThreadClient(server_ip, self.packet_size)
+        self.server_client = ThreadClient(server_ip_address, self.packet_size)
         # Connect to the caches
         cache_ip = cache_ip_address
         self.clients = []
@@ -69,12 +69,16 @@ class P2PUser():
         self.clients[0].put_instruction('VLEN file-%s' % (video_name))
         video_length = int(self.clients[0].get_response())
         base_file_name = video_name + '.flv'
-        base_file = open(base_file_name, 'ab')
+        try:
+            os.mkdir('video-' + video_name)
+        except:
+            pass
+        base_file = open('video-' + video_name + '/' + base_file_name, 'ab')
         for frame_number in xrange(start_frame, video_length):
             print '[user.py] frame_number : ', frame_number
             filename = 'file-' + video_name + '.' + str(frame_number)
             # directory for this frame
-            folder_name = video_name + '.' + str(frame_number) + '/'
+            folder_name = 'video-' + video_name + '/' + video_name + '.' + str(frame_number) + '.dir/'
 
             # get available chunks lists from cache A and B.
             inst_CNKS = 'CNKS ' + filename
@@ -87,18 +91,33 @@ class P2PUser():
                 client = self.clients[i]
                 client.put_instruction(inst_CNKS)
                 return_str = client.get_response().split('&')
-                available_chunks[i] = return_str[0][1:-2].split('%')
+                if return_str[0] == '':
+                    available_chunks[i] = []
+                else:
+                    available_chunks[i] = return_str[0].split('%')
                 rates[i] = int(return_str[1])
                 union_chunks = list( set(union_chunks) | set(available_chunks[i]) )
 
-            flag_deficit = (sum(rates) < 20) # True if user needs more rate from caches
-
+            print '[user.py]', available_chunks
+            effective_rates = [0]*len(self.clients)
             assigned_chunks = [0]*len(self.clients)
             # index assignment here
             chosen_chunks = set([])
             for i in range(len(self.clients)):
-                assigned_chunks[i] = list(set(random.sample(list(set(available_chunks[i]) - chosen_chunks), rates[i])))
+                effective_available_chunks = list(set(available_chunks[i]) - chosen_chunks)
+                effective_rates[i] = min(rates[i], len(effective_available_chunks))
+
+                print '[user.py] eff_chunks', effective_available_chunks
+                print '[user.py] eff_rate', effective_rates[i]
+                assigned_chunks[i] = list(set(random.sample(effective_available_chunks, effective_rates[i])))
+                # Temporarily convert str list to int list, sort it, convert it back
+                print '[user.py]', assigned_chunks[i]
+                int_assigned_chunks = map(int, assigned_chunks[i])
+                int_assigned_chunks.sort()
+                assigned_chunks[i] = map(str, int_assigned_chunks)
                 chosen_chunks = (chosen_chunks | set(assigned_chunks[i]))
+
+            flag_deficit = (sum(effective_rates) < 20) # True if user needs more rate from caches
 
             # request assigned chunks
             for i in range(len(self.clients)):
@@ -169,33 +188,13 @@ class P2PUser():
             chunksList = chunk_files_in_frame_dir(folder_name)
 
             if frame_number != start_frame:
-                print 'size of base file:', os.path.getsize(base_file_name)
+                print 'size of base file:', os.path.getsize('video-' + video_name + '/' + base_file_name)
             print 'trying to decode'
             filefec.decode_from_files(base_file, chunksList)
-            print 'decoded.  Size of base file =', os.path.getsize(base_file_name)
+            print 'decoded.  Size of base file =', os.path.getsize('video-' + video_name + '/' + base_file_name)
             if frame_number == 1 and VLC_PLAYER_USE:
                 # Open VLC Player
                 os.system('/Applications/VLC.app/Contents/MacOS/VLC2 OnePiece575.flv &')
-
-def chunk_nums_in_frame_dir(folder_name):
-    # returns an array of chunk numbers (ints) in this frame.
-    # folder_name ends in '/'.
-    # assumes chunk filenames end in chunk number.
-    chunksNums = []
-    for chunk_name in os.listdir(folder_name):
-        chunk_suffix = (chunk_name.split('.'))[-1]
-        if chunk_suffix.isdigit():
-            chunksNums.append(chunk_suffix)
-    return chunksNums
-
-def chunk_files_in_frame_dir(folder_name):
-    # opens file objects for each file in the directory.
-    # folder_name ends in '/'.
-    chunksList = []
-    for chunk_name in os.listdir(folder_name):
-        chunkFile = open(folder_name + chunk_name, 'rb')
-        chunksList.append(chunkFile)
-    return chunksList
 
 def chunks_to_request(A, B, num_ret):
     """ Find the elements in B that are not in A. From these elements, return a
