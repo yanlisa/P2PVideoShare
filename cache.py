@@ -182,15 +182,21 @@ class Cache(object):
         if packet_size == 0: # This must not happen.
             return True
 
+        last_packet_size = self.movie_LUT.last_chunk_size_lookup(video_name)
+        if last_packet_size == 0:
+            return True
+        inst_INTL = 'INTL ' + 'CNKN ' + str(packet_size) # chunk size of typical frame (not last one)
+        inst_INTL_LAST = 'INTL ' + 'CNKN ' + str(last_packet_size) # chunk size of last frame
+
         chosen_chunks = index
         server_request = map(str, chosen_chunks)
         server_request_string = '%'.join(server_request)
         server_request_string = server_request_string + '&' + str(0)
+
+        self.server_client.put_instruction(inst_INTL) # set chunk_size to typical frame.
         for i in range(1, frame_num+1):
             if i == frame_num: # This is the last frame, so change chunk_size.
-                self.server_client.client.set_chunk_size(self.movie_LUT.last_chunk_size_lookup(video_name))
-            else:
-                self.server_client.client.set_chunk_size(packet_size)
+                self.server_client.put_instruction(inst_INTL_LAST)
             print '[cache.py] downloading frame ', i
             filename = 'file-' + video_name + '.' + str(i)
             inst_RETR = 'RETR ' + filename

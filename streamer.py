@@ -38,6 +38,8 @@ class StreamFTP(threading.Thread, FTP, object):
         threading.Thread.__init__(self)
 
     def set_chunk_size(self, new_chunk_size):
+        if DEBUGGING_MSG:
+            print "[streamer.py] New chunk size: ", new_chunk_size
         self.chunk_size = new_chunk_size
 
     def set_chunks(self, chunks):
