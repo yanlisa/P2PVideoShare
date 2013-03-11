@@ -3,12 +3,15 @@ import os
 def chunk_exists_in_frame_dir(folder_name, chunk_index):
     # returns True if the chunk exists
     chunksNums = []
-    for chunk_name in os.listdir(folder_name):
-        chunk_suffix = (chunk_name.split('_')[0].split('.'))[-1]
-        if chunk_suffix.isdigit():
-            if int(chunk_suffix) == int(chunk_index[0]):
-                return True
-    return False
+    try:
+        for chunk_name in os.listdir(folder_name):
+            chunk_suffix = (chunk_name.split('_')[0].split('.'))[-1]
+            if chunk_suffix.isdigit():
+                if int(chunk_suffix) == int(chunk_index[0]):
+                    return True
+        return False
+    except:
+        return False
 
 def chunk_nums_in_frame_dir(folder_name):
     # returns an array of chunk numbers (ints) in this frame.

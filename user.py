@@ -233,7 +233,18 @@ def chunks_to_request(A, B, num_ret):
     For now, it may just be easiest to take the first num_ret elements of the
     non-overlapping set instead of randomizing the elements to choose from the
     non-overlapping set. """
-    set_A, set_B = sets.Set(map(str, A)), sets.Set(map(str, B)) # map all elts to str
+
+    str_A = map(str, A)
+    str_B = map(str, B)
+
+    for i in range(len(str_A)):
+        str_A[i] = str_A[i].zfill(2)
+    for i in range(len(str_B)):
+        str_B[i] = str_B[i].zfill(2)
+    #print str_A
+    #print str_B
+
+    set_A, set_B = sets.Set(str_A), sets.Set(str_B) # map all elts to str
     list_diff = list(set_B - set_A)
     list_diff.sort()
     return list_diff[:min(len(set_B - set_A), num_ret)]
