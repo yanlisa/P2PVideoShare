@@ -47,13 +47,13 @@ class P2PUser():
         self.tracker_ip = tracker_ip
          
         # Connect to the server
-        server_ip_address = get_server_address()
-        self.server_client = ThreadClient(server_ip_address, self.packet_size)
+        server_ip_addr = get_server_address()
+        self.server_client = ThreadClient(server_ip_addr, self.packet_size)
         # Connect to the caches
-        cache_ip_address = get_cache_addresses(2)
+        cache_ip_addr = get_cache_addresses(2)
         self.clients = []
         for i in xrange(len(cache_ip)):
-            self.clients.append(ThreadClient(cache_ip[i], self.packet_size, i))
+            self.clients.append(ThreadClient(cache_ip_addr[i], self.packet_size, i))
             # later: ask tracker.
         self.manager = None # TODO: create the manager class to decode/play
 
