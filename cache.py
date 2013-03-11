@@ -58,6 +58,7 @@ class Cache(object):
         #   stream_rate,
         #   num_of_chunks_cache_stores ]
         self.packet_size = 2504
+        server_ip_address = get_server_address()
         self.server_client = ThreadClient(server_ip_address, self.packet_size)
 
         cache_id = int(cache_config[0])
@@ -411,6 +412,9 @@ def load_cache_config(cache_id):
             return row
     # If not found
     return None
+
+def get_server_address():
+    return server_ip_address
 
 if __name__ == "__main__":
     if len(sys.argv) == 2:

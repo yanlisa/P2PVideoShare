@@ -34,15 +34,18 @@ server_ip_address = (ip_local, 61000)
 
 class P2PUser():
 
-    def __init__(self, packet_size=2504):
+    def __init__(self, tracker_ip, packet_size=2504):
         """ Create a new P2PUser.  Set the packet size, instantiate the manager,
         and establish clients.  Currently, the clients are static but will
         become dynamic when the tracker is implemented.
         """
         self.packet_size = packet_size
+        self.tracker_ip = tracker_ip
         # Connect to the server
+        server_ip_address = get_server_address()
         self.server_client = ThreadClient(server_ip_address, self.packet_size)
         # Connect to the caches
+        cache_ip_address = get_cache_addresses(2)
         cache_ip = cache_ip_address
         self.clients = []
         for i in xrange(len(cache_ip)):
@@ -212,23 +215,30 @@ def chunks_to_request(A, B, num_ret):
     list_diff.sort()
     return list_diff[:min(len(set_B - set_A), num_ret)]
 
+def get_server_address():
+    return server_ip_address
+
+def get_cache_addresses(num_caches):
+    return cache_ip_address
+
 if __name__ == "__main__":
     print "Arguments:", sys.argv
 
     packet_size_LUT = {'hyunah':194829, 'OnePiece575':169433}
 
-    if len(sys.argv) == 2:
+    if len(sys.argv) == 3:
         file_name = sys.argv[1]
+        tracker_ip = sys.argv[2]
         if file_name in packet_size_LUT:
             packet_size = packet_size_LUT[file_name]
         else:
             print '[user.py] The video ', file_name, ' does not exist.'
             sys.exit()
     else:
-        print '[user.py] user.py requires one argument'
+        print '[user.py] user.py requires two arguments: filename and tracker IP.'
         sys.exit()
 
-    test_user = P2PUser(packet_size)
+    test_user = P2PUser(tracker_ip, packet_size)
     test_user.download(file_name, 1)
 
     # 'self' does not exist here
