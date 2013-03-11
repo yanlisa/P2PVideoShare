@@ -12,6 +12,7 @@ from helper import *
 # Debugging MSG
 DEBUGGING_MSG = True
 # Cache Configuration
+movie_config_file = '../../config/movie_info.csv'
 cache_config_file = '../../config/cache_config.csv'
 
 MAX_CONNS = 10
@@ -101,6 +102,8 @@ class Cache(object):
         self.authorizer.add_anonymous(path, perm='elr')
         handler = CacheHandler
         handler.authorizer = self.authorizer
+        self.movie_LUT = MovieLUT(movie_config_file) # Movie lookup table.
+        handler.movie_LUT = self.movie_LUT 
         # handler.masquerade_address = '107.21.135.254'
         handler.passive_ports = range(60000, 65535)
 
@@ -147,22 +150,6 @@ class Cache(object):
     def get_watching_video(self, index):
         return CacheHandler.watching_video[index]
 
-    def packet_size_lookup(self, video_name):
-        packet_size_LUT = {'hyunah':194829, 'OnePiece575':169433}
-        if video_name in packet_size_LUT:
-            return packet_size_LUT[video_name]
-        else:
-            print '[cache.py] The video ', video_name, ' does not exist.'
-            return 0
-
-    def frame_num_lookup(self, video_name):
-        frame_num_LUT = {'hyunah':10, 'OnePiece575':71}
-        if video_name in frame_num_LUT:
-            return frame_num_LUT[video_name]
-        else:
-            print '[cache.py] The video ', video_name, ' does not exist.'
-            return 0
-
     def rate_update(self):
         print '[cache.py] rate updating'
         conns = self.get_conns()
@@ -172,7 +159,7 @@ class Cache(object):
         else:
             for i in range(len(conns)):
                 video_name = cache.get_watching_video(i)
-                packet_size = cache.packet_size_lookup(video_name)
+                packet_size = self.movie_LUT.chunk_size_lookup(video_name)
                 if packet_size == 0:
                     continue
                 additional_rate_needed = packet_size / 1000 / BUFFER_LENGTH * 8 # (Kbps)
@@ -190,25 +177,27 @@ class Cache(object):
 
     def download_one_chunk_from_server(self, video_name, index):
         print '[cache.py] Caching chunk', index , 'of' , video_name
-        packet_size = cache.packet_size_lookup(video_name)
-        frame_num = cache.frame_num_lookup(video_name)
+        packet_size = self.movie_LUT.chunk_size_lookup(video_name)
+        frame_num = self.movie_LUT.frame_num_lookup(video_name)
         if packet_size == 0: # This must not happen.
             return True
-
-        self.server_client.client.set_chunk_size(packet_size)
 
         chosen_chunks = index
         server_request = map(str, chosen_chunks)
         server_request_string = '%'.join(server_request)
         server_request_string = server_request_string + '&' + str(0)
-        for i in range(1, frame_num):
+        for i in range(1, frame_num+1):
+            if i == frame_num: # This is the last frame, so change chunk_size.
+                self.server_client.client.set_chunk_size(self.movie_LUT.last_chunk_size_lookup(video_name))
+            else:
+                self.server_client.client.set_chunk_size(packet_size)
             print '[cache.py] downloading frame ', i
             filename = 'file-' + video_name + '.' + str(i)
             inst_RETR = 'RETR ' + filename
             self.server_client.put_instruction(inst_RETR + '.' + server_request_string)
             # wait till download is completed
             while True:
-                time.sleep(5)
+                time.sleep(0.5)
                 folder_name = 'video-' + video_name + '/' + video_name + '.' + str(i) + '.dir/'
                 if chunk_exists_in_frame_dir(folder_name, index) == True:
                     break
@@ -222,8 +211,8 @@ class Cache(object):
         for i in range(len(conns)):
             current_rate = cache.get_conn_rate(i)
             video_name = cache.get_watching_video(i)
-            packet_size = cache.packet_size_lookup(video_name)
-            frame_num = cache.frame_num_lookup(video_name)
+            packet_size = self.movie_LUT.chunk_size_lookup(video_name)
+            frame_num = self.movie_LUT.frame_num_lookup(video_name)
             if packet_size == 0:
                 continue
 

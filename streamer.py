@@ -37,8 +37,8 @@ class StreamFTP(threading.Thread, FTP, object):
         #FTP.__init__(self, host, user, passwd, acct, timeout)
         threading.Thread.__init__(self)
 
-    def set_chunk_size(self, chunk_size):
-        self.chunk_size = chunk_size
+    def set_chunk_size(self, new_chunk_size):
+        self.chunk_size = new_chunk_size
 
     def set_chunks(self, chunks):
         self.chunks = chunks
@@ -94,7 +94,6 @@ class StreamFTP(threading.Thread, FTP, object):
                 line = line[:-2]
             elif line[-1:] == '\n':
                 line = line[:-1]
-        #    callback(line)
             response += line + "\n"
         fp.close()
         self.conn.close()
@@ -124,11 +123,11 @@ class StreamFTP(threading.Thread, FTP, object):
                 break
             elif fn_name == "RETR":
                 fname = cmd.split(' ')[1]
-                if DEBUGGING_MSG:
-                    print "Next RETR instruction: ", fname
                 try:
+                    if self.chunk_size == 0 and DEBUGGING_MSG:
+                        print "[streamer.py] No chunk size set for RETR: ", fname, \
+                            ". Please set chunk size using INTL command."
                     resp = self.retrbinary(cmd, self.callback(self.chunk_size, fname))
-                    # resp = self.retrbinary(cmd, open(fname, 'wb').write)
                 except socket.error:
                     # something strange happened with the connection; most
                     # likely a cache disconnection.  Ask the tracker to
@@ -143,6 +142,13 @@ class StreamFTP(threading.Thread, FTP, object):
                     break
             elif fn_name == "ABOR":
                 resp = self.abort()
+            elif fn_name == "INTL":
+                # Internal function for setting params of this streamer client.
+                internal_command = cmd.split(' ')[1:]
+                if internal_command[0] == "CNKN":
+                    new_chunk_size = int(internal_command[1])
+                    self.set_chunk_size(new_chunk_size)
+                 
             else: # for any other command, call retrlines.
                 try:
                     resp = self.retrlines(cmd)
@@ -158,12 +164,9 @@ def runrecv(packet_size, fname):
     if True:
         print "StreamFTP now has size ", ftp.chunk_size
     ret_status = ftp.retrlines('LIST')
-    # file_to_write = open(fname, 'wb')
-    # ret_status = ftp.retrbinary('RETR ' + fname, filecallback(fname, file_to_write))
 
     ret_status = ftp.retrbinary('RETR ' + fname, chunkcallback( \
             packet_size, fname))
-    # file_to_write.close()
     ftp.quit()
 
 if __name__ == "__main__":

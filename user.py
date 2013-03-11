@@ -40,13 +40,17 @@ class P2PUser():
         become dynamic when the tracker is implemented.
         """
         self.packet_size = packet_size
+        # Connect to the server
+        self.server_client = ThreadClient(server_ip_address, self.packet_size)
+        # Connect to the caches
+        cache_ip = cache_ip_address
         self.tracker_ip = tracker_ip
+         
         # Connect to the server
         server_ip_address = get_server_address()
         self.server_client = ThreadClient(server_ip_address, self.packet_size)
         # Connect to the caches
         cache_ip_address = get_cache_addresses(2)
-        cache_ip = cache_ip_address
         self.clients = []
         for i in xrange(len(cache_ip)):
             self.clients.append(ThreadClient(cache_ip[i], self.packet_size, i))
@@ -70,14 +74,33 @@ class P2PUser():
         # after receiving these packets, get stuff from the server.
         available_chunks = set([])
         self.clients[0].put_instruction('VLEN file-%s' % (video_name))
-        video_length = int(self.clients[0].get_response())
+        vlen_str = self.clients[0].get_response().split('\n')[0]
+        vlen_items = vlen_str.split('&')
+        print "VLEN: ", vlen_items
+        num_frames = int(vlen_items[0])
         base_file_name = video_name + '.flv'
         try:
             os.mkdir('video-' + video_name)
         except:
             pass
+        
+        # Set internal chunk_size through putting an internal instruction into
+        # the queue.
+        inst_INTL = 'INTL ' + 'CNKN ' + vlen_items[2] # chunk size of typical frame (not last one)
+        for i in range(len(self.clients)):
+            client = self.clients[i]
+            client.put_instruction(inst_INTL)
+        self.server_client.put_instruction(inst_INTL)
+
         base_file = open('video-' + video_name + '/' + base_file_name, 'ab')
-        for frame_number in xrange(start_frame, video_length):
+        for frame_number in xrange(start_frame, num_frames): 
+            if frame_number == num_frames - 1: # This is the last frame, so change chunk_size.
+                inst_INTL = 'INTL ' + 'CNKN ' + vlen_items[3] # chunk size of last frame
+                for i in range(len(self.clients)):
+                    client = self.clients[i]
+                    client.put_instruction(inst_INTL)
+                self.server_client.put_instruction(inst_INTL)
+
             print '[user.py] frame_number : ', frame_number
             filename = 'file-' + video_name + '.' + str(frame_number)
             # directory for this frame
@@ -126,10 +149,10 @@ class P2PUser():
             for i in range(len(self.clients)):
                 client = self.clients[i]
                 client_request_string = '%'.join(assigned_chunks[i])
-                print "flag_deficit:", flag_deficit
                 client_request_string = client_request_string + '&' + str(int(flag_deficit))
-                print "Assigned chunks: ", assigned_chunks[i]
-                print "Client request string: ", client_request_string
+                print "[user.py] [Client " + str(i) + "] flag_deficit: ", int(flag_deficit), \
+                    ", Assigned chunks: ", assigned_chunks[i], \
+                    ", Request string: ", client_request_string
                 client.put_instruction(inst_RETR + '.' + client_request_string)
             sleep(CACHE_DOWNLOAD_DURATION)
 
@@ -225,19 +248,19 @@ if __name__ == "__main__":
     print "Arguments:", sys.argv
 
     packet_size_LUT = {'hyunah':194829, 'OnePiece575':169433}
+    tracker_ip = 0
 
-    if len(sys.argv) == 3:
+    if len(sys.argv) == 2:
         file_name = sys.argv[1]
-        tracker_ip = sys.argv[2]
         if file_name in packet_size_LUT:
             packet_size = packet_size_LUT[file_name]
         else:
             print '[user.py] The video ', file_name, ' does not exist.'
             sys.exit()
     else:
-        print '[user.py] user.py requires two arguments: filename and tracker IP.'
         sys.exit()
 
+    packet_size = 0
     test_user = P2PUser(tracker_ip, packet_size)
     test_user.download(file_name, 1)
 

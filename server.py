@@ -1,4 +1,5 @@
 import asyncore
+import csv
 import traceback
 import sys, errno
 from pyftpdlib import ftpserver
@@ -12,6 +13,8 @@ DEBUGGING_MSG = True
 # Cache Configuration
 server_address = ("localhost", 61000)
 path = "."
+
+movie_config_file = 'config/movie_info.csv'
 
 class StreamFTPServer(ftpserver.FTPServer):
     """One instance of the server is created every time this file is run.
@@ -31,9 +34,10 @@ class StreamFTPServer(ftpserver.FTPServer):
         if spec_rate != 0:
             self.stream_rate = spec_rate
             if DEBUGGING_MSG:
-                print "StreamFTPServer stream rate:", self.stream_rate
+                print "[server.py] StreamFTPServer stream rate : ", self.stream_rate
         self.conns = []
         self.handlers = []
+
 
     def handle_accept(self):
         """Mainly copy-pasted from FTPServer code. Added stream_rate parameter
@@ -207,8 +211,6 @@ class StreamHandler(ftpserver.FTPHandler):
             chunk-<filename>.<ext>&<framenum>/<chunknum>
             file-<filename>
         """
-        if DEBUGGING_MSG:
-            print file
         parsedform = parse_chunks(file)
         if parsedform:
             filename, framenum, binary_g, chunks = parsedform
@@ -221,11 +223,11 @@ class StreamHandler(ftpserver.FTPHandler):
                 # get chunks list and open up all files
                 files = self.get_chunk_files(path, chunks)
 
-                if DEBUGGING_MSG:
-                    print "chunks requested:", chunks
-                    print 'chunksdir', chunksdir
-                    print 'framedir', framedir
-                    print 'path', path
+                # if DEBUGGING_MSG:
+                #     print "chunks requested:", chunks
+                #     print 'chunksdir', chunksdir
+                #     print 'framedir', framedir
+                #     print 'path', path
             except OSError, err:
                 why = ftpserver._strerror(err)
                 self.respond('550 %s.' % why)
@@ -272,35 +274,14 @@ class StreamHandler(ftpserver.FTPHandler):
     def ftp_VLEN(self, filename):
         """Checks the total frames available on this server for the desired
         movie."""
-
-        frame_num_LUT = {'hyunah':11, 'OnePiece575':71}
-        fileformat = ((filename.split('/'))[-1]).split('-')
-        video_name = fileformat[1]
-        self.push_dtp_data(str(frame_num_LUT[video_name]), isproducer=False, cmd="VLEN")
-
-        if False:
-            print filename
-            # strip directories and "file-" extension
-            fileformat = ((filename.split('/'))[-1]).split('-')
-            if fileformat[0] != 'file' or len(fileformat) != 2:
-                why = "Format to VLEN should be file-<filename>."
-                self.respond('544 %s' %why)
-                return
-              # /home/ec2-user//movies chunks-OnePiece575/OnePiece575.1.dir
-            path2 = path + '/video-' + fileformat[1]
-            print path2
-            iterator = self.run_as_current_user(self.fs.get_list_dir, path2)
-            count = 0
-            loops = 5000
-            for x in xrange(loops):
-                try:
-                    next = iterator.next()
-                    file_format = next.split('.dir')
-                    if len(file_format) > 1:
-                        count += 1
-                except StopIteration:
-                    break
-            self.push_dtp_data(str(count), isproducer=False, cmd="VLEN")
+        video_name = filename.split('file-')[-1]
+        vlen_items = [self.movie_LUT.frame_num_lookup(video_name), 
+                    self.movie_LUT.size_bytes_lookup(video_name), 
+                    self.movie_LUT.chunk_size_lookup(video_name), 
+                    self.movie_LUT.last_chunk_size_lookup(video_name)]
+        vlen_str = '&'.join(map(str, vlen_items))
+        self.push_dtp_data(vlen_str, isproducer=False, cmd="VLEN")
+        print vlen_str
 
     def ftp_CNKS(self, line):
         """
@@ -535,6 +516,48 @@ class MovieLister(ftpserver.BufferedIteratorProducer):
                 break
         return ''.join(buffer)[:-1]
 
+class MovieLUT():
+    """
+    Lookups for data that will eventually be moved to Tracker. For now, load a config
+    file and always have that config file set.
+    """
+    def __init__(self, config_file):
+        f = open(config_file)
+        fs = csv.reader(f, delimiter = ' ')
+        self.frame_num_index = 0
+        self.size_bytes_index = 1
+        self.chunk_size_index = 2
+        self.last_chunk_size_index = 3
+        self.movies_LUT = {}
+        for row in fs:
+            if (DEBUGGING_MSG): print '[server.py] Loading movie : ', row
+            movie_name = row[0]
+            self.movies_LUT[movie_name] = (int(row[1]), int(row[2]), int(row[3]), int(row[4]))
+
+    def gen_lookup(self, video_name, feature_index):
+        """Assumes all features are integers, so return 0 if the video doesn't exist."""
+        if video_name in self.movies_LUT:
+            return self.movies_LUT[video_name][feature_index]
+        else:
+            print '[server.py] The video ', video_name, ' does not exist.'
+            return 0
+
+    def frame_num_lookup(self, video_name):
+        """Number of frames for this video."""
+        return self.gen_lookup(video_name, self.frame_num_index)
+
+    def size_bytes_lookup(self, video_name):
+        """Size of total video, in bytes."""
+        return self.gen_lookup(video_name, self.size_bytes_index)
+
+    def chunk_size_lookup(self, video_name):
+        """Size of chunk, minus last chunk, in bytes."""
+        return self.gen_lookup(video_name, self.chunk_size_index)
+
+    def last_chunk_size_lookup(self, video_name):
+        """Size of last chunk, in bytes."""
+        return self.gen_lookup(video_name, self.last_chunk_size_index)
+
 def main():
     """Parameters:
         No parameters: run with defaults (assume on ec2server)
@@ -543,17 +566,18 @@ def main():
 
     authorizer = ftpserver.DummyAuthorizer()
     # allow anonymous login.
-    print path
+    if DEBUGGING_MSG:
+        print '[server.py] Path : ', path
     authorizer.add_anonymous(path, perm='elr')
     handler = StreamHandler
     handler.authorizer = authorizer
-    # handler.masquerade_address = '107.21.135.254' # Nick EC2
+    handler.movie_LUT = MovieLUT(movie_config_file) # Movie lookup table. 
+
+ # handler.masquerade_address = '107.21.135.254' # Nick EC2
     # handler.masquerade_address = '174.129.174.31' # Lisa EC2
     handler.passive_ports = range(60000, 65535)
     ftpd = StreamFTPServer(server_address, handler, stream_rate)
-    print "Streaming Server now has size ", ftpd.stream_rate
     ftpd.serve_forever()
-
+    
 if __name__ == "__main__":
-    print path
     main()
