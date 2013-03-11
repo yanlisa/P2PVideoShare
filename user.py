@@ -45,7 +45,7 @@ class P2PUser():
         # Connect to the caches
         cache_ip = cache_ip_address
         self.tracker_ip = tracker_ip
-         
+
         # Connect to the server
         server_ip_addr = get_server_address()
         self.server_client = ThreadClient(server_ip_addr, self.packet_size)
@@ -83,7 +83,7 @@ class P2PUser():
             os.mkdir('video-' + video_name)
         except:
             pass
-        
+
         # Set internal chunk_size through putting an internal instruction into
         # the queue.
         inst_INTL = 'INTL ' + 'CNKN ' + vlen_items[2] # chunk size of typical frame (not last one)
@@ -93,8 +93,8 @@ class P2PUser():
         self.server_client.put_instruction(inst_INTL)
 
         base_file = open('video-' + video_name + '/' + base_file_name, 'ab')
-        for frame_number in xrange(start_frame, num_frames): 
-            if frame_number == num_frames - 1: # This is the last frame, so change chunk_size.
+        for frame_number in xrange(start_frame, num_frames + 1):
+            if frame_number == num_frames: # This is the last frame, so change chunk_size.
                 inst_INTL = 'INTL ' + 'CNKN ' + vlen_items[3] # chunk size of last frame
                 for i in range(len(self.clients)):
                     client = self.clients[i]
