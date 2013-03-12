@@ -258,6 +258,8 @@ class P2PUser():
 
         for client in self.clients:
             client.put_instruction('QUIT')
+        self.server_client.put_instruction('QUIT')
+        print "[user.py] Closed all connections."
 
 def chunks_to_request(A, B, num_ret):
     """ Find the elements in B that are not in A. From these elements, return a
