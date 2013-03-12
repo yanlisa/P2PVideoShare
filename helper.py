@@ -53,6 +53,8 @@ class MovieLUT():
 def retrieve_caches_address_from_tracker(tracker_address, num_of_caches):
     req_str = 'GET_CACHES_ADDRESS&' + str(num_of_caches)
     ret_str = urllib2.urlopen(tracker_address + req_str).read()
+    print '[helper.py] req_str :' + req_str
+    print '[helper.py] ret_str :' + ret_str
 
     res = [''] * num_of_caches
     ret_str_split = ret_str.split('\n')

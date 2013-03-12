@@ -252,6 +252,12 @@ class P2PUser():
         self.server_client.put_instruction('QUIT')
         print "[user.py] Closed all connections."
 
+    def disconnect(self):
+        # 'self' does not exist here
+        for client in self.clients:
+            client.put_instruction('QUIT')
+
+
 def chunks_to_request(A, B, num_ret):
     """ Find the elements in B that are not in A. From these elements, return a
     randomized set that has maximum num_ret elements.
@@ -298,11 +304,7 @@ def main():
     packet_size = 0
     test_user = P2PUser(tracker_ip, packet_size)
     test_user.download(file_name, 1)
-
-    # 'self' does not exist here
-    for client in self.clients:
-        client.put_instruction('QUIT')
-
+    test_user.disconnect()
 
 if __name__ == "__main__":
     main()

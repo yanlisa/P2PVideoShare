@@ -172,6 +172,9 @@ class StreamHandler(ftpserver.FTPHandler):
             if DEBUGGING_MSG:
                 print "Streaming FTP Handler stream rate changed to:", self.stream_rate
 
+    def on_connect(self):
+        print '[server.py] ******** CONNECTION ESTABLISHED'
+
     @staticmethod
     def set_movies_path(path):
         StreamHandler.movies_path = path
