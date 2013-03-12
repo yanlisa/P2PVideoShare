@@ -12,14 +12,13 @@ from helper import *
 # Debugging MSG
 DEBUGGING_MSG = True
 # Cache Configuration
-movie_config_file = '../../config/movie_info.csv'
 cache_config_file = '../../config/cache_config.csv'
 
 MAX_CONNS = 10
 MAX_VIDEOS = 10
 BUFFER_LENGTH = 10
 path = "."
-server_ip_address = ('localhost', 61000)
+tracker_address = "http://localhost:8080/req/"
 
 # IP Table
 class ThreadStreamFTPServer(StreamFTPServer, threading.Thread):
@@ -59,7 +58,7 @@ class Cache(object):
         #   stream_rate,
         #   num_of_chunks_cache_stores ]
         self.packet_size = 2504
-        server_ip_address = get_server_address()
+        server_ip_address = get_server_address(tracker_address)
         self.server_client = ThreadClient(server_ip_address, self.packet_size)
         # Cache will get a response when each chunk is downloaded.
         self.server_client.set_respond_RETR(True)
@@ -104,8 +103,8 @@ class Cache(object):
         self.authorizer.add_anonymous(path, perm='elr')
         handler = CacheHandler
         handler.authorizer = self.authorizer
-        self.movie_LUT = MovieLUT(movie_config_file) # Movie lookup table.
-        handler.movie_LUT = self.movie_LUT 
+        self.movie_LUT = retrieve_MovieLUT_from_tracker(tracker_address)
+        handler.movie_LUT = self.movie_LUT
         # handler.masquerade_address = '107.21.135.254'
         handler.passive_ports = range(60000, 65535)
 
@@ -414,10 +413,10 @@ def load_cache_config(cache_id):
     # If not found
     return None
 
-def get_server_address():
-    return server_ip_address
+def get_server_address(tracker_address):
+    return retrieve_server_address_from_tracker(tracker_address)
 
-if __name__ == "__main__":
+def main():
     if len(sys.argv) == 2:
         config = load_cache_config(int(sys.argv[1])) # Look up configuration of the given cache ID
         if config == None:
@@ -429,3 +428,6 @@ if __name__ == "__main__":
 
     cache = Cache(config)
     cache.start_cache()
+
+if __name__ == "__main__":
+    main()

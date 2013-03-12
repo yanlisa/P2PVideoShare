@@ -17,20 +17,8 @@ VLC_PLAYER_USE = False
 CACHE_DOWNLOAD_DURATION = 8 # sec
 SERVER_DOWNLOAD_DURATION = 2 # sec
 DECODE_WAIT_DURATION = 0.1 # sec
-
-# IP Table
-ip_local = 'localhost'
-ip_ec2_lisa = '174.129.174.31'
-ip_ec2_nick = '107.21.135.254'
-
-# IP Configuration
-#cache_ip_address = [(ip_ec2_lisa, 25), (ip_local, 22)]
-cache_ip_address = []
+tracker_address = "http://localhost:8080/req/"
 num_of_caches = 2
-base_port = 60001
-for i in range(num_of_caches):
-    cache_ip_address.append((ip_local, base_port+i))
-server_ip_address = (ip_local, 61000)
 
 class P2PUser():
 
@@ -40,14 +28,17 @@ class P2PUser():
         become dynamic when the tracker is implemented.
         """
         self.packet_size = packet_size
-        # Connect to the caches
-        cache_ip = cache_ip_address
-        self.tracker_ip = tracker_ip
-
+        my_ip = 'user'
+        my_port = 30
+        register_to_tracker_as_user(tracker_address, my_ip, my_port)
         # Connect to the server
-        server_ip_addr = get_server_address()
-        self.server_client = ThreadClient(server_ip_addr, self.packet_size)
-
+        server_ip_address = retrieve_server_address_from_tracker(tracker_address)
+        self.server_client = ThreadClient(server_ip_address, self.packet_size)
+        # Connect to the caches
+        cache_ip_addr = retrieve_caches_address_from_tracker(tracker_address, num_of_caches)
+        print '[cache.py] ' , cache_ip_addr
+        self.tracker_ip = tracker_ip
+        # Connect to the server
         # Cache will get a response when each chunk is downloaded from the server.
         # Note that this flag should **NOT** be set for the caches, as the caches
         # downloads will be aborted after 8 seconds with no expectation.
@@ -55,10 +46,10 @@ class P2PUser():
         # to see what remains to be downloaded from the server.
         self.server_client.set_respond_RETR(True)
 
+        self.server_client = ThreadClient(server_ip_address, self.packet_size)
         # Connect to the caches
-        cache_ip_addr = get_cache_addresses(2)
         self.clients = []
-        for i in xrange(len(cache_ip)):
+        for i in xrange(len(cache_ip_addr)):
             self.clients.append(ThreadClient(cache_ip_addr[i], self.packet_size, i))
             # later: ask tracker.
         self.manager = None # TODO: create the manager class to decode/play
@@ -288,13 +279,7 @@ def chunks_to_request(A, B, num_ret):
     list_diff.sort()
     return list_diff[:min(len(set_B - set_A), num_ret)]
 
-def get_server_address():
-    return server_ip_address
-
-def get_cache_addresses(num_caches):
-    return cache_ip_address
-
-if __name__ == "__main__":
+def main():
     print "Arguments:", sys.argv
 
     packet_size_LUT = {'hyunah':194829, 'OnePiece575':169433}
@@ -313,3 +298,11 @@ if __name__ == "__main__":
     packet_size = 0
     test_user = P2PUser(tracker_ip, packet_size)
     test_user.download(file_name, 1)
+
+    # 'self' does not exist here
+    for client in self.clients:
+        client.put_instruction('QUIT')
+
+
+if __name__ == "__main__":
+    main()

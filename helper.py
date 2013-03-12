@@ -1,4 +1,100 @@
 import os
+import urllib2
+import csv
+
+DEBUGGING_MSG = True
+
+class MovieLUT():
+    """
+    Lookups for data that will eventually be moved to Tracker. For now, load a config
+    file and always have that config file set.
+    """
+    def __init__(self):
+        self.frame_num_index = 0
+        self.code_param_n_index = 1
+        self.code_param_k_index = 2
+        self.size_bytes_index = 3
+        self.chunk_size_index = 4
+        self.last_chunk_size_index = 5
+        self.movies_LUT = {}
+
+    def update_with_csv(self, config_file):
+        f = open(config_file)
+        fs = csv.reader(f, delimiter = ' ')
+        for row in fs:
+            if (DEBUGGING_MSG): print '[server.py] Loading movie : ', row
+            movie_name = row[0]
+            self.movies_LUT[movie_name] = (int(row[1]), int(row[2]), int(row[3]), int(row[4]), int(row[5]), int(row[6]))
+
+    def gen_lookup(self, video_name, feature_index):
+        """Assumes all features are integers, so return 0 if the video doesn't exist."""
+        if video_name in self.movies_LUT:
+            return self.movies_LUT[video_name][feature_index]
+        else:
+            print '[server.py] The video ', video_name, ' does not exist.'
+            return 0
+
+    def frame_num_lookup(self, video_name):
+        """Number of frames for this video."""
+        return self.gen_lookup(video_name, self.frame_num_index)
+
+    def size_bytes_lookup(self, video_name):
+        """Size of total video, in bytes."""
+        return self.gen_lookup(video_name, self.size_bytes_index)
+
+    def chunk_size_lookup(self, video_name):
+        """Size of chunk, minus last chunk, in bytes."""
+        return self.gen_lookup(video_name, self.chunk_size_index)
+
+    def last_chunk_size_lookup(self, video_name):
+        """Size of last chunk, in bytes."""
+        return self.gen_lookup(video_name, self.last_chunk_size_index)
+
+def retrieve_caches_address_from_tracker(tracker_address, num_of_caches):
+    req_str = 'GET_CACHES_ADDRESS&' + str(num_of_caches)
+    ret_str = urllib2.urlopen(tracker_address + req_str).read()
+
+    res = [''] * num_of_caches
+    ret_str_split = ret_str.split('\n')
+    ct = 0
+    for each_row in ret_str_split:
+        if each_row == '':
+            return res[:ct]
+        parsed_row = each_row.split(' ')
+        print parsed_row
+        res[ct] = [parsed_row[0], int(parsed_row[1])]
+        ct = ct + 1
+    return None
+
+def retrieve_server_address_from_tracker(tracker_address):
+    req_str = 'GET_SERVER_ADDRESS'
+    ret_str = urllib2.urlopen(tracker_address + req_str).read()
+    ret_str_split = ret_str.split(' ')
+    return (ret_str_split[0], int(ret_str_split[1]))
+
+def retrieve_MovieLUT_from_tracker(tracker_address): # Retrieve it from the tracker
+    lut = MovieLUT()
+
+    req_str = 'GET_ALL_VIDEOS'
+    ret_str = urllib2.urlopen(tracker_address + req_str).read()
+    ret_str_split = ret_str.split('\n')
+    for each_row in ret_str_split:
+        if each_row == '':
+            break
+        parsed_row = each_row.split(' ')
+        print parsed_row
+        lut.movies_LUT[parsed_row[1]] = (int(parsed_row[2]), int(parsed_row[3]), int(parsed_row[4]), int(parsed_row[5]), int(parsed_row[6]), int(parsed_row[7]))
+    return lut
+
+def register_to_tracker_as_cache(tracker_address, ip, port):
+    req_str = 'REGISTER_CACHE&' + str(ip) + '_' + str(port)
+    ret_str = urllib2.urlopen(tracker_address + req_str).read()
+    return ret_str
+
+def register_to_tracker_as_user(tracker_address, ip, port):
+    req_str = 'REGISTER_USER&' + str(ip) + '_' + str(port)
+    ret_str = urllib2.urlopen(tracker_address + req_str).read()
+    return ret_str
 
 def chunk_exists_in_frame_dir(folder_name, chunk_index):
     # returns True if the chunk exists
@@ -33,7 +129,6 @@ def chunk_files_in_frame_dir(folder_name):
         chunksList.append(chunkFile)
     return chunksList
 
-
 def parse_chunks(arg):
     """Returns file name, chunks, and frame number.
     File string format:
@@ -55,4 +150,3 @@ def parse_chunks(arg):
     else:
         chunks = map(int, (parts[2]).split('%'))
         return (filename, framenum, int(binarystr), chunks)
-

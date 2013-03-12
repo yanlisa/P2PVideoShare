@@ -12,6 +12,37 @@ def remove_server():
 def get_server():
     return db.select('nodes', where="type_of_node='server'", order='id').list()
 
+# VIDEO
+def add_video(input_vname, input_n_of_frames, input_code_param_n, input_code_param_k, input_total_size, input_chunk_size, input_last_chunk_size):
+    db.insert('videos',
+            vname = input_vname,
+            n_of_frames = input_n_of_frames,
+            code_param_n = input_code_param_n,
+            code_param_k = input_code_param_k,
+            total_size = input_total_size,
+            chunk_size = input_chunk_size,
+            last_chunk_size = input_last_chunk_size)
+
+def remove_video(input_vname):
+    db.delete('videos', where="vname=$input_vname", vars=locals())
+
+def remove_all_videos():
+    db.delete('videos', where="id>=0", vars=locals())
+
+def get_video(input_vname):
+    return db.select('videos', where="vname=$input_vname", vars=locals()).list()
+
+def get_all_videos():
+    return db.select('videos').list()
+
+def get_num_of_videos():
+    results = db.query("SELECT count(*) AS ct FROM videos")
+    return results[0].ct
+
+# NODE
+def remove_all_nodes():
+    db.delete('nodes', where="id>=0", vars=locals())
+
 # CACHE
 def add_cache(input_ip, input_port):
     db.insert('nodes', type_of_node='cache', ip=input_ip, port=input_port)

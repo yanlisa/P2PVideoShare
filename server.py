@@ -1,3 +1,4 @@
+import urllib2
 import asyncore
 import csv
 import traceback
@@ -6,15 +7,15 @@ from pyftpdlib import ftpserver
 import Queue, time, re
 import threading
 import threadclient
-from helper import parse_chunks
+from helper import parse_chunks, MovieLUT
 
 # Debugging MSG
 DEBUGGING_MSG = True
 # Cache Configuration
 server_address = ("localhost", 61000)
+tracker_address = "http://localhost:8080/req/"
 path = "."
-
-movie_config_file = 'config/movie_info.csv'
+movie_config_file = '../config/video_info.csv'
 
 class StreamFTPServer(ftpserver.FTPServer):
     """One instance of the server is created every time this file is run.
@@ -275,9 +276,9 @@ class StreamHandler(ftpserver.FTPHandler):
         """Checks the total frames available on this server for the desired
         movie."""
         video_name = filename.split('file-')[-1]
-        vlen_items = [self.movie_LUT.frame_num_lookup(video_name), 
-                    self.movie_LUT.size_bytes_lookup(video_name), 
-                    self.movie_LUT.chunk_size_lookup(video_name), 
+        vlen_items = [self.movie_LUT.frame_num_lookup(video_name),
+                    self.movie_LUT.size_bytes_lookup(video_name),
+                    self.movie_LUT.chunk_size_lookup(video_name),
                     self.movie_LUT.last_chunk_size_lookup(video_name)]
         vlen_str = '&'.join(map(str, vlen_items))
         self.push_dtp_data(vlen_str, isproducer=False, cmd="VLEN")
@@ -516,54 +517,11 @@ class MovieLister(ftpserver.BufferedIteratorProducer):
                 break
         return ''.join(buffer)[:-1]
 
-class MovieLUT():
-    """
-    Lookups for data that will eventually be moved to Tracker. For now, load a config
-    file and always have that config file set.
-    """
-    def __init__(self, config_file):
-        f = open(config_file)
-        fs = csv.reader(f, delimiter = ' ')
-        self.frame_num_index = 0
-        self.size_bytes_index = 1
-        self.chunk_size_index = 2
-        self.last_chunk_size_index = 3
-        self.movies_LUT = {}
-        for row in fs:
-            if (DEBUGGING_MSG): print '[server.py] Loading movie : ', row
-            movie_name = row[0]
-            self.movies_LUT[movie_name] = (int(row[1]), int(row[2]), int(row[3]), int(row[4]))
-
-    def gen_lookup(self, video_name, feature_index):
-        """Assumes all features are integers, so return 0 if the video doesn't exist."""
-        if video_name in self.movies_LUT:
-            return self.movies_LUT[video_name][feature_index]
-        else:
-            print '[server.py] The video ', video_name, ' does not exist.'
-            return 0
-
-    def frame_num_lookup(self, video_name):
-        """Number of frames for this video."""
-        return self.gen_lookup(video_name, self.frame_num_index)
-
-    def size_bytes_lookup(self, video_name):
-        """Size of total video, in bytes."""
-        return self.gen_lookup(video_name, self.size_bytes_index)
-
-    def chunk_size_lookup(self, video_name):
-        """Size of chunk, minus last chunk, in bytes."""
-        return self.gen_lookup(video_name, self.chunk_size_index)
-
-    def last_chunk_size_lookup(self, video_name):
-        """Size of last chunk, in bytes."""
-        return self.gen_lookup(video_name, self.last_chunk_size_index)
-
 def main():
     """Parameters:
         No parameters: run with defaults (assume on ec2server)
     """
     stream_rate = 100000000 # 30KB per sec
-
     authorizer = ftpserver.DummyAuthorizer()
     # allow anonymous login.
     if DEBUGGING_MSG:
@@ -571,13 +529,39 @@ def main():
     authorizer.add_anonymous(path, perm='elr')
     handler = StreamHandler
     handler.authorizer = authorizer
-    handler.movie_LUT = MovieLUT(movie_config_file) # Movie lookup table. 
+
+    # Register server to tracker
+    req_str = 'REGISTER_SERVER&' + server_address[0] + '_' + str(server_address[1])
+    ret_str = urllib2.urlopen(tracker_address + req_str).read()
+    print ret_str
+    if not ret_str == 'Server is registered':
+        err_msg = 'Server failed to be registered'
+        print err_msg
+        return err_msg
+
+    # Register videos to tracker
+    handler.movie_LUT = MovieLUT() # Movie lookup table.
+    handler.movie_LUT.update_with_csv(movie_config_file) # Movie lookup table.
+    for key, value in handler.movie_LUT.movies_LUT.items():
+        req_str = 'REGISTER_VIDEO&' + \
+        key + '_' + \
+        str(value[handler.movie_LUT.frame_num_index]) + '_' + \
+        str(value[handler.movie_LUT.code_param_n_index]) + '_' +  \
+        str(value[handler.movie_LUT.code_param_k_index]) + '_' + \
+        str(value[handler.movie_LUT.size_bytes_index]) + '_' + \
+        str(value[handler.movie_LUT.chunk_size_index]) + '_' + \
+        str(value[handler.movie_LUT.last_chunk_size_index])
+        ret_str = urllib2.urlopen(tracker_address + req_str).read()
+        if not ret_str == 'Video is registered':
+            err_msg = 'Video failed to be registered'
+            print err_msg
+            return err_msg
 
  # handler.masquerade_address = '107.21.135.254' # Nick EC2
     # handler.masquerade_address = '174.129.174.31' # Lisa EC2
     handler.passive_ports = range(60000, 65535)
     ftpd = StreamFTPServer(server_address, handler, stream_rate)
     ftpd.serve_forever()
-    
+
 if __name__ == "__main__":
     main()
