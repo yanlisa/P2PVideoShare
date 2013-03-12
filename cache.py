@@ -65,6 +65,7 @@ class Cache(object):
 
         cache_id = int(cache_config[0])
         address = (cache_config[1], int(cache_config[2]))
+        register_to_tracker_as_cache(tracker_address, address[0], address[1])
         print '[cache.py] Address : ', address
         masq_address = cache_config[3]
         stream_rate = int(cache_config[4])

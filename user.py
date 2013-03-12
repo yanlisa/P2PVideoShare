@@ -36,7 +36,7 @@ class P2PUser():
         self.server_client = ThreadClient(server_ip_address, self.packet_size)
         # Connect to the caches
         cache_ip_addr = retrieve_caches_address_from_tracker(tracker_address, num_of_caches)
-        print '[cache.py] ' , cache_ip_addr
+        print '[user.py] ' , cache_ip_addr
         self.tracker_ip = tracker_ip
         # Connect to the server
         # Cache will get a response when each chunk is downloaded from the server.
@@ -190,7 +190,7 @@ class P2PUser():
                 print chunk_nums_rx
 
             # Add the chunks that have already been requested from server
-            
+
             chunk_nums_rx = list (set(chunk_nums_in_frame_dir(folder_name)) | set(server_request))
             addtl_server_request = []
             num_chunks_rx = len(chunk_nums_rx)
