@@ -31,22 +31,22 @@ class P2PUser():
         my_ip = 'user'
         my_port = 30
         register_to_tracker_as_user(tracker_address, my_ip, my_port)
-        # Connect to the server
-        server_ip_address = retrieve_server_address_from_tracker(tracker_address)
-        self.server_client = ThreadClient(server_ip_address, self.packet_size)
-        # Connect to the caches
-        cache_ip_addr = retrieve_caches_address_from_tracker(tracker_address, num_of_caches)
-        print '[user.py] ' , cache_ip_addr
-        self.tracker_ip = tracker_ip
+
         # Connect to the server
         # Cache will get a response when each chunk is downloaded from the server.
         # Note that this flag should **NOT** be set for the caches, as the caches
         # downloads will be aborted after 8 seconds with no expectation.
         # After the cache download period, the files themselves will be checked
         # to see what remains to be downloaded from the server.
+        server_ip_address = retrieve_server_address_from_tracker(tracker_address)
+        self.server_client = ThreadClient(server_ip_address, self.packet_size)
         self.server_client.set_respond_RETR(True)
 
-        self.server_client = ThreadClient(server_ip_address, self.packet_size)
+        # Connect to the caches
+        cache_ip_addr = retrieve_caches_address_from_tracker(tracker_address, num_of_caches)
+        print '[user.py] ' , cache_ip_addr
+        self.tracker_ip = tracker_ip
+
         # Connect to the caches
         self.clients = []
         for i in xrange(len(cache_ip_addr)):
