@@ -40,8 +40,6 @@ class P2PUser():
         become dynamic when the tracker is implemented.
         """
         self.packet_size = packet_size
-        # Connect to the server
-        self.server_client = ThreadClient(server_ip_address, self.packet_size)
         # Connect to the caches
         cache_ip = cache_ip_address
         self.tracker_ip = tracker_ip
@@ -49,6 +47,14 @@ class P2PUser():
         # Connect to the server
         server_ip_addr = get_server_address()
         self.server_client = ThreadClient(server_ip_addr, self.packet_size)
+
+        # Cache will get a response when each chunk is downloaded from the server.
+        # Note that this flag should **NOT** be set for the caches, as the caches
+        # downloads will be aborted after 8 seconds with no expectation.
+        # After the cache download period, the files themselves will be checked
+        # to see what remains to be downloaded from the server.
+        self.server_client.set_respond_RETR(True)
+
         # Connect to the caches
         cache_ip_addr = get_cache_addresses(2)
         self.clients = []
@@ -110,6 +116,8 @@ class P2PUser():
             inst_CNKS = 'CNKS ' + filename
             inst_RETR = 'RETR ' + filename
 
+            ###### DECIDING WHICH CHUNKS TO DOWNLOAD FROM CACHES: TIME 0 ######
+
             available_chunks = [0]*len(self.clients) # available_chunks[i] = cache i's availble chunks
             rates = [0]*len(self.clients) # rates[i] = cache i's offered rate
             union_chunks = [] # union of all available indices
@@ -154,57 +162,83 @@ class P2PUser():
                     ", Assigned chunks: ", assigned_chunks[i], \
                     ", Request string: ", client_request_string
                 client.put_instruction(inst_RETR + '.' + client_request_string)
-            sleep(CACHE_DOWNLOAD_DURATION)
 
-            #print 'client available chunks: %s' % (str(chunks))
-            #available_chunks = available_chunks | set(chunks)
-            #client.set_chunks(str(available_chunks & set(chunks)))
-            #print len(available_chunks)
-
-            # immediately stop cache downloads.
-            for client in self.clients:
-                client.client.abort()
-
-            # Look up the download directory and count the downloaded chunks
-            chunk_nums_rx = chunk_nums_in_frame_dir(folder_name)
-            if (DEBUGGING_MSG):
-                print "%d chunks received from caches for frame %d: " % (len(chunk_nums_rx), frame_number)
-                print chunk_nums_rx
-
-            # Request from server remaining chunks missing
-
-            # TODO: Find the chunks received so far using OS.
-            # First argument: chunks received, Second: server chunks (everything), Third: # chunks needed
-            # third arg: k (= 20) - len(first arg)
-            num_chunks_rx = len(chunk_nums_rx)
-            if (num_chunks_rx >= 20):
-                print 'Nothing to download from the server :D'
+            ###### DECIDING CHUNKS THAT HAVE TO BE DOWNLOADED FROM CACHE: TIME 0 ######
+            # Before CACHE_DOWNLOAD_DURATION, also start requesting chunks from server.
+            server_request = []
+            chosen_chunks = list(chosen_chunks)
+            num_chunks_rx_predicted = len(chosen_chunks)
+            if (num_chunks_rx_predicted >= 20):
+                print "[user.py] 20 chunks assigned to caches; assume server will not be called."
             else:
-                server_request = chunks_to_request(chunk_nums_rx, range(0, 40), 20 - num_chunks_rx)
+                server_request = chunks_to_request(chosen_chunks, range(0, 40), 20 - num_chunks_rx_predicted)
                 if server_request:
                     server_request_string = '%'.join(server_request)
                     # server should always be set with flag_deficit = 0 (has all chunks)
                     server_request_string = server_request_string + '&' + str(0)
                     self.server_client.put_instruction(inst_RETR + '.' + server_request_string)
                     if(DEBUGGING_MSG):
-                        print 'Requesting %s from server' % \
-                            (server_request_string)
+                        print "[user.py] Requesting from server: ", server_request
                 elif (DEBUGGING_MSG):
                     print "No unique chunks from server requested."
 
+            sleep(CACHE_DOWNLOAD_DURATION)
+            ###### STOPPING CACHE DOWNLOADS: TIME 8 (CACHE_DOWNLOAD_DURATION) ######
+
+            # immediately stop cache downloads.
+            for client in self.clients:
+                client.client.abort()
+            print "[user.py] Cache connections aborted for frame %d" % (frame_number)
+
+            ###### REQUEST ADDITIONAL CHUNKS FROM SERVER: TIME 8 (CACHE_DOWNLOAD_DURATION) ######
+            # Request from server remaining chunks missing
+            # Look up the download directory and count the downloaded chunks
+            chunk_nums_rx = chunk_nums_in_frame_dir(folder_name)
+            if (DEBUGGING_MSG):
+                print "%d chunks received so far for frame %d: " % (len(chunk_nums_rx), frame_number)
+                print chunk_nums_rx
+
+            # Add the chunks that have already been requested from server
+            
+            chunk_nums_rx = list (set(chunk_nums_in_frame_dir(folder_name)) | set(server_request))
+            addtl_server_request = []
+            num_chunks_rx = len(chunk_nums_rx)
+            if (num_chunks_rx >= 20):
+                print "[user.py] No additional chunks to download from the server."
+            else:
+                addtl_server_request = chunks_to_request(chunk_nums_rx, range(0, 40), 20 - num_chunks_rx)
+                if addtl_server_request:
+                    addtl_server_request_string = '%'.join(addtl_server_request)
+                    # server should always be set with flag_deficit = 0 (has all chunks)
+                    addtl_server_request_string = addtl_server_request_string + '&' + str(0)
+                    self.server_client.put_instruction(inst_RETR + '.' + addtl_server_request_string)
+                    if(DEBUGGING_MSG):
+                        print "[user.py] Requesting from server: ", addtl_server_request
+                elif (DEBUGGING_MSG):
+                    print "No unique chunks from server requested."
+
+            ###### WAIT FOR CHUNKS FROM SERVER TO FINISH DOWNLOADING: TIME 10 ######
             sleep(SERVER_DOWNLOAD_DURATION)
 
             if (DEBUGGING_MSG):
                 print "[user.py] Waiting to receive all elements from server."
-            while True:
-                chunk_nums = chunk_nums_in_frame_dir(folder_name)
-                num_chunks_rx = len(chunk_nums)
-                if num_chunks_rx >= 20:
-                    break
-                sleep(DECODE_WAIT_DURATION)
+            if server_request:
+                resp_RETR = self.server_client.get_response()
+                parsed_form = parse_chunks(resp_RETR)
+                fname, framenum, binary_g, chunks = parsed_form
+                print "[user.py] Downloaded chunks from server: ", chunks
+            if addtl_server_request:
+                resp_RETR = self.server_client.get_response()
+                parsed_form = parse_chunks(resp_RETR)
+                fname, framenum, binary_g, chunks = parsed_form
+                print "[user.py] Downloaded chunks from server: ", chunks
 
-            if (DEBUGGING_MSG):
+            chunk_nums = chunk_nums_in_frame_dir(folder_name)
+            num_chunks_rx = len(chunk_nums)
+            if num_chunks_rx >= 20 and DEBUGGING_MSG:
                 print "[user.py] Received 20 packets"
+            else:
+                print "[user.py] Did not receive 20 packets for this frame."
 
             # abort the connection to the server
             self.server_client.client.abort()
@@ -221,6 +255,9 @@ class P2PUser():
             if frame_number == 1 and VLC_PLAYER_USE:
                 # Open VLC Player
                 os.system('/Applications/VLC.app/Contents/MacOS/VLC2 OnePiece575.flv &')
+
+        for client in self.clients:
+            client.put_instruction('QUIT')
 
 def chunks_to_request(A, B, num_ret):
     """ Find the elements in B that are not in A. From these elements, return a
@@ -274,7 +311,3 @@ if __name__ == "__main__":
     packet_size = 0
     test_user = P2PUser(tracker_ip, packet_size)
     test_user.download(file_name, 1)
-
-    # 'self' does not exist here
-    for client in self.clients:
-        client.put_instruction('QUIT')
