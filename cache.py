@@ -160,19 +160,19 @@ class Cache(object):
             print '[cache.py] No user is connected'
         else:
             for i in range(len(conns)):
-                video_name = cache.get_watching_video(i)
+                video_name = self.get_watching_video(i)
                 packet_size = self.movie_LUT.chunk_size_lookup(video_name)
                 if packet_size == 0:
                     continue
                 additional_rate_needed = packet_size / 1000 / BUFFER_LENGTH * 8 # (Kbps)
 
-                current_rate = cache.get_conn_rate(i)
-                max_possible_rate = len(cache.get_chunks(i)) # FIX : it should be video(i)
+                current_rate = self.get_conn_rate(i)
+                max_possible_rate = len(self.get_chunks(i)) # FIX : it should be video(i)
 
                 g = self.get_g(i)
                 if g == 1 and current_rate < max_possible_rate + 1 and self.sum_rate + additional_rate_needed < self.bandwidth_cap:
                     # Increase rate assigned to this link.
-                    cache.set_conn_rate(i, current_rate + 1)
+                    self.set_conn_rate(i, current_rate + 1)
                     self.sum_rate = self.sum_rate + additional_rate_needed
                     print '[cache.py] BW updated'
                     print '[cache.py] BW Usage', self.sum_rate , '(Kbps) /' , self.bandwidth_cap , '(Kbps)'
@@ -221,20 +221,20 @@ class Cache(object):
 
         # Currently assuming 'a single movie'. It needs to be generalized
         for i in range(len(conns)):
-            current_rate = cache.get_conn_rate(i)
-            video_name = cache.get_watching_video(i)
+            current_rate = self.get_conn_rate(i)
+            video_name = self.get_watching_video(i)
             packet_size = self.movie_LUT.chunk_size_lookup(video_name)
             frame_num = self.movie_LUT.frame_num_lookup(video_name)
             if packet_size == 0:
                 continue
 
-            max_possible_rate = len(cache.get_chunks(i))
+            max_possible_rate = len(self.get_chunks(i))
             additional_storage_needed = packet_size * 20
             if current_rate > max_possible_rate and self.sum_storage + additional_storage_needed < self.storage_cap:
                 # Download one more chunk across all frames
                 chunk_index = random.sample(range(0, 40), 1)
                 if self.download_one_chunk_from_server(video_name, chunk_index) == True:
-                    cache.set_chunks(i, list(set(cache.get_chunks(i)) | set(map(str, chunk_index))))
+                    self.set_chunks(i, list(set(self.get_chunks(i)) | set(map(str, chunk_index))))
                     self.sum_storage = self.sum_storage + additional_storage_needed
                     print '[cache.py] storage update done'
                     print '[cache.py] storage Usage' , int(self.sum_storage/1000/1000) , '(MB) /' , int(self.storage_cap/1000/1000) , '(MB)'
