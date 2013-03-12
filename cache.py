@@ -61,6 +61,8 @@ class Cache(object):
         self.packet_size = 2504
         server_ip_address = get_server_address()
         self.server_client = ThreadClient(server_ip_address, self.packet_size)
+        # Cache will get a response when each chunk is downloaded.
+        self.server_client.set_respond_RETR(True)
 
         cache_id = int(cache_config[0])
         address = (cache_config[1], int(cache_config[2]))
@@ -197,16 +199,20 @@ class Cache(object):
         for i in range(1, frame_num+1):
             if i == frame_num: # This is the last frame, so change chunk_size.
                 self.server_client.put_instruction(inst_INTL_LAST)
-            print '[cache.py] downloading frame ', i
             filename = 'file-' + video_name + '.' + str(i)
             inst_RETR = 'RETR ' + filename
             self.server_client.put_instruction(inst_RETR + '.' + server_request_string)
             # wait till download is completed
-            while True:
-                time.sleep(0.5)
-                folder_name = 'video-' + video_name + '/' + video_name + '.' + str(i) + '.dir/'
-                if chunk_exists_in_frame_dir(folder_name, index) == True:
-                    break
+            resp_RETR = self.server_client.get_response()
+            parsed_form = parse_chunks(resp_RETR)
+            fname, framenum, binary_g, chunks = parsed_form
+            print '[cache.py] Finished downloading: Frame %s Chunk %s' % (framenum, chunks)
+
+            # while True:
+            #     time.sleep(0.5)
+            #     folder_name = 'video-' + video_name + '/' + video_name + '.' + str(i) + '.dir/'
+            #     if chunk_exists_in_frame_dir(folder_name, index) == True:
+            #         break
         return True
 
     def storage_update(self):

@@ -30,6 +30,8 @@ class StreamFTP(threading.Thread, FTP, object):
         self.callback = None
         self.chunks = []
         self.chunk_size = chunk_size
+        self.resp_RETR = False # When set, puts chunk/frame num in resp_queue after received.
+
         FTP.__init__(self, timeout = 300)
         host_ip_address = host[0]
         host_port_num = host[1]
@@ -76,6 +78,8 @@ class StreamFTP(threading.Thread, FTP, object):
             raise
         self.conn.close()
         self.conn = None
+        if self.resp_RETR:
+            self.resp_queue.put(cmd)
         return self.retrresp()
 
     def retrlines(self, cmd, callback=None):

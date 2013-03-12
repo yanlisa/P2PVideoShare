@@ -25,6 +25,9 @@ class ThreadClient(object):
         self.chunks = None
         self.client_id = client_id
 
+    def set_respond_RETR(self, flag):
+        self.client.resp_RETR = flag
+
     def put_instruction(self, cmd_string):
         """
         Puts an FTP command into the client's instruction queue. The client
