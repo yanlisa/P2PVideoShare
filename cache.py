@@ -66,9 +66,9 @@ class Cache(object):
         self.server_client.set_respond_RETR(True)
 
         cache_id = int(cache_config[0])
-        address = (cache_config[1], int(cache_config[2]))
-        register_to_tracker_as_cache(tracker_address, address[0], address[1])
-        print '[cache.py] Address : ', address
+        self.address = (cache_config[1], int(cache_config[2]))
+        register_to_tracker_as_cache(tracker_address, self.address[0], self.address[1])
+        print '[cache.py] Address : ', self.address
         masq_address = cache_config[3]
         stream_rate = int(cache_config[4])
         # num_of_chunks_cache_stores = int(cache_config[5])
@@ -111,7 +111,7 @@ class Cache(object):
         handler.binary_g = [0]*MAX_CONNS # binary: provided chunks sufficient for conn
         handler.watching_video = ['']*MAX_CONNS
 
-        self.mini_server = ThreadStreamFTPServer(address, handler, stream_rate)
+        self.mini_server = ThreadStreamFTPServer(self.address, handler, stream_rate)
         print "Cache streaming rate set to ", self.mini_server.stream_rate
         handler.set_movies_path(path)
 
@@ -260,7 +260,9 @@ class Cache(object):
                     # Download one more chunk across all frames
                     chunk_index = random.sample(range(0, 40), 1)
                     if self.download_one_chunk_from_server(video_name, chunk_index) == True:
-                        self.set_chunks(video_name, list(set(self.get_chunks(video_name)) | set(map(str, chunk_index))))
+                        new_chunks = list(set(self.get_chunks(video_name)) | set(map(str, chunk_index)))
+                        self.set_chunks(video_name, new_chunks)
+                        update_chunks_for_cache(tracker_address, self.address[0], self.address[1], video_name, new_chunks)
                         self.sum_storage = self.sum_storage + additional_storage_needed
                         print '[cache.py] storage update done'
                         print '[cache.py] storage Usage' , int(self.sum_storage/1000/1000) , '(MB) /' , int(self.storage_cap/1000/1000) , '(MB)'

@@ -1,4 +1,5 @@
 import web
+import ast
 
 db = web.database(dbn='sqlite', db='tracker.db')
 
@@ -43,9 +44,19 @@ def get_num_of_videos():
 def remove_all_nodes():
     db.delete('nodes', where="id>=0", vars=locals())
 
+def get_all_nodes():
+    return db.select('nodes').list()
+
 # CACHE
 def add_cache(input_ip, input_port):
-    db.insert('nodes', type_of_node='cache', ip=input_ip, port=input_port)
+    db.insert('nodes', type_of_node='cache', ip=input_ip, port=input_port, stored_chunks=str({}))
+
+def add_chunks_for_cache(input_ip, input_port, input_video_name, input_chunks):
+    query_result = db.select('nodes', where="type_of_node='cache' AND ip=$input_ip AND port=$input_port", vars=locals()).list()
+    chunk_stored = ast.literal_eval(query_result[0].stored_chunks)
+    chunk_stored[input_video_name] = input_chunks
+    chunk_str_output = str(chunk_stored)
+    db.update('nodes', where="ip=$input_ip AND port=$input_port", stored_chunks=chunk_str_output,vars=locals())
 
 def remove_cache(input_ip, input_port):
     db.delete('nodes', where="type_of_node='cache' AND ip=$input_ip AND port=$input_port", vars=locals())
@@ -61,8 +72,8 @@ def get_num_of_caches():
     return results[0].ct
 
 # USER
-def add_user(input_ip, input_port):
-    db.insert('nodes', type_of_node='user', ip=input_ip, port=input_port)
+def add_user(input_ip, input_port, input_watching_video):
+    db.insert('nodes', type_of_node='user', ip=input_ip, port=input_port, watching_video=input_watching_video)
 
 def remove_user(input_ip, input_port):
     db.delete('nodes', where="type_of_node='user' AND ip=$input_ip AND port=$input_port", vars=locals())

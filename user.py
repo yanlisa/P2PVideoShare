@@ -22,7 +22,7 @@ num_of_caches = 2
 
 class P2PUser():
 
-    def __init__(self, tracker_ip, packet_size=2504):
+    def __init__(self, tracker_ip, video_name, packet_size):
         """ Create a new P2PUser.  Set the packet size, instantiate the manager,
         and establish clients.  Currently, the clients are static but will
         become dynamic when the tracker is implemented.
@@ -30,7 +30,7 @@ class P2PUser():
         self.packet_size = packet_size
         my_ip = 'user'
         my_port = 30
-        register_to_tracker_as_user(tracker_address, my_ip, my_port)
+        register_to_tracker_as_user(tracker_address, my_ip, my_port, video_name)
 
         # Connect to the server
         # Cache will get a response when each chunk is downloaded from the server.
@@ -292,18 +292,18 @@ def main():
     tracker_ip = 0
 
     if len(sys.argv) == 2:
-        file_name = sys.argv[1]
-        if file_name in packet_size_LUT:
-            packet_size = packet_size_LUT[file_name]
+        video_name = sys.argv[1]
+        if video_name in packet_size_LUT:
+            packet_size = packet_size_LUT[video_name]
         else:
-            print '[user.py] The video ', file_name, ' does not exist.'
+            print '[user.py] The video ', video_name, ' does not exist.'
             sys.exit()
     else:
         sys.exit()
 
     packet_size = 0
-    test_user = P2PUser(tracker_ip, packet_size)
-    test_user.download(file_name, 1)
+    test_user = P2PUser(tracker_ip, video_name, packet_size)
+    test_user.download(video_name, 1)
     test_user.disconnect()
 
 if __name__ == "__main__":

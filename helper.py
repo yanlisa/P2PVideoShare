@@ -93,9 +93,17 @@ def register_to_tracker_as_cache(tracker_address, ip, port):
     ret_str = urllib2.urlopen(tracker_address + req_str).read()
     return ret_str
 
-def register_to_tracker_as_user(tracker_address, ip, port):
-    req_str = 'REGISTER_USER&' + str(ip) + '_' + str(port)
+def register_to_tracker_as_user(tracker_address, ip, port, watching_movie):
+    req_str = 'REGISTER_USER&' + str(ip) + '_' + str(port) + '_' + watching_movie
     ret_str = urllib2.urlopen(tracker_address + req_str).read()
+    return ret_str
+
+def update_chunks_for_cache(tracker_address, ip, port, video_name, chunks):
+    req_str = 'UPDATE_CHUNKS_FOR_CACHE&' + str(ip) + '_' + str(port) + '_' + str(video_name) + '_' + str(chunks)
+    req_str = req_str.replace(" ", "") # Having space in a query makes a problem
+    print '[helper.py] query_str ', req_str
+    ret_str = urllib2.urlopen(tracker_address + req_str).read()
+    print '[helper.py] ret_str ', ret_str
     return ret_str
 
 def chunk_exists_in_frame_dir(folder_name, chunk_index):

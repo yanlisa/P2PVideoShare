@@ -565,6 +565,10 @@ def main():
     handler.passive_ports = range(60000, 65535)
     ftpd = StreamFTPServer(server_address, handler, stream_rate)
     ftpd.serve_forever()
+    print 'hihi'
+    print 'hihi'
+    print 'hihi'
+    print 'hihi'
 
 if __name__ == "__main__":
     main()

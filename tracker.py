@@ -1,3 +1,4 @@
+import ast
 import web
 import db_manager
 
@@ -6,14 +7,34 @@ urls = (
     '/req/(.*)', 'request',
 )
 app = web.application(urls, globals())
+render = web.template.render('templates/')
 
 class overview:
     def GET(self):
-        return_str = ''
-        return_str = return_str + 'Number of online users ' + str(db_manager.get_num_of_users()) + '\n'
-        return_str = return_str + 'Number of online caches ' + str(db_manager.get_num_of_caches()) + '\n'
-        return_str = return_str + 'Number of videos registered ' + str(db_manager.get_num_of_videos()) + '\n'
-        return return_str
+        nodes_info = db_manager.get_all_nodes()
+        videos_info = db_manager.get_all_videos()
+        nodes_info2 = []
+        videos_info2 = []
+
+        n_nodes = [0, 0, 0] # Server / cache / user
+
+        # Convert storages to lists
+        for each in nodes_info:
+            nodes_info2.append([each.id, str(each.type_of_node), str(each.ip), str(each.port), str(each.watching_video), ast.literal_eval(str(each.stored_chunks))])
+            if str(each.type_of_node) == 'server':
+                n_nodes[0] = n_nodes[0] + 1
+            elif str(each.type_of_node) == 'cache':
+                n_nodes[1] = n_nodes[1] + 1
+            elif str(each.type_of_node) == 'user':
+                n_nodes[2] = n_nodes[2] + 1
+        for each in videos_info:
+            videos_info2.append([each.id, str(each.vname), each.n_of_frames, each.code_param_n, each.code_param_k, each.total_size, each.chunk_size, each.last_chunk_size])
+
+        print '[tracker.py] nodes_info ', nodes_info2
+        print '[tracker.py] n_nodes ', n_nodes
+        print '[tracker.py] videos_info ', videos_info2
+
+        return render.overview(nodes_info2, n_nodes, videos_info2)
 
 class request:
     def parse_request(self, request_str):
@@ -21,6 +42,7 @@ class request:
         valid_req_strings = ['GET_SERVER_ADDRESS',
                             'GET_CACHES_ADDRESS',
                             'GET_ALL_VIDEOS',
+                            'UPDATE_CHUNKS_FOR_CACHE',
                             'REGISTER_SERVER',
                             'REGISTER_VIDEO',
                             'REGISTER_USER',
@@ -48,6 +70,7 @@ class request:
             elif req_type == 'GET_CACHES_ADDRESS':
                 n_of_current_caches = db_manager.get_num_of_caches()
                 n_of_returned_caches = min(n_of_current_caches, int(req_arg))
+                print '[tracker.py] n_of_returned_caches', n_of_returned_caches
                 caches = db_manager.get_many_caches(n_of_returned_caches)
                 ret_str = ''
                 for cache in caches:
@@ -58,7 +81,8 @@ class request:
                 # req_arg = "143.243.23.13_324"
                 arg_ip = req_arg.split('_')[0]
                 arg_port = req_arg.split('_')[1]
-                db_manager.add_user(arg_ip, arg_port)
+                arg_watching_video = req_arg.split('_')[2]
+                db_manager.add_user(arg_ip, arg_port, arg_watching_video)
                 return 'User is registered'
             elif req_type == 'REGISTER_CACHE':
                 arg_ip = req_arg.split('_')[0]
@@ -93,7 +117,6 @@ class request:
                 for video in videos:
                     ret_str = ret_str + str(video.id) + ' ' + str(video.vname) + ' ' + str(video.n_of_frames) + ' ' + str(video.code_param_n) + ' ' + str(video.code_param_k) + ' ' + str(video.total_size) + ' ' + str(video.chunk_size) + ' ' + str(video.last_chunk_size) + '\n'
                 return ret_str
-
             elif req_type == 'REMOVE_SERVER':
                 db_manager.remove_server()
                 return 'Server is removed'
@@ -107,6 +130,12 @@ class request:
                 arg_port = req_arg.split('_')[1]
                 db_manager.remove_cache(arg_ip, arg_port)
                 return 'Cache is removed'
+            elif req_type == 'UPDATE_CHUNKS_FOR_CACHE':
+                arg_ip = req_arg.split('_')[0]
+                arg_port = req_arg.split('_')[1]
+                arg_vname = req_arg.split('_')[2]
+                arg_chunk_str = req_arg.split('_')[3]
+                db_manager.add_chunks_for_cache(arg_ip, arg_port, arg_vname, arg_chunk_str)
 
 if __name__ == "__main__":
     app.run()

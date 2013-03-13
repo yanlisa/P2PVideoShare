@@ -1,0 +1,68 @@
+$def with (nodes_info, n_nodes, videos_info)
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+    </head>
+    <body>
+        <p><h3>Node information</h3>
+        Number of servers = $n_nodes[0]<br>
+        Number of caches = $n_nodes[1]<br>
+        Number of users = $n_nodes[2]<br>
+        <table border=1>
+            <tr>
+                <th>id</th>
+                <th>type</th>
+                <th>ip</th>
+                <th>port</th>
+            </tr>
+            $for each in nodes_info:
+            <tr>
+                $for v in each:
+                <td>$v</td>
+            </tr>
+        </table>
+        </p>
+
+        <p><h3>Stored Chunks at Caches</h3>
+        <table border=1>
+            <tr>
+                <th>Cache ID</th>
+                $for each in videos_info:
+                <th>$each[1]</th>
+            </tr>
+            $for each in nodes_info:
+                $if each[1] == 'cache':
+                    <tr>
+                        <td>$each[0]</td>
+                        $for each_video in videos_info:
+                        <td>
+                            $if each_video[1] in each[5].keys(): 
+                                $each[5][each_video[1]]
+                        </td>
+                    </tr>
+        </table>
+
+        </p>
+        
+        <p><h3>Video information</h3>
+        <table border=1>
+            <tr>
+                <th>id</th>
+                <th>video_name</th>
+                <th>n_frms</th>
+                <th>code_n</th>
+                <th>code_k</th>
+                <th>total_size(bytes)</th>
+                <th>chunk_size</th>
+                <th>last_chunk_size</th>
+            </tr>
+            $for each in videos_info:
+            <tr>
+                $for v in each:
+                <td>$v</td>
+            </tr>
+        </table>
+        </p>
+    </body>
+</html>
+
