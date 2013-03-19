@@ -3,7 +3,7 @@ if [ ! -z "$1" ] ; then
     numcaches=$1
 fi
 echo "numcaches: $numcaches"
-print "Removing old cache_config.csv."
+echo "Removing old cache_config.csv."
 rm cache_config.csv
 
 iplocal=`./ip_local.sh`
