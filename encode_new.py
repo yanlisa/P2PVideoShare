@@ -25,7 +25,7 @@ def split_and_encode(filestr, k, n):
         print "Filename in wrong format. Must be 'file-<filename>.ext."
         return
 
-    dirname = 'chunks-' + filename
+    dirname = 'video-' + filename
     os.mkdir(dirname)
 
     forig = open(filestr, 'rb')
