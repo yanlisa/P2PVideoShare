@@ -18,9 +18,22 @@ class overview:
 
         n_nodes = [0, 0, 0] # Server / cache / user
 
+        # Convert 'chunk indexes' to ints
+        for each in nodes_info:
+            each.stored_chunks = ast.literal_eval(str(each.stored_chunks))
+            if each.stored_chunks is not None:
+                if len(each.stored_chunks.keys()) == 0:
+                    continue
+                for key, val in each.stored_chunks.items():
+                    stored_chunk_str = str(val)
+                    stored_chunk_list = map(int, ast.literal_eval(stored_chunk_str))
+                    val = stored_chunk_list.sort()
+                    each.stored_chunks[key] = stored_chunk_list
+
         # Convert storages to lists
         for each in nodes_info:
-            nodes_info2.append([each.id, str(each.type_of_node), str(each.ip), str(each.port), str(each.watching_video), ast.literal_eval(str(each.stored_chunks))])
+            nodes_info2.append([each.id, str(each.type_of_node), str(each.ip), str(each.port), str(each.watching_video), each.stored_chunks])
+            #nodes_info2.append([each.id, str(each.type_of_node), str(each.ip), str(each.port), str(each.watching_video), ast.literal_eval(str(each.stored_chunks))])
             if str(each.type_of_node) == 'server':
                 n_nodes[0] = n_nodes[0] + 1
             elif str(each.type_of_node) == 'cache':
@@ -40,16 +53,20 @@ class request:
     def parse_request(self, request_str):
         # REQUEST_COMMAND & ARGUMENT
         valid_req_strings = ['GET_SERVER_ADDRESS',
+                            'GET_SERVER_ADDRESS_FOR_CACHE',
                             'GET_CACHES_ADDRESS',
                             'GET_ALL_VIDEOS',
                             'UPDATE_CHUNKS_FOR_CACHE',
                             'REGISTER_SERVER',
+                            'REGISTER_SERVER_FOR_CACHE',
                             'REGISTER_VIDEO',
                             'REGISTER_USER',
                             'REGISTER_CACHE',
                             'REMOVE_SERVER',
+                            'REMOVE_SERVER_FOR_CACHE',
                             'REMOVE_USER',
-                            'REMOVE_CACHE']
+                            'REMOVE_CACHE',
+                            'UPDATE_SERVER_LOAD']
         req_type = request_str.split('&')[0]
         if len(request_str.split('&')) > 1:
             req_arg = request_str.split('&')[1]
@@ -66,6 +83,10 @@ class request:
             # REQUEST NODE INFO
             if req_type == 'GET_SERVER_ADDRESS':
                 res = db_manager.get_server()
+                return str(res[0].ip) + ' ' + str(res[0].port)
+            elif req_type == 'GET_SERVER_ADDRESS_FOR_CACHE':
+                print 'get_server_address_for_cache'
+                res = db_manager.get_server_for_cache()
                 return str(res[0].ip) + ' ' + str(res[0].port)
             elif req_type == 'GET_CACHES_ADDRESS':
                 n_of_current_caches = db_manager.get_num_of_caches()
@@ -94,9 +115,16 @@ class request:
                 arg_port = req_arg.split('_')[1]
                 # remove existing server & videos
                 db_manager.remove_server()
+                db_manager.remove_server_for_cache()
                 db_manager.remove_all_videos()
                 db_manager.remove_all_nodes()
                 db_manager.add_server(arg_ip, arg_port)
+                return 'Server is registered'
+            elif req_type == 'REGISTER_SERVER_FOR_CACHE':
+                arg_ip = req_arg.split('_')[0]
+                arg_port = req_arg.split('_')[1]
+                # remove existing server & videos
+                db_manager.add_server_for_cache(arg_ip, arg_port)
                 return 'Server is registered'
             # VIDEO REGISTER
             elif req_type == 'REGISTER_VIDEO':
@@ -120,6 +148,9 @@ class request:
             elif req_type == 'REMOVE_SERVER':
                 db_manager.remove_server()
                 return 'Server is removed'
+            elif req_type == 'REMOVE_SERVER_FOR_CACHE':
+                db_manager.remove_server_for_cache()
+                return 'Server for cache is removed'
             elif req_type == 'REMOVE_USER':
                 arg_ip = req_arg.split('_')[0]
                 arg_port = req_arg.split('_')[1]
@@ -136,6 +167,11 @@ class request:
                 arg_vname = req_arg.split('_')[2]
                 arg_chunk_str = req_arg.split('_')[3]
                 db_manager.add_chunks_for_cache(arg_ip, arg_port, arg_vname, arg_chunk_str)
+            elif req_type == 'UPDATE_SERVER_LOAD':
+                arg_vname = req_arg.split('_')[0]
+                arg_n_of_chks = req_arg.split('_')[1]
+                db_manager.add_server_load(arg_vname, arg_n_of_chks)
+
 
 if __name__ == "__main__":
     app.run()

@@ -1,4 +1,4 @@
-num_of_caches=2
+num_of_caches=3
 base_port=49152 # this is the first of the private ports, so we won't disrupt
                 # operations using reserved ports.
 if [ ! -d "caches" ]; then
@@ -12,8 +12,9 @@ do
         mkdir "cache"$i
     fi
     cd "cache"$i
-    sudo python ../../cache.py $i > log.txt &
+    rm -r video*
+    python ../../cache.py $i > ../../log/cache_$i.txt &
     cd ..
-    sleep 5
+    sleep 1
 done
-
+cd ".."

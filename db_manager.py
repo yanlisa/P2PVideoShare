@@ -7,11 +7,20 @@ db = web.database(dbn='sqlite', db='tracker.db')
 def add_server(input_ip, input_port):
     db.insert('nodes', type_of_node='server', ip=input_ip, port=input_port)
 
+def add_server_for_cache(input_ip, input_port):
+    db.insert('nodes', type_of_node='server_for_cache', ip=input_ip, port=input_port)
+
 def remove_server():
     db.delete('nodes', where="type_of_node='server'", vars=locals())
 
+def remove_server_for_cache():
+    db.delete('nodes', where="type_of_node='server_for_cache'", vars=locals())
+
 def get_server():
     return db.select('nodes', where="type_of_node='server'", order='id').list()
+
+def get_server_for_cache():
+    return db.select('nodes', where="type_of_node='server_for_cache'", order='id').list()
 
 # VIDEO
 def add_video(input_vname, input_n_of_frames, input_code_param_n, input_code_param_k, input_total_size, input_chunk_size, input_last_chunk_size):
@@ -84,3 +93,7 @@ def get_user(node_id):
 def get_num_of_users():
     results = db.query("SELECT count(*) AS ct FROM nodes WHERE type_of_node='user'")
     return results[0].ct
+
+# SERVER_LOAD
+def add_server_load(input_vname, input_n):
+    db.insert('stat', vname=input_vname, n_of_chks=input_n)

@@ -74,6 +74,12 @@ def retrieve_server_address_from_tracker(tracker_address):
     ret_str_split = ret_str.split(' ')
     return (ret_str_split[0], int(ret_str_split[1]))
 
+def retrieve_server_address_from_tracker_for_cache(tracker_address):
+    req_str = 'GET_SERVER_ADDRESS_FOR_CACHE'
+    ret_str = urllib2.urlopen(tracker_address + req_str).read()
+    ret_str_split = ret_str.split(' ')
+    return (ret_str_split[0], int(ret_str_split[1]))
+
 def retrieve_MovieLUT_from_tracker(tracker_address): # Retrieve it from the tracker
     lut = MovieLUT()
 
@@ -100,6 +106,12 @@ def register_to_tracker_as_user(tracker_address, ip, port, watching_movie):
 
 def update_chunks_for_cache(tracker_address, ip, port, video_name, chunks):
     req_str = 'UPDATE_CHUNKS_FOR_CACHE&' + str(ip) + '_' + str(port) + '_' + str(video_name) + '_' + str(chunks)
+    req_str = req_str.replace(" ", "") # Having space in a query makes a problem
+    ret_str = urllib2.urlopen(tracker_address + req_str).read()
+    return ret_str
+
+def update_server_load(tracker_address, video_name, num_of_chks_from_server):
+    req_str = 'UPDATE_SERVER_LOAD&' + str(video_name) + '_' + str(num_of_chks_from_server)
     req_str = req_str.replace(" ", "") # Having space in a query makes a problem
     print '[helper.py] query_str ', req_str
     ret_str = urllib2.urlopen(tracker_address + req_str).read()

@@ -12,7 +12,7 @@ from helper import parse_chunks, MovieLUT
 # Debugging MSG
 DEBUGGING_MSG = True
 # Cache Configuration
-server_address = ("localhost", 61000)
+server_address = ("localhost", 61001)
 tracker_address = "http://localhost:8080/req/"
 path = "."
 movie_config_file = '../config/video_info.csv'
@@ -534,31 +534,13 @@ def main():
     handler.authorizer = authorizer
 
     # Register server to tracker
-    req_str = 'REGISTER_SERVER&' + server_address[0] + '_' + str(server_address[1])
+    req_str = 'REGISTER_SERVER_FOR_CACHE&' + server_address[0] + '_' + str(server_address[1])
     ret_str = urllib2.urlopen(tracker_address + req_str).read()
     print ret_str
     if not ret_str == 'Server is registered':
         err_msg = 'Server failed to be registered'
         print err_msg
         return err_msg
-
-    # Register videos to tracker
-    handler.movie_LUT = MovieLUT() # Movie lookup table.
-    handler.movie_LUT.update_with_csv(movie_config_file) # Movie lookup table.
-    for key, value in handler.movie_LUT.movies_LUT.items():
-        req_str = 'REGISTER_VIDEO&' + \
-        key + '_' + \
-        str(value[handler.movie_LUT.frame_num_index]) + '_' + \
-        str(value[handler.movie_LUT.code_param_n_index]) + '_' +  \
-        str(value[handler.movie_LUT.code_param_k_index]) + '_' + \
-        str(value[handler.movie_LUT.size_bytes_index]) + '_' + \
-        str(value[handler.movie_LUT.chunk_size_index]) + '_' + \
-        str(value[handler.movie_LUT.last_chunk_size_index])
-        ret_str = urllib2.urlopen(tracker_address + req_str).read()
-        if not ret_str == 'Video is registered':
-            err_msg = 'Video failed to be registered'
-            print err_msg
-            return err_msg
 
  # handler.masquerade_address = '107.21.135.254' # Nick EC2
     # handler.masquerade_address = '174.129.174.31' # Lisa EC2

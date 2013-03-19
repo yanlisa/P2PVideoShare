@@ -20,6 +20,10 @@ BUFFER_LENGTH = 10
 path = "."
 tracker_address = "http://localhost:8080/req/"
 
+T_rate = 1
+T_storage = 10
+T_topology = 300
+
 # IP Table
 class ThreadStreamFTPServer(StreamFTPServer, threading.Thread):
     """
@@ -80,8 +84,8 @@ class Cache(object):
         self.delta_mu = 1
         self.delta_k = 1
 
-        self.bandwidth_cap = 5000 # (Kbps)
-        self.storage_cap_in_MB = 500 # (MB)
+        self.bandwidth_cap = 6400 # (Kbps)
+        self.storage_cap_in_MB = 41 # (MB)
         self.storage_cap = self.storage_cap_in_MB * 1000 * 1000 # (Bytes)
 
         self.dual_la = 0 # dual variable for ST
@@ -153,48 +157,50 @@ class Cache(object):
     def get_watching_video(self, index):
         return CacheHandler.watching_video[index]
 
-    def rate_update(self):
-        print '[cache.py] rate updating'
-        handlers = self.get_handlers()
-        if len(handlers) == 0:
-            print '[cache.py] No user is connected'
-        else:
-            sum_rate = 0
-            for i in range(len(handlers)):
-                handler = handlers[i]
-                if handler._closed == True:
-                    continue
-                video_name = self.get_watching_video(i)
-                packet_size = self.movie_LUT.chunk_size_lookup(video_name)
-                current_rate = self.get_conn_rate(i)
-                sum_rate = sum_rate + current_rate * packet_size / 1000 / BUFFER_LENGTH * 8
-            self.sum_rate = sum_rate
-            print '[cache.py] BW usage ' + str(self.sum_rate) + '/' + str(self.bandwidth_cap)
+    def rate_update(self, T_period):
+        while True:
+            print '[cache.py] rate updating'
+            time.sleep(T_period)
+            handlers = self.get_handlers()
+            if len(handlers) == 0:
+                print '[cache.py] No user is connected'
+            else:
+                sum_rate = 0
+                for i in range(len(handlers)):
+                    handler = handlers[i]
+                    if handler._closed == True:
+                        continue
+                    video_name = self.get_watching_video(i)
+                    packet_size = self.movie_LUT.chunk_size_lookup(video_name)
+                    current_rate = self.get_conn_rate(i)
+                    sum_rate = sum_rate + current_rate * packet_size / 1000 / BUFFER_LENGTH * 8
+                self.sum_rate = sum_rate
+                print '[cache.py] BW usage ' + str(self.sum_rate) + '/' + str(self.bandwidth_cap)
 
-            for i in range(len(handlers)):
-                handler = handlers[i]
-                if handler._closed == True:
-                    print '[cache.py] Connection ' + str(i) + ' is closed'
-                    continue
-                video_name = self.get_watching_video(i)
-                print '[cache.py] User ' + str(i) + ' is watching ' + str(video_name)
-                packet_size = self.movie_LUT.chunk_size_lookup(video_name)
-                if packet_size == 0:
-                    continue
-                additional_rate_needed = packet_size / 1000 / BUFFER_LENGTH * 8 # (Kbps)
+                for i in range(len(handlers)):
+                    handler = handlers[i]
+                    if handler._closed == True:
+                        print '[cache.py] Connection ' + str(i) + ' is closed'
+                        continue
+                    video_name = self.get_watching_video(i)
+                    print '[cache.py] User ' + str(i) + ' is watching ' + str(video_name)
+                    packet_size = self.movie_LUT.chunk_size_lookup(video_name)
+                    if packet_size == 0:
+                        continue
+                    additional_rate_needed = packet_size / 1000 / BUFFER_LENGTH * 8 # (Kbps)
 
-                current_rate = self.get_conn_rate(i)
-                max_possible_rate = len(self.get_chunks(video_name)) # FIX : it should be video(i)
+                    current_rate = self.get_conn_rate(i)
+                    max_possible_rate = len(self.get_chunks(video_name)) # FIX : it should be video(i)
 
-                g = self.get_g(i)
-                print '[cache.py] User ' + str(i) + ' (g,cur_rate,max_rate) ' + str(g) + ',' + str(current_rate) + ',' + str(max_possible_rate)
-                print '[cache.py] Cache (sum_rate, additional_rate, bw_cap) ', (self.sum_rate, additional_rate_needed, self.bandwidth_cap)
-                if g == 1 and current_rate < max_possible_rate + 1 and self.sum_rate + additional_rate_needed < self.bandwidth_cap:
-                    # Increase rate assigned to this link.
-                    self.set_conn_rate(i, current_rate + 1)
-                    self.sum_rate = self.sum_rate + additional_rate_needed
-                    print '[cache.py] Rate updated'
-                    print '[cache.py] BW Usage', self.sum_rate , '(Kbps) /' , self.bandwidth_cap , '(Kbps)'
+                    g = self.get_g(i)
+                    print '[cache.py] User ' + str(i) + ' (g,cur_rate,max_rate) ' + str(g) + ',' + str(current_rate) + ',' + str(max_possible_rate)
+                    print '[cache.py] Cache (sum_rate, additional_rate, bw_cap) ', (self.sum_rate, additional_rate_needed, self.bandwidth_cap)
+                    if g == 1 and current_rate < max_possible_rate + 1 and self.sum_rate + additional_rate_needed < self.bandwidth_cap:
+                        # Increase rate assigned to this link.
+                        self.set_conn_rate(i, current_rate + 1)
+                        self.sum_rate = self.sum_rate + additional_rate_needed
+                        print '[cache.py] Rate updated'
+                        print '[cache.py] BW Usage', self.sum_rate , '(Kbps) /' , self.bandwidth_cap , '(Kbps)'
 
     def download_one_chunk_from_server(self, video_name, index):
         print '[cache.py] Caching chunk', index , 'of' , video_name
@@ -234,41 +240,45 @@ class Cache(object):
             #         break
         return True
 
-    def storage_update(self):
-        print '[cache.py] storage updating'
-        handlers = self.get_handlers()
-        if len(handlers) == 0:
-            print '[cache.py] No user is connected'
-        else:
-            for i in range(len(handlers)):
-                handler = handlers[i]
-                if handler._closed == True:
-                    print '[cache.py] Connection ' + str(i) + ' is closed'
-                    continue
+    def storage_update(self, T_period):
+        while True:
+            print '[cache.py] storage updating'
+            time.sleep(T_period)
+            handlers = self.get_handlers()
+            if len(handlers) == 0:
+                print '[cache.py] No user is connected'
+            else:
+                for i in range(len(handlers)):
+                    handler = handlers[i]
+                    if handler._closed == True:
+                        print '[cache.py] Connection ' + str(i) + ' is closed'
+                        continue
 
-                # Open connection
-                current_rate = self.get_conn_rate(i)
-                video_name = self.get_watching_video(i)
-                packet_size = self.movie_LUT.chunk_size_lookup(video_name)
-                frame_num = self.movie_LUT.frame_num_lookup(video_name)
-                if packet_size == 0:
-                    continue
+                    # Open connection
+                    current_rate = self.get_conn_rate(i)
+                    video_name = self.get_watching_video(i)
+                    packet_size = self.movie_LUT.chunk_size_lookup(video_name)
+                    frame_num = self.movie_LUT.frame_num_lookup(video_name)
+                    if packet_size == 0:
+                        continue
 
-                max_possible_rate = len(self.get_chunks(video_name))
-                additional_storage_needed = packet_size * 20
-                if current_rate > max_possible_rate and self.sum_storage + additional_storage_needed < self.storage_cap:
-                    # Download one more chunk across all frames
-                    chunk_index = random.sample(range(0, 40), 1)
-                    if self.download_one_chunk_from_server(video_name, chunk_index) == True:
-                        new_chunks = list(set(self.get_chunks(video_name)) | set(map(str, chunk_index)))
-                        self.set_chunks(video_name, new_chunks)
-                        update_chunks_for_cache(tracker_address, self.address[0], self.address[1], video_name, new_chunks)
-                        self.sum_storage = self.sum_storage + additional_storage_needed
-                        print '[cache.py] storage update done'
-                        print '[cache.py] storage Usage' , int(self.sum_storage/1000/1000) , '(MB) /' , int(self.storage_cap/1000/1000) , '(MB)'
+                    max_possible_rate = len(self.get_chunks(video_name))
+                    additional_storage_needed = packet_size * 20
+                    if current_rate > max_possible_rate and self.sum_storage + additional_storage_needed < self.storage_cap:
+                        # Download one more chunk across all frames
+                        chunk_index = random.sample(range(0, 40), 1)
+                        if self.download_one_chunk_from_server(video_name, chunk_index) == True:
+                            new_chunks = list(set(self.get_chunks(video_name)) | set(map(str, chunk_index)))
+                            self.set_chunks(video_name, new_chunks)
+                            update_chunks_for_cache(tracker_address, self.address[0], self.address[1], video_name, new_chunks)
+                            self.sum_storage = self.sum_storage + additional_storage_needed
+                            print '[cache.py] storage update done'
+                            print '[cache.py] storage Usage' , int(self.sum_storage/1000/1000) , '(MB) /' , int(self.storage_cap/1000/1000) , '(MB)'
 
-    def topology_update(self):
-        print '[cache.py] topology updating'
+    def topology_update(self, T_period):
+        while True:
+            print '[cache.py] topology updating'
+            time.sleep(T_period)
 
     def connection_check(self):
         print '[cache.py] connection checking'
@@ -279,26 +289,13 @@ class Cache(object):
         #CacheHandler.connected[self.index] = True
 
     def start_control(self):
-        T_rate = 1
-        T_storage = 10
-        T_topology = 30
+        th1 = threading.Thread(target=self.rate_update, args=(T_rate,))
+        th2 = threading.Thread(target=self.storage_update, args=(T_storage,))
+        th3 = threading.Thread(target=self.topology_update, args=(T_topology,))
+        threads = [th1, th2, th3]
 
-        T_gcd = 1
-        T_lcm = 30
-
-        T_ct = 0
-
-        while True:
-            print '[cache.py] T_ct = ', T_ct
-            time.sleep(T_gcd)
-            T_ct = T_ct + T_gcd
-            if T_ct % T_rate == 0:
-                self.rate_update()
-            if T_ct % T_storage == 0:
-                self.storage_update()
-            if T_ct & T_topology == 0:
-                self.topology_update()
-                self.connection_check()
+        for th in threads:
+            th.start()
 
 ###### HANDLER FOR EACH CONNECTION TO THIS CACHE######
 
@@ -466,7 +463,8 @@ def load_cache_config(cache_id):
     return None
 
 def get_server_address(tracker_address):
-    return retrieve_server_address_from_tracker(tracker_address)
+    #return retrieve_server_address_from_tracker(tracker_address)
+    return retrieve_server_address_from_tracker_for_cache(tracker_address)
 
 def main():
     if len(sys.argv) == 2:

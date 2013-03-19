@@ -22,7 +22,7 @@ num_of_caches = 2
 
 class P2PUser():
 
-    def __init__(self, tracker_ip, video_name, packet_size):
+    def __init__(self, tracker_address, video_name, packet_size):
         """ Create a new P2PUser.  Set the packet size, instantiate the manager,
         and establish clients.  Currently, the clients are static but will
         become dynamic when the tracker is implemented.
@@ -41,17 +41,9 @@ class P2PUser():
         server_ip_address = retrieve_server_address_from_tracker(tracker_address)
         self.server_client = ThreadClient(server_ip_address, self.packet_size)
         self.server_client.set_respond_RETR(True)
-
-        # Connect to the caches
-        cache_ip_addr = retrieve_caches_address_from_tracker(tracker_address, num_of_caches)
-        print '[user.py] ' , cache_ip_addr
-        self.tracker_ip = tracker_ip
-
-        # Connect to the caches
+        self.tracker_address = tracker_address
         self.clients = []
-        for i in xrange(len(cache_ip_addr)):
-            self.clients.append(ThreadClient(cache_ip_addr[i], self.packet_size, i))
-            # later: ask tracker.
+        self.num_of_caches = num_of_caches
         self.manager = None # TODO: create the manager class to decode/play
 
     def play(self, video_name, frame_number):
@@ -66,9 +58,18 @@ class P2PUser():
         # TODO: add decoding.
 
     def download(self, video_name, start_frame):
-        # ask all clients for 5 chunks in the next 10 second set
-        # make sure each of these requests have separate chunk numbers.
-        # after receiving these packets, get stuff from the server.
+        # Connect to the caches
+        cache_ip_addr = retrieve_caches_address_from_tracker(self.tracker_address, 100)
+        connected_caches = set([])
+        connected_caches_index = [0] * self.num_of_caches
+        not_connected_caches = set(range(len(cache_ip_addr)))
+        for i in range(self.num_of_caches):
+            self.clients.append(ThreadClient(cache_ip_addr[i], self.packet_size, i))
+            connected_caches.add(i)
+            connected_caches_index[i] = i
+            print '[user.py] ', i, 'th connection : ' , cache_ip_addr
+        not_connected_caches = not_connected_caches - connected_caches
+
         available_chunks = set([])
         self.clients[0].put_instruction('VLEN file-%s' % (video_name))
         vlen_str = self.clients[0].get_response().split('\n')[0]
@@ -83,18 +84,21 @@ class P2PUser():
 
         # Set internal chunk_size through putting an internal instruction into
         # the queue.
-        inst_INTL = 'INTL ' + 'CNKN ' + vlen_items[2] # chunk size of typical frame (not last one)
-        for i in range(len(self.clients)):
-            client = self.clients[i]
-            client.put_instruction(inst_INTL)
-        self.server_client.put_instruction(inst_INTL)
-
         base_file = open('video-' + video_name + '/' + base_file_name, 'ab')
+        T_choke = 5 # Choke period
+
         for frame_number in xrange(start_frame, num_frames + 1):
-            if frame_number == num_frames: # This is the last frame, so change chunk_size.
+            effective_rates = [0]*len(self.clients)
+            assigned_chunks = [0]*len(self.clients)
+
+            if frame_number < num_frames: # Usual frames
+                inst_INTL = 'INTL ' + 'CNKN ' + vlen_items[2] # chunk size of typical frame (not last one)
+                for client in self.clients:
+                    client.put_instruction(inst_INTL)
+                self.server_client.put_instruction(inst_INTL)
+            else: # Last frame
                 inst_INTL = 'INTL ' + 'CNKN ' + vlen_items[3] # chunk size of last frame
-                for i in range(len(self.clients)):
-                    client = self.clients[i]
+                for client in self.clients:
                     client.put_instruction(inst_INTL)
                 self.server_client.put_instruction(inst_INTL)
 
@@ -124,8 +128,6 @@ class P2PUser():
                 union_chunks = list( set(union_chunks) | set(available_chunks[i]) )
 
             print '[user.py]', available_chunks
-            effective_rates = [0]*len(self.clients)
-            assigned_chunks = [0]*len(self.clients)
             # index assignment here
             chosen_chunks = set([])
             for i in range(len(self.clients)):
@@ -172,6 +174,9 @@ class P2PUser():
                         print "[user.py] Requesting from server: ", server_request
                 elif (DEBUGGING_MSG):
                     print "No unique chunks from server requested."
+
+            num_of_chks_from_server = len(server_request)
+            #update_server_load(tracker_address, video_name, num_of_chks_from_server)
 
             sleep(CACHE_DOWNLOAD_DURATION)
             ###### STOPPING CACHE DOWNLOADS: TIME 8 (CACHE_DOWNLOAD_DURATION) ######
@@ -247,6 +252,26 @@ class P2PUser():
                 # Open VLC Player
                 os.system('/Applications/VLC.app/Contents/MacOS/VLC2 OnePiece575.flv &')
 
+            if frame_number % T_choke == 0: # Topology update
+                rate_vector = [0] * self.num_of_caches
+                for i in range(num_of_caches):
+                    rate_vector[i] = len(assigned_chunks[i])
+                client_index = rate_vector.index(min(rate_vector))
+                worst_cache_index = connected_caches_index[client_index]
+                new_cache_index = random.sample(not_connected_caches, 1)
+
+                if len(new_cache_index) > 0:
+                    new_cache_index = new_cache_index[0]
+                    connected_caches_index[client_index] = new_cache_index
+                    self.clients[client_index] = ThreadClient(cache_ip_addr[new_cache_index], self.packet_size, worst_cache_index)
+                    connected_caches.add(new_cache_index)
+                    connected_caches.remove(worst_cache_index)
+                    not_connected_caches.add(worst_cache_index)
+                    not_connected_caches.remove(new_cache_index)
+
+                    print '[user.py] Topology Update : ', worst_cache_index, cache_ip_addr[worst_cache_index], 'is chocked.'
+                    print '[user.py] Topology Update : ', new_cache_index, cache_ip_addr[new_cache_index], 'is added.'
+
         for client in self.clients:
             client.put_instruction('QUIT')
         self.server_client.put_instruction('QUIT')
@@ -288,8 +313,7 @@ def chunks_to_request(A, B, num_ret):
 def main():
     print "Arguments:", sys.argv
 
-    packet_size_LUT = {'hyunah':194829, 'OnePiece575':169433}
-    tracker_ip = 0
+    packet_size_LUT = {'hyunah':194829, 'hyunah2':194829, 'OnePiece575':169433}
 
     if len(sys.argv) == 2:
         video_name = sys.argv[1]
@@ -302,7 +326,7 @@ def main():
         sys.exit()
 
     packet_size = 0
-    test_user = P2PUser(tracker_ip, video_name, packet_size)
+    test_user = P2PUser(tracker_address, video_name, packet_size)
     test_user.download(video_name, 1)
     test_user.disconnect()
 
