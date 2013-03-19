@@ -1,7 +1,8 @@
 $def with (nodes_info, n_nodes, videos_info)
 <!DOCTYPE html>
 <html lang="en">
-	<head>
+    <head>
+    <META HTTP-EQUIV="refresh" CONTENT="5">
     </head>
     <body>
         <p><h3>Node information</h3>
@@ -14,6 +15,8 @@ $def with (nodes_info, n_nodes, videos_info)
                 <th>type</th>
                 <th>ip</th>
                 <th>port</th>
+                <th>Watching_video</th>
+                <th>Stored_chunks</th>
             </tr>
             $for each in nodes_info:
             <tr>
@@ -28,17 +31,23 @@ $def with (nodes_info, n_nodes, videos_info)
             <tr>
                 <th>Cache ID</th>
                 $for each in videos_info:
-                <th>$each[1]</th>
+                    <th colspan=$each[3]>$each[1]</th>
             </tr>
             $for each in nodes_info:
                 $if each[1] == 'cache':
                     <tr>
                         <td>$each[0]</td>
                         $for each_video in videos_info:
-                        <td>
-                            $if each_video[1] in each[5].keys(): 
-                                $each[5][each_video[1]]
-                        </td>
+                            $if each_video[1] not in each[5].keys():
+                                $for i in range(each_video[3]):
+                                    <td>&#1792;</td>
+                            $else:
+                                $for i in range(each_video[3]):
+                                    $if i in each[5][each_video[1]]:
+                                        <td>&#9608;</td>
+                                    $else:
+                                        <td>&#1792;</td>
+
                     </tr>
         </table>
 
