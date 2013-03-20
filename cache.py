@@ -18,7 +18,7 @@ MAX_CONNS = 10
 MAX_VIDEOS = 10
 BUFFER_LENGTH = 10
 path = "."
-tracker_address = "http://localhost:8080/req/"
+tracker_address = load_tracker_address() # set in helper. 
 
 T_rate = 1
 T_storage = 10

@@ -16,7 +16,7 @@ VLC_PLAYER_USE = False
 CACHE_DOWNLOAD_DURATION = 8 # sec
 SERVER_DOWNLOAD_DURATION = 2 # sec
 DECODE_WAIT_DURATION = 0.1 # sec
-tracker_address = "http://localhost:8080/req/"
+tracker_address = load_tracker_address() 
 num_of_caches = 2
 
 class P2PUser():

@@ -3,6 +3,10 @@ import urllib2
 import csv
 
 DEBUGGING_MSG = True
+tracker_address = "http://107.21.135.254:8080/req/"
+
+def load_tracker_address():
+    return tracker_address
 
 class MovieLUT():
     """
