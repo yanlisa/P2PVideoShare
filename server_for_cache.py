@@ -13,7 +13,7 @@ from helper import parse_chunks, MovieLUT
 DEBUGGING_MSG = True
 # Cache Configuration
 server_address = ("localhost", 61001)
-tracker_address = "http://localhost:8080/req/"
+tracker_address = load_tracker_address() 
 path = "."
 movie_config_file = '../config/video_info.csv'
 
