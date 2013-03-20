@@ -3,7 +3,6 @@ from time import sleep
 from helper import *
 import os
 import re
-import sets
 from threadclient import ThreadClient
 from ftplib import error_perm
 from zfec import filefec
@@ -305,7 +304,7 @@ def chunks_to_request(A, B, num_ret):
     #print str_A
     #print str_B
 
-    set_A, set_B = sets.Set(str_A), sets.Set(str_B) # map all elts to str
+    set_A, set_B = set(str_A), set(str_B) # map all elts to str
     list_diff = list(set_B - set_A)
     list_diff.sort()
     return list_diff[:min(len(set_B - set_A), num_ret)]
