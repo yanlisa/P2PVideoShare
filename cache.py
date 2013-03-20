@@ -14,8 +14,8 @@ DEBUGGING_MSG = True
 # Cache Configuration
 cache_config_file = '../../config/cache_config.csv'
 
-MAX_CONNS = 10
-MAX_VIDEOS = 10
+MAX_CONNS = 1000
+MAX_VIDEOS = 1000
 BUFFER_LENGTH = 10
 path = "."
 tracker_address = load_tracker_address() # set in helper. 

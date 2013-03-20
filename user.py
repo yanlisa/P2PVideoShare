@@ -7,10 +7,11 @@ from threadclient import ThreadClient
 from ftplib import error_perm
 from zfec import filefec
 import random
+import urllib2
 
 # Debugging MSG
 DEBUGGING_MSG = True
-VLC_PLAYER_USE = False
+VLC_PLAYER_USE = True
 
 # Global parameters
 CACHE_DOWNLOAD_DURATION = 8 # sec
@@ -44,6 +45,19 @@ class P2PUser():
         self.clients = []
         self.num_of_caches = num_of_caches
         self.manager = None # TODO: create the manager class to decode/play
+
+    def VLC_start_video(self, video_path):
+        # Put the file into the queue and play it
+        url = 'http://127.0.0.1:8080/requests/status.xml?command=in_play&input=file://'
+        url = url + video_path
+        print '[user.py] ', url
+        urllib2.urlopen(url).read()
+
+    def VLC_pause_video(self):
+        # Pause or play it
+        url = 'http://127.0.0.1:8080/requests/status.xml?command=pl_pause'
+        print '[user.py] ', url
+        urllib2.urlopen(url).read()
 
     def play(self, video_name, frame_number):
         """ Starts playing the video as identified by either name or number and
@@ -84,6 +98,7 @@ class P2PUser():
         # Set internal chunk_size through putting an internal instruction into
         # the queue.
         base_file = open('video-' + video_name + '/' + base_file_name, 'ab')
+        base_file_full_path = os.path.abspath('video-' + video_name + '/' + base_file_name)
         T_choke = 5 # Choke period
 
         for frame_number in xrange(start_frame, num_frames + 1):
@@ -217,6 +232,9 @@ class P2PUser():
 
             if (DEBUGGING_MSG):
                 print "[user.py] Waiting to receive all elements from server."
+            if frame_number > start_frame and (server_request or addtl_server_request):
+                # Need to pause it!
+                self.VLC_pause_video()
             if server_request:
                 resp_RETR = self.server_client.get_response()
                 parsed_form = parse_chunks(resp_RETR)
@@ -227,6 +245,10 @@ class P2PUser():
                 parsed_form = parse_chunks(resp_RETR)
                 fname, framenum, binary_g, chunks = parsed_form
                 print "[user.py] Downloaded chunks from server: ", chunks
+
+            # Now play it
+            if frame_number > start_frame and (server_request or addtl_server_request):
+                self.VLC_pause_video()
 
             chunk_nums = chunk_nums_in_frame_dir(folder_name)
             num_chunks_rx = len(chunk_nums)
@@ -248,8 +270,7 @@ class P2PUser():
             filefec.decode_from_files(base_file, chunksList)
             print 'decoded.  Size of base file =', os.path.getsize('video-' + video_name + '/' + base_file_name)
             if frame_number == 1 and VLC_PLAYER_USE:
-                # Open VLC Player
-                os.system('/Applications/VLC.app/Contents/MacOS/VLC2 OnePiece575.flv &')
+                self.VLC_start_video(base_file_full_path)
 
             if frame_number % T_choke == 0: # Topology update
                 rate_vector = [0] * self.num_of_caches
