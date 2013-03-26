@@ -39,6 +39,11 @@ class StreamFTPServer(ftpserver.FTPServer):
         self.conns = []
         self.handlers = []
 
+    def set_stream_rate(self, spec_rate):
+        if spec_rate != 0:
+            self.stream_rate = spec_rate
+            if DEBUGGING_MSG:
+                print "Streaming FTP Handler stream rate changed to:", self.stream_rate
 
     def handle_accept(self):
         """Mainly copy-pasted from FTPServer code. Added stream_rate parameter
