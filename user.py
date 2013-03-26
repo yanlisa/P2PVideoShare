@@ -11,23 +11,24 @@ import urllib2
 
 # Debugging MSG
 DEBUGGING_MSG = True
-VLC_PLAYER_USE = True
+VLC_PLAYER_USE = False
 
 # Global parameters
 CACHE_DOWNLOAD_DURATION = 8 # sec
 SERVER_DOWNLOAD_DURATION = 2 # sec
 DECODE_WAIT_DURATION = 0.1 # sec
-tracker_address = load_tracker_address() 
+tracker_address = load_tracker_address()
 num_of_caches = 2
 
 class P2PUser():
 
-    def __init__(self, tracker_address, video_name, packet_size):
+    #def __init__(self, tracker_address, video_name, packet_size):
+    def __init__(self, tracker_address, video_name):
         """ Create a new P2PUser.  Set the packet size, instantiate the manager,
         and establish clients.  Currently, the clients are static but will
         become dynamic when the tracker is implemented.
         """
-        self.packet_size = packet_size
+        self.packet_size = 1000
         my_ip = 'user'
         my_port = 30
         register_to_tracker_as_user(tracker_address, my_ip, my_port, video_name)
@@ -232,7 +233,7 @@ class P2PUser():
 
             if (DEBUGGING_MSG):
                 print "[user.py] Waiting to receive all elements from server."
-            if frame_number > start_frame and (server_request or addtl_server_request):
+            if frame_number > start_frame and (server_request or addtl_server_request) and VLC_PLAYER_USE:
                 # Need to pause it!
                 self.VLC_pause_video()
             if server_request:
@@ -247,7 +248,7 @@ class P2PUser():
                 print "[user.py] Downloaded chunks from server: ", chunks
 
             # Now play it
-            if frame_number > start_frame and (server_request or addtl_server_request):
+            if frame_number > start_frame and (server_request or addtl_server_request) and VLC_PLAYER_USE:
                 self.VLC_pause_video()
 
             chunk_nums = chunk_nums_in_frame_dir(folder_name)
@@ -272,7 +273,7 @@ class P2PUser():
             if frame_number == 1 and VLC_PLAYER_USE:
                 self.VLC_start_video(base_file_full_path)
 
-            if frame_number % T_choke == 0: # Topology update
+            if frame_number % T_choke == 0 and len(not_connected_cache): # Topology update
                 rate_vector = [0] * self.num_of_caches
                 for i in range(num_of_caches):
                     rate_vector[i] = len(assigned_chunks[i])
@@ -332,21 +333,9 @@ def chunks_to_request(A, B, num_ret):
 
 def main():
     print "Arguments:", sys.argv
-
-    packet_size_LUT = {'hyunah':194829, 'hyunah2':194829, 'OnePiece575':169433}
-
-    if len(sys.argv) == 2:
-        video_name = sys.argv[1]
-        if video_name in packet_size_LUT:
-            packet_size = packet_size_LUT[video_name]
-        else:
-            print '[user.py] The video ', video_name, ' does not exist.'
-            sys.exit()
-    else:
-        sys.exit()
-
-    packet_size = 0
-    test_user = P2PUser(tracker_address, video_name, packet_size)
+    #test_user = P2PUser(tracker_address, video_name, packet_size)
+    video_name = sys.argv[1]
+    test_user = P2PUser(tracker_address, video_name)
     test_user.download(video_name, 1)
     test_user.disconnect()
 

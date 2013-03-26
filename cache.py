@@ -18,7 +18,7 @@ MAX_CONNS = 1000
 MAX_VIDEOS = 1000
 BUFFER_LENGTH = 10
 path = "."
-tracker_address = load_tracker_address() # set in helper. 
+tracker_address = load_tracker_address() # set in helper.
 
 T_rate = 1
 T_storage = 10
@@ -40,8 +40,7 @@ class ThreadStreamFTPServer(StreamFTPServer, threading.Thread):
         return self.conns
 
     def get_handlers(self):
-        print '[cache.py] ', self.handlers
-        print self.handlers
+        print '[cache.py] self.handlers = ', self.handlers
         return self.handlers
 
 class Cache(object):

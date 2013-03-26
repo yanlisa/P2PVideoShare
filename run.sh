@@ -1,8 +1,8 @@
 ./populate_tracker.sh
-sleep 2
+sleep 1
 ./populate_server.sh
-sleep 2
+sleep 1
 ./populate_server_for_cache.sh
-sleep 2
+sleep 1
 ./populate_cache.sh
 
