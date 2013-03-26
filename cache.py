@@ -73,7 +73,7 @@ class Cache(object):
         register_to_tracker_as_cache(tracker_address, self.address[0], self.address[1])
         print '[cache.py] Address : ', self.address
         masq_address = cache_config[3]
-        stream_rate = int(cache_config[4])
+        stream_rate = int(cache_config[4]) # in bps
         # num_of_chunks_cache_stores = int(cache_config[5])
 
         # Variables for algorithms

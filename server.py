@@ -28,7 +28,7 @@ class StreamFTPServer(ftpserver.FTPServer):
 
     handle_accept: on new client connection.
     """
-    stream_rate = 10000 # default rate
+    stream_rate = 10000 # default rate (bps), but main() calls with 30KB/s
 
     def __init__(self, address, handler, spec_rate=0):
         super(StreamFTPServer, self).__init__(address, handler)
@@ -67,8 +67,6 @@ class StreamFTPServer(ftpserver.FTPServer):
             *********************
             handler = StreamHandler, which specifies stream_rate for the overall
             tcp connection.
-
-            stream_rate is adjusted with handler.set_stream_rate.
             *********************
             """
             handler = self.handler(sock, self, len(self.handlers), self.stream_rate)
@@ -165,12 +163,6 @@ class StreamHandler(ftpserver.FTPHandler):
 
     def get_chunks(self):
         return self.chunks
-
-    def set_stream_rate(self, spec_rate):
-        if spec_rate != 0:
-            self.stream_rate = spec_rate
-            if DEBUGGING_MSG:
-                print "Streaming FTP Handler stream rate changed to:", self.stream_rate
 
     def on_connect(self):
         print '[server.py] ******** CONNECTION ESTABLISHED'
@@ -438,17 +430,6 @@ class FileStreamProducer(ftpserver.FileProducer):
         super(FileStreamProducer, self).__init__(file, type)
 
     @staticmethod
-    def set_buffer_size(buffer_size):
-        """
-        No longer need to restrict the buffer, as ThrottledDTPHandler
-        takes care of streaming rate.
-
-        This function sets the size of data to be sent across the TCP conn.
-        That is, it is the size of the TCP packet (minus header).
-        """
-        FileStreamProducer.buffer_size = buffer_size
-
-    @staticmethod
     def set_wait_time(wait_time):
         FileStreamProducer.wait_time = wait_time
 
@@ -473,17 +454,6 @@ class FileChunkProducer(FileStreamProducer):
         if not self.file_queue.empty():
             self.curr_producer = FileStreamProducer( \
                 self.file_queue.get(), self.type, self.buffer_size)
-
-    @staticmethod
-    def set_buffer_size(buffer_size):
-        """
-        No longer need to restrict the buffer, as ThrottledDTPHandler
-        takes care of streaming rate.
-
-        This function sets the size of data to be sent across the TCP conn.
-        That is, it is the size of the TCP packet (minus header).
-        """
-        FileChunkProducer.buffer_size = buffer_size
 
     def more(self):
         if self.curr_producer:
