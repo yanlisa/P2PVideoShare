@@ -13,7 +13,7 @@ from helper import parse_chunks, MovieLUT, load_tracker_address
 DEBUGGING_MSG = True
 # Cache Configuration
 server_address = ("localhost", 61000)
-tracker_address = load_tracker_address() 
+tracker_address = load_tracker_address()
 path = "."
 movie_config_file = '../config/video_info.csv'
 
@@ -134,7 +134,7 @@ class StreamHandler(ftpserver.FTPHandler):
     Has two different responses for ftp_RETR:
     -If type is of the form 'chunk-<filename>.<int>', send all
     """
-    stream_rate = 10*1024 # default (10 Kbps)
+    stream_rate = 10000*1024 # default (10 Kbps)
     max_chunks = 40
     movies_path = path
 
@@ -524,7 +524,7 @@ def main():
     """Parameters:
         No parameters: run with defaults (assume on ec2server)
     """
-    stream_rate = 100000000 # 30KB per sec
+    stream_rate = 5000000 # 5Mbps
     authorizer = ftpserver.DummyAuthorizer()
     # allow anonymous login.
     if DEBUGGING_MSG:
