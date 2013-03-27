@@ -269,7 +269,7 @@ class StreamHandler(ftpserver.FTPHandler):
             except ValueError:
                 why = "Invalid REST parameter"
             except IOError, err:
-                why = _strerror(err)
+                why = ftpserver._strerror(err)
             if not ok:
                 self.respond('554 %s' % why)
                 return
@@ -458,31 +458,7 @@ class VariableThrottledDTPHandler(ftpserver.ThrottledDTPHandler):
                 self.auto_size_buffers(spec_rate)
         return super(VariableThrottledDTPHandler, self).send(data)
 
-
-class FileStreamProducer(ftpserver.FileProducer):
-    """
-    Wraps around FileProducer such that reading is limited by
-    packet_size.
-    Wait 0.1 s before calling more().
-    Default buffer_size is 65536 as specified in FileProducer.
-    """
-    buffer_size = 65535
-    wait_time = 0.1
-    def __init__(self, file, type, buff=0):
-        if buff:
-            self.buffer_size = buff
-        super(FileStreamProducer, self).__init__(file, type)
-
-    @staticmethod
-    def set_wait_time(wait_time):
-        FileStreamProducer.wait_time = wait_time
-
-    def more(self):
-        time.sleep(self.wait_time)
-        data = super(FileStreamProducer, self).more()
-        return data
-
-class FileChunkProducer(FileStreamProducer):
+class FileChunkProducer(ftpserver.FileProducer):
     """Takes a queue of file chunk objects and attempts to send
     one with each call to self.more().
 
@@ -496,8 +472,8 @@ class FileChunkProducer(FileStreamProducer):
         self.curr_producer = None
         self.type = type
         if not self.file_queue.empty():
-            self.curr_producer = FileStreamProducer( \
-                self.file_queue.get(), self.type, self.buffer_size)
+            self.curr_producer = ftpserver.FileProducer( \
+                self.file_queue.get(), self.type)
 
     def more(self):
         if self.curr_producer:
@@ -505,8 +481,8 @@ class FileChunkProducer(FileStreamProducer):
             if not data:
                 if not self.file_queue.empty():
                     f = self.file_queue.get()
-                    self.curr_producer = FileStreamProducer( \
-                        f, self.type, self.buffer_size)
+                    self.curr_producer = ftpserver.FileProducer( \
+                        f, self.type)
                     data = self.curr_producer.more()
             return data
         return None
