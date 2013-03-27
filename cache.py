@@ -261,6 +261,8 @@ class Cache(object):
                     if packet_size == 0:
                         continue
 
+                    print '[cache.py] storage Usage' , int(self.sum_storage/1000/1000) , '(MB) /' , int(self.storage_cap/1000/1000) , '(MB)'
+
                     max_possible_rate = len(self.get_chunks(video_name))
                     additional_storage_needed = packet_size * 20
                     if current_rate > max_possible_rate and self.sum_storage + additional_storage_needed < self.storage_cap:

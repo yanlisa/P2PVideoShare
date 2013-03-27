@@ -273,7 +273,7 @@ class P2PUser():
             if frame_number == 1 and VLC_PLAYER_USE:
                 self.VLC_start_video(base_file_full_path)
 
-            if frame_number % T_choke == 0 and len(not_connected_cache): # Topology update
+            if frame_number % T_choke == 0 and len(not_connected_caches): # Topology update
                 rate_vector = [0] * self.num_of_caches
                 for i in range(num_of_caches):
                     rate_vector[i] = len(assigned_chunks[i])
