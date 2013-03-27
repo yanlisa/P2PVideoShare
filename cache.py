@@ -21,7 +21,7 @@ path = "."
 tracker_address = load_tracker_address() # set in helper.
 
 T_rate = 1
-T_storage = 10
+T_storage = 1
 T_topology = 300
 
 # IP Table
@@ -73,7 +73,7 @@ class Cache(object):
         register_to_tracker_as_cache(tracker_address, self.address[0], self.address[1])
         print '[cache.py] Address : ', self.address
         masq_address = cache_config[3]
-        stream_rate = int(cache_config[4]) # in bps
+        stream_rate = int(cache_config[4])
         # num_of_chunks_cache_stores = int(cache_config[5])
 
         # Variables for algorithms
@@ -464,8 +464,7 @@ def load_cache_config(cache_id):
     return None
 
 def get_server_address(tracker_address):
-    #return retrieve_server_address_from_tracker(tracker_address)
-    return retrieve_server_address_from_tracker_for_cache(tracker_address)
+    return retrieve_server_address_from_tracker(tracker_address)
 
 def main():
     if len(sys.argv) == 2:

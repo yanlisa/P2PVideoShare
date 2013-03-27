@@ -5,4 +5,3 @@ cd "server"
 echo "Initiating server..."
 python ../server.py  > ../log/server.txt &
 cd ".."
-

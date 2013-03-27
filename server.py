@@ -511,6 +511,10 @@ class MovieLister(ftpserver.BufferedIteratorProducer):
         return ''.join(buffer)[:-1]
 
 def main():
+    if len(sys.argv) == 2:
+        port_num = int(sys.argv[1])
+        server_address[1] = port_num
+
     """Parameters:
         No parameters: run with defaults (assume on ec2server)
     """
