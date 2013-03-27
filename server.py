@@ -28,7 +28,7 @@ class StreamFTPServer(ftpserver.FTPServer):
 
     handle_accept: on new client connection.
     """
-    stream_rate = 10000 # default rate (bps), but main() calls with 30KB/s
+    stream_rate = 10000 # default rate (bps), but main() calls with much larger 
 
     def __init__(self, address, handler, spec_rate=0):
         super(StreamFTPServer, self).__init__(address, handler)
@@ -129,6 +129,8 @@ proto_cmds['VLEN'] = dict(perm='l', auth=True, arg=True,
                               help='Syntax: VLEN (video length: number of frames total).')
 proto_cmds['CNKS'] = dict(perm='l', auth=True, arg=None,
                               help='Syntax: CNKS (list available chunk nums).')
+proto_cmds['RETO'] = dict(perm='r', auth=True, arg=True,
+                  help='Syntax: RETO <SP> file-name (retrieve a file).')
 
 class StreamHandler(ftpserver.FTPHandler):
     """The general handler for an FTP Server in this network.
@@ -137,7 +139,7 @@ class StreamHandler(ftpserver.FTPHandler):
     Has two different responses for ftp_RETR:
     -If type is of the form 'chunk-<filename>.<int>', send all
     """
-    stream_rate = 10*1024 # default (10 Kbps)
+    stream_rate = 1000*1024 # default (10 Kbps)
     max_chunks = 40
     movies_path = path
 
@@ -236,6 +238,43 @@ class StreamHandler(ftpserver.FTPHandler):
             producer = self.chunkproducer(files, self._current_type)
             self.push_dtp_data(producer, isproducer=True, file=None, cmd="RETR")
             return
+
+    def ftp_RETO(self, file):
+        """Retrieve the specified file (transfer from the server to the
+        client)
+
+        ftpserver version of ftp_RETR, pasted here for testing purposes.
+        """
+        rest_pos = self._restart_position
+        self._restart_position = 0
+        try:
+            fd = self.run_as_current_user(self.fs.open, file, 'rb')
+        except IOError, err:
+            why = _strerror(err)
+            self.respond('550 %s.' % why)
+            return
+
+        if rest_pos:
+            # Make sure that the requested offset is valid (within the
+            # size of the file being resumed).
+            # According to RFC-1123 a 554 reply may result in case that
+            # the existing file cannot be repositioned as specified in
+            # the REST.
+            ok = 0
+            try:
+                if rest_pos > self.fs.getsize(file):
+                    raise ValueError
+                fd.seek(rest_pos)
+                ok = 1
+            except ValueError:
+                why = "Invalid REST parameter"
+            except IOError, err:
+                why = _strerror(err)
+            if not ok:
+                self.respond('554 %s' % why)
+                return
+        producer = ftpserver.FileProducer(fd, self._current_type)
+        self.push_dtp_data(producer, isproducer=True, file=fd, cmd="RETR")
 
     def get_chunk_files(self, path, chunks=None):
         """For the specified path, open up all files for reading. and return
@@ -535,7 +574,7 @@ def main():
             print err_msg
             return err_msg
 
- # handler.masquerade_address = '107.21.135.254' # Nick EC2
+    # handler.masquerade_address = '107.21.135.254' # Nick EC2
     # handler.masquerade_address = '174.129.174.31' # Lisa EC2
     handler.passive_ports = range(60000, 65535)
     ftpd = StreamFTPServer(server_address, handler, stream_rate)
