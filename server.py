@@ -28,7 +28,7 @@ class StreamFTPServer(ftpserver.FTPServer):
 
     handle_accept: on new client connection.
     """
-    stream_rate = 10000 # default rate (bps), but main() calls with much larger 
+    stream_rate = 10000 # default rate (bps), but main() calls with much larger
 
     def __init__(self, address, handler, spec_rate=0):
         super(StreamFTPServer, self).__init__(address, handler)
@@ -139,11 +139,7 @@ class StreamHandler(ftpserver.FTPHandler):
     Has two different responses for ftp_RETR:
     -If type is of the form 'chunk-<filename>.<int>', send all
     """
-<<<<<<< HEAD
     stream_rate = 10000*1024 # default (10 Kbps)
-=======
-    stream_rate = 1000*1024 # default (10 Kbps)
->>>>>>> 269d367f116d752332b6bf6635c33812e3ae01ec
     max_chunks = 40
     movies_path = path
 
