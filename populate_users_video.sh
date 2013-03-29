@@ -13,7 +13,7 @@ do
     fi
     cd "user_"$1"_"$i
     rm -r video*
-    python ../../user.py $1 > ../../log/user_$1_$i.txt &
+    python ../../user.py $1 "user-"$1"-"$i > ../../log/user_$1_$i.txt &
     cd ".."
     sleep 1
 done

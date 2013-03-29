@@ -3,7 +3,7 @@ import os, sys, errno
 import time
 from helper import parse_chunks
 
-DEBUGGING_MSG = True
+DEBUGGING_MSG = False
 
 class ThreadClient(object):
     """Creates a client thread and pushes instructions to it.
@@ -105,7 +105,7 @@ class ThreadClient(object):
                     if extra_bytes > 0:
                         trunc_data = data[:len(data)-extra_bytes]
                     datastring = ''.join([order_and_data[1], trunc_data])
-                    if (True):
+                    if DEBUGGING_MSG:
                         outputStr = "Writing %s (actual: %d, expected: %d, totalCurrBytes: %d).\n" % \
                             (filestr, len(datastring), chunk_size, total_curr_bytes)
                         sys.stdout.write(outputStr)

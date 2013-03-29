@@ -10,19 +10,20 @@ import threading
 from helper import *
 
 # Debugging MSG
-DEBUGGING_MSG = True
+DEBUGGING_MSG = False
 # Cache Configuration
 cache_config_file = '../../config/cache_config.csv'
 
+INFINITY = 10e10
 MAX_CONNS = 1000
 MAX_VIDEOS = 1000
 BUFFER_LENGTH = 10
 path = "."
 tracker_address = load_tracker_address() # set in helper.
 
-T_rate = 1
-T_storage = 1
-T_topology = 300
+T_rate = .01
+T_storage = .01
+T_topology = 600
 
 # IP Table
 class ThreadStreamFTPServer(StreamFTPServer, threading.Thread):
@@ -40,7 +41,7 @@ class ThreadStreamFTPServer(StreamFTPServer, threading.Thread):
         return self.conns
 
     def get_handlers(self):
-        print '[cache.py] self.handlers = ', self.handlers
+        #print '[cache.py] self.handlers = ', self.handlers
         return self.handlers
 
 class Cache(object):
@@ -77,22 +78,25 @@ class Cache(object):
         # num_of_chunks_cache_stores = int(cache_config[5])
 
         # Variables for algorithms
-        self.delta_x = 1
-        self.delta_f = 1
-        self.delta_la = 1
-        self.delta_mu = 1
-        self.delta_k = 1
+        eps = .1
+        average_streaming_rate = 500 # Kbps
+        average_length = 600 # sec
+        self.eps_x = eps
+        self.eps_f = eps / 500 / 8
+        self.eps_la = eps / 100
+        self.eps_mu = eps / pow(average_length, 2) / 10
+        self.eps_k = eps
 
-        self.bandwidth_cap = 6400 # (Kbps)
-        self.storage_cap_in_MB = 41 # (MB)
+        self.bandwidth_cap = 2000 # (Kbps)
+        self.storage_cap_in_MB = 50 # (MB)
         self.storage_cap = self.storage_cap_in_MB * 1000 * 1000 # (Bytes)
 
-        self.dual_la = 0 # dual variable for ST
-        self.dual_mu = 0 # dual variable for BW
+        self.dual_la = 0 # dual variable for BW
+        self.dual_mu = 0 # dual variable for ST
 
-        self.primal_x = [] * MAX_CONNS
-        self.primal_f = [] * MAX_VIDEOS
-        self.dual_k = [] * MAX_VIDEOS
+        self.primal_x = [0] * MAX_CONNS
+        self.primal_f = {}
+        self.dual_k = [0] * MAX_CONNS
 
         self.sum_rate = 0
         self.sum_storage = 0
@@ -146,7 +150,7 @@ class Cache(object):
             return []
 
     def set_chunks(self, video_name, new_chunks):
-        print '[[[cache.py]]]', new_chunks
+        print '[cache.py]', new_chunks
         CacheHandler.chunks[video_name] = new_chunks
         # self.mini_server.get_handlers()[index].set_chunks(new_chunks)
 
@@ -156,9 +160,91 @@ class Cache(object):
     def get_watching_video(self, index):
         return CacheHandler.watching_video[index]
 
+    def bound(self, h, y, a, b):
+       # if (a > b)
+       #     Illegal bound specified, a(lower bound) must be less than or equal to b(upper bound
+       # end
+       if y > b:
+           return min(0, h)
+       elif y < a:
+           return max(0, h)
+       else:
+           return h
+
     def rate_update(self, T_period):
+        self.rate_update_optimal(T_period)
+        #self.rate_udpate_greedy(T_period)
+
+    def rate_update_optimal(self, T_period):
         while True:
-            print '[cache.py] rate updating'
+            time.sleep(T_period)
+            handlers = self.get_handlers()
+            if len(handlers) == 0:
+                if DEBUGGING_MSG:
+                    print '[cache.py] No user is connected'
+            else:
+                sum_rate = 0
+                for i in range(len(handlers)):
+                    handler = handlers[i]
+                    if handler._closed == True:
+                        continue
+                    video_name = self.get_watching_video(i)
+                    packet_size = self.movie_LUT.chunk_size_lookup(video_name)
+                    current_rate = self.get_conn_rate(i)
+                    sum_rate = sum_rate + current_rate * packet_size / 1000 / BUFFER_LENGTH * 8
+                self.sum_rate = sum_rate
+                if DEBUGGING_MSG:
+                    print '[cache.py] BW usage ' + str(self.sum_rate) + '/' + str(self.bandwidth_cap)
+
+                sum_x = 0
+                for i in range(len(handlers)):
+                    ## 1. UPDATE PRIMAL_X
+                    handler = handlers[i]
+                    if handler._closed == True:
+                        if DEBUGGING_MSG:
+                            print '[cache.py] Connection ' + str(i) + ' is closed'
+                        continue
+                    video_name = self.get_watching_video(i)
+                    if DEBUGGING_MSG:
+                        print '[cache.py] User ' + str(i) + ' is watching ' + str(video_name)
+                    packet_size = self.movie_LUT.chunk_size_lookup(video_name)
+                    if packet_size == 0:
+                        continue
+
+                    # First, find the optiaml variables
+                    g = self.get_g(i)
+                    delta_x = self.bound(g - (self.dual_la + self.dual_k[i]), \
+                                        self.primal_x[i], 0, self.bandwidth_cap)
+                    self.primal_x[i] += self.eps_x * delta_x
+                    sum_x += self.primal_x[i]
+
+                    # Apply it if it goes over some rate
+                    rate_per_chunk = packet_size / 1000 / BUFFER_LENGTH * 8 # (Kbps)
+                    assigned_rate = round(self.primal_x[i] / rate_per_chunk)
+                    num_of_stored_chunks = len(self.get_chunks(video_name)) # FIX : it should be video(i)
+                    self.set_conn_rate(i, min(assigned_rate, num_of_stored_chunks))
+                    #current_rate = self.get_conn_rate(i)
+                    print '[cache.py] User ' + str(i) + ' (g,x,assigned_rate,num_of_stored) ' + str(g) + ',' + str(self.primal_x[i]) + ',' + str(assigned_rate) + ',' + str(num_of_stored_chunks)
+
+                    ## 2. UPDATE DUAL_K
+                    if video_name not in self.primal_f.keys():
+                        self.primal_f[video_name] = 0.0
+                    if DEBUGGING_MSG:
+                        print '[cache.py] total rate = ', (rate_per_chunk * 20)
+                    delta_k = self.bound(self.primal_x[i] - self.primal_f[video_name] * rate_per_chunk * 20, self.dual_k[i], 0, INFINITY)
+                    self.dual_k[i] += self.eps_k * delta_k
+                    print '[cache.py] User ' + str(i) + ' dual_k ' + str(self.dual_k[i])
+
+                ## 3. UPDATE DUAL_LA
+                print '[cache.py] sum_x ' , sum_x
+                delta_la = self.bound(sum_x - self.bandwidth_cap, self.dual_la, 0, INFINITY)
+                self.dual_la += self.eps_la * delta_la
+                print '[cache.py] dual_la ' + str(self.dual_la)
+
+
+
+    def rate_update_greedy(self, T_period):
+        while True:
             time.sleep(T_period)
             handlers = self.get_handlers()
             if len(handlers) == 0:
@@ -201,6 +287,12 @@ class Cache(object):
                         print '[cache.py] Rate updated'
                         print '[cache.py] BW Usage', self.sum_rate , '(Kbps) /' , self.bandwidth_cap , '(Kbps)'
 
+    def remove_one_chunk(self, video_name, index):
+        # It should remove all the downloaded chunks at cache
+        # Currently, it just removes the index out of the cache_chunk_list
+
+        return True
+
     def download_one_chunk_from_server(self, video_name, index):
         print '[cache.py] Caching chunk', index , 'of' , video_name
         packet_size = self.movie_LUT.chunk_size_lookup(video_name)
@@ -240,8 +332,93 @@ class Cache(object):
         return True
 
     def storage_update(self, T_period):
+        self.storage_update_optimal(T_period)
+        # self.storage_update_greedy(T_period)
+
+    def storage_update_optimal(self, T_period):
         while True:
-            print '[cache.py] storage updating'
+            time.sleep(T_period)
+            handlers = self.get_handlers()
+            if len(handlers) == 0:
+                if DEBUGGING_MSG:
+                    print '[cache.py] No user is connected'
+            else:
+                sum_storage_virtual = 0
+                for i in range(len(handlers)):
+                    handler = handlers[i]
+                    if handler._closed == True:
+                        print '[cache.py] Connection ' + str(i) + ' is closed'
+                        continue
+
+                    # Open connection
+                    current_rate = self.get_conn_rate(i)
+                    video_name = self.get_watching_video(i)
+                    packet_size = self.movie_LUT.chunk_size_lookup(video_name)
+                    frame_num = self.movie_LUT.frame_num_lookup(video_name)
+                    additional_storage_needed = packet_size * frame_num # Rough
+                    if packet_size == 0:
+                        continue
+                    dual_k_sum = 0
+                    for j in range(len(handlers)):
+                        handler_j = handlers[j]
+                        if handler_j._closed == True:
+                            continue
+                        if self.get_watching_video(j) == video_name:
+                            dual_k_sum += self.dual_k[j]
+                    print '[cache.py] dual_k_sum = ', dual_k_sum
+                    if video_name not in self.primal_f.keys():
+                        self.primal_f[video_name] = 0.0
+                    delta_f = self.bound(dual_k_sum - frame_num * BUFFER_LENGTH * self.dual_mu, self.primal_f[video_name], 0, 1)
+                    self.primal_f[video_name] += self.eps_f * delta_f
+                    sum_storage_virtual += self.primal_f[video_name] * self.movie_LUT.size_bytes_lookup(video_name)
+
+                    print '[cache.py] primal_f[' + video_name + '] = ' + str(self.primal_f[video_name])
+                    if DEBUGGING_MSG:
+                        print '[cache.py] delta_f = %.5f' % delta_f
+                        print '[cache.py] self.eps_f = %.5f' % self.eps_f
+                        print '[cache.py] self.eps_f * delta_f = %.5f ' % (self.eps_f * delta_f)
+
+                    stored_chunks = self.get_chunks(video_name)
+                    print '[cache.py] stored_chunks ', stored_chunks
+                    num_stored_chunks = len(stored_chunks)
+                    assigned_num_of_chunks = int(self.primal_f[video_name] * 20) # ceiling
+                    print '[cache.py] num_stored_chunks ', num_stored_chunks
+                    print '[cache.py] assigned_num_of_chks ', assigned_num_of_chunks
+                    if assigned_num_of_chunks > num_stored_chunks:
+                        if len(stored_chunks) >= 20:
+                            pass
+                        else:
+                            chunk_index = random.sample( list(set(range(0,40)) - set(map(int, stored_chunks))), 1 ) # Sample one out of missing chunks
+                            if self.download_one_chunk_from_server(video_name, chunk_index) == True:
+                                new_chunks = list(set(self.get_chunks(video_name)) | set(map(str, chunk_index)))
+                                self.set_chunks(video_name, new_chunks)
+                                update_chunks_for_cache(tracker_address, self.address[0], self.address[1], video_name, new_chunks)
+                                self.sum_storage = self.sum_storage + additional_storage_needed
+                                print '[cache.py] chunk add done'
+                                print '[cache.py] storage Usage' , int(self.sum_storage/1000/1000) , '(MB) /' , int(self.storage_cap/1000/1000) , '(MB)'
+                    elif assigned_num_of_chunks < num_stored_chunks:
+                        if len(stored_chunks) == 0:
+                            pass
+                        else:
+                            chunk_index = random.sample( list(set(stored_chunks)), 1 )
+                            if self.remove_one_chunk(video_name, chunk_index) == True:
+                                new_chunks = list(set(self.get_chunks(video_name)) - set(map(str, chunk_index)))
+                                self.set_chunks(video_name, new_chunks)
+                                update_chunks_for_cache(tracker_address, self.address[0], self.address[1], video_name, new_chunks)
+                                self.sum_storage = self.sum_storage - additional_storage_needed
+                                print '[cache.py] chunk ', chunk_index, ' is dropped'
+                                print '[cache.py] storage Usage' , int(self.sum_storage/1000/1000) , '(MB) /' , int(self.storage_cap/1000/1000) , '(MB)'
+                    else:
+                        print '[cache.py] storage not updated'
+                # Need to update dual_mu
+                print '[cache.py] self.sum_storage ', self.sum_storage
+                print '[cache.py] self.sum_storage_virtual ', sum_storage_virtual
+                delta_mu = self.bound(sum_storage_virtual - self.storage_cap, self.dual_mu, 0, INFINITY)
+                self.dual_mu += self.eps_mu * delta_mu
+                print '[cache.py] dual_mu ' + str(self.dual_mu)
+
+    def storage_update_greedy(self, T_period):
+        while True:
             time.sleep(T_period)
             handlers = self.get_handlers()
             if len(handlers) == 0:
@@ -260,9 +437,7 @@ class Cache(object):
                     frame_num = self.movie_LUT.frame_num_lookup(video_name)
                     if packet_size == 0:
                         continue
-
                     print '[cache.py] storage Usage' , int(self.sum_storage/1000/1000) , '(MB) /' , int(self.storage_cap/1000/1000) , '(MB)'
-
                     max_possible_rate = len(self.get_chunks(video_name))
                     additional_storage_needed = packet_size * 20
                     if current_rate > max_possible_rate and self.sum_storage + additional_storage_needed < self.storage_cap:
@@ -348,7 +523,7 @@ class CacheHandler(StreamHandler):
             data = '%'.join(map(str, CacheHandler.chunks[video_name]))
         else:
             data = '%'.join(map(str, ''))
-        data = data + '&' + str(CacheHandler.rates[self.index])
+        data = data + '&' + str(int(CacheHandler.rates[self.index]))
         print "Sending CNKS: ", data
         #CacheHandler.connected[self.index] = True
         self.push_dtp_data(data, isproducer=False, cmd="CNKS")
@@ -446,7 +621,8 @@ class ServerDownloader(threadclient.ThreadClient, threading.Thread):
                 (filestr, sys.getsizeof(data), curr_bytes)
             sys.stdout.write(outputStr)
             sys.stdout.flush()
-            outputStr = "Writing %d bytes to %s.\n" %  (curr_bytes, filestr)
+            if DEBUGGING_MSG:
+                outputStr = "Writing %d bytes to %s.\n" %  (curr_bytes, filestr)
             sys.stdout.write(outputStr)
             sys.stdout.flush()
             file_to_write.write(datastring)

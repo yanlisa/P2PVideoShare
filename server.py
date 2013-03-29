@@ -8,6 +8,7 @@ import Queue, time, re
 import threading
 import threadclient
 from helper import parse_chunks, MovieLUT, load_tracker_address
+from time import gmtime, strftime
 
 # Debugging MSG
 DEBUGGING_MSG = True
@@ -217,6 +218,10 @@ class StreamHandler(ftpserver.FTPHandler):
         parsedform = parse_chunks(file)
         if parsedform:
             filename, framenum, binary_g, chunks = parsedform
+            f = open('server_load.txt', 'a')
+            current_time = strftime("%Y-%m-%d %H:%M:%S")
+            f.write(current_time + ' ' + str(len(chunks)) + '\n')
+            f.close()
             try:
                 # filename should be prefixed by "file-" in order to be valid.
                 # frame number is expected to exist for this cache.

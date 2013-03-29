@@ -84,8 +84,8 @@ def get_num_of_caches():
 def add_user(input_ip, input_port, input_watching_video):
     db.insert('nodes', type_of_node='user', ip=input_ip, port=input_port, watching_video=input_watching_video)
 
-def remove_user(input_ip, input_port):
-    db.delete('nodes', where="type_of_node='user' AND ip=$input_ip AND port=$input_port", vars=locals())
+def remove_user(input_ip, input_port, input_watching_video):
+    db.delete('nodes', where="type_of_node='user' AND ip=$input_ip AND port=$input_port AND watching_video=$input_watching_video", vars=locals())
 
 def get_user(node_id):
     return db.select('nodes', where="type_of_node='user' AND id=$node_id", order='id').list()

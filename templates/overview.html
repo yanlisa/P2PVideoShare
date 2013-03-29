@@ -1,10 +1,34 @@
-$def with (nodes_info, n_nodes, videos_info)
+$def with (nodes_info, n_nodes, videos_info, server_load)
 <!DOCTYPE html>
 <html lang="en">
     <head>
     <META HTTP-EQUIV="refresh" CONTENT="5">
+        <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+        <script type="text/javascript">
+            google.load("visualization", "1", {packages:["corechart"]});
+            google.setOnLoadCallback(drawChart);
+            function drawChart() {
+                var data = google.visualization.arrayToDataTable([
+                        ['Time', 'Server load'],
+                        $for i in range(len(server_load)-1):
+                            ['$i', $server_load[i] ],
+                        ['$len(server_load)-1', $server_load[len(server_load)-1] ]
+                        ]);
+
+                var options = {
+title: 'Server Load',
+       hAxis: {title: 'Time (sec)',  titleTextStyle: {color: 'red'}}
+                };
+
+                var chart = new google.visualization.AreaChart(document.getElementById('chart_div'));
+                chart.draw(data, options);
+            }
+        </script>
     </head>
     <body>
+        <p><h3>Server load</h3>
+        <div id="chart_div" style="width: 1400px; height: 500px;"></div>
+        </p>
         <p><h3>Node information</h3>
         Number of servers = $n_nodes[0]<br>
         Number of caches = $n_nodes[1]<br>

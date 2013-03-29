@@ -18,19 +18,19 @@ CACHE_DOWNLOAD_DURATION = 8 # sec
 SERVER_DOWNLOAD_DURATION = 2 # sec
 DECODE_WAIT_DURATION = 0.1 # sec
 tracker_address = load_tracker_address()
-num_of_caches = 2
+num_of_caches = 5
 
 class P2PUser():
 
     #def __init__(self, tracker_address, video_name, packet_size):
-    def __init__(self, tracker_address, video_name):
+    def __init__(self, tracker_address, video_name, user_name):
         """ Create a new P2PUser.  Set the packet size, instantiate the manager,
         and establish clients.  Currently, the clients are static but will
         become dynamic when the tracker is implemented.
         """
         self.packet_size = 1000
-        my_ip = 'user'
-        my_port = 30
+        my_ip = user_name
+        my_port = 0
         register_to_tracker_as_user(tracker_address, my_ip, my_port, video_name)
 
         # Connect to the server
@@ -75,8 +75,10 @@ class P2PUser():
         # Connect to the caches
         cache_ip_addr = retrieve_caches_address_from_tracker(self.tracker_address, 100)
         connected_caches = set([])
+        self.num_of_caches = min(self.num_of_caches, len(cache_ip_addr))
         connected_caches_index = [0] * self.num_of_caches
         not_connected_caches = set(range(len(cache_ip_addr)))
+
         for i in range(self.num_of_caches):
             self.clients.append(ThreadClient(cache_ip_addr[i], self.packet_size, i))
             connected_caches.add(i)
@@ -139,21 +141,24 @@ class P2PUser():
                     available_chunks[i] = []
                 else:
                     available_chunks[i] = return_str[0].split('%')
+                print '[user.py]', return_str[1]
                 rates[i] = int(return_str[1])
                 union_chunks = list( set(union_chunks) | set(available_chunks[i]) )
 
             print '[user.py]', available_chunks
             # index assignment here
             chosen_chunks = set([])
+            sum_rate_so_far = 0
             for i in range(len(self.clients)):
                 effective_available_chunks = list(set(available_chunks[i]) - chosen_chunks)
-                effective_rates[i] = min(rates[i], len(effective_available_chunks))
+                effective_rates[i] = min(rates[i], len(effective_available_chunks), 20 - sum_rate_so_far)
+                sum_rate_so_far = sum_rate_so_far + effective_rates[i]
 
-                print '[user.py] eff_chunks', effective_available_chunks
-                print '[user.py] eff_rate', effective_rates[i]
+                print '[user.py] CACHE ', i, 'eff_chunks ', effective_available_chunks
+                print '[user.py] CACHE ', i, 'eff_rate', effective_rates[i]
                 assigned_chunks[i] = list(set(random.sample(effective_available_chunks, effective_rates[i])))
                 # Temporarily convert str list to int list, sort it, convert it back
-                print '[user.py]', assigned_chunks[i]
+                print '[user.py] CACHE ', i, 'assigned_chunks', assigned_chunks[i]
                 int_assigned_chunks = map(int, assigned_chunks[i])
                 int_assigned_chunks.sort()
                 assigned_chunks[i] = map(str, int_assigned_chunks)
@@ -298,10 +303,14 @@ class P2PUser():
         self.server_client.put_instruction('QUIT')
         print "[user.py] Closed all connections."
 
-    def disconnect(self):
-        # 'self' does not exist here
+    def disconnect(self, tracker_address, video_name, user_name):
         for client in self.clients:
             client.put_instruction('QUIT')
+        my_ip = user_name
+        my_port = 0
+        my_video_name = video_name
+        deregister_to_tracker_as_user(tracker_address, my_ip, my_port, video_name)
+        print "[user.py] BYE"
 
 
 def chunks_to_request(A, B, num_ret):
@@ -335,9 +344,10 @@ def main():
     print "Arguments:", sys.argv
     #test_user = P2PUser(tracker_address, video_name, packet_size)
     video_name = sys.argv[1]
-    test_user = P2PUser(tracker_address, video_name)
+    user_name = sys.argv[2]
+    test_user = P2PUser(tracker_address, video_name, user_name)
     test_user.download(video_name, 1)
-    test_user.disconnect()
+    test_user.disconnect(tracker_address, video_name, user_name)
 
 if __name__ == "__main__":
     main()

@@ -3,5 +3,6 @@ if [ ! -d "server" ]; then
 fi
 cd "server"
 echo "Initiating server..."
+rm server_load.txt
 python ../server.py  > ../log/server.txt &
 cd ".."

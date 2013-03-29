@@ -4,10 +4,44 @@ import db_manager
 
 urls = (
     '/', 'overview',
+    '/test', 'test',
     '/req/(.*)', 'request',
 )
 app = web.application(urls, globals())
 render = web.template.render('templates/')
+
+def get_server_load():
+    try:
+        f = open('server/server_load.txt', 'r')
+        base_time_stamp = 0
+        server_load = [0] * 3600 * 24
+        max_time = 0
+        while True:
+            input_line = f.readline()
+            if len(input_line) ==0:
+                break # EOF
+            parsed_str = input_line.split(' ')
+            (h, m, s) = parsed_str[1].split(':')
+            time = int(h) * 3600 + int(m) * 60 + int(s)
+            if base_time_stamp == 0:
+                base_time_stamp = time
+            time -= base_time_stamp
+            if time > max_time:
+                max_time = time
+            server_load[time] += int(parsed_str[2])
+        f.close()
+        if False:
+            f2 = open('server/server_load_manipulated.txt', 'w')
+            for i in range(3600 * 24):
+                f2.write(str(i) + ' ' + str(server_load[i])+ '\n')
+            f2.close()
+        return server_load[:max_time+1]
+    except:
+        return [0]
+
+class test:
+    def GET(self):
+        return render.test(server_load_read())
 
 class overview:
     def GET(self):
@@ -47,7 +81,7 @@ class overview:
         print '[tracker.py] n_nodes ', n_nodes
         print '[tracker.py] videos_info ', videos_info2
 
-        return render.overview(nodes_info2, n_nodes, videos_info2)
+        return render.overview(nodes_info2, n_nodes, videos_info2, get_server_load())
 
 class request:
     def parse_request(self, request_str):
@@ -154,7 +188,8 @@ class request:
             elif req_type == 'REMOVE_USER':
                 arg_ip = req_arg.split('_')[0]
                 arg_port = req_arg.split('_')[1]
-                db_manager.remove_user(arg_ip, arg_port)
+                arg_watching_video = req_arg.split('_')[2]
+                db_manager.remove_user(arg_ip, arg_port, arg_watching_video)
                 return 'User is removed'
             elif req_type == 'REMOVE_CACHE':
                 arg_ip = req_arg.split('_')[0]

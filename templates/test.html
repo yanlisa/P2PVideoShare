@@ -1,0 +1,29 @@
+$def with (server_load)
+<html>
+    <head>
+        <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+        <script type="text/javascript">
+            google.load("visualization", "1", {packages:["corechart"]});
+            google.setOnLoadCallback(drawChart);
+            function drawChart() {
+                var data = google.visualization.arrayToDataTable([
+                        ['Time', 'Server load'],
+                        $for i in range(len(server_load)-1):
+                            ['$i', $server_load[i] ],
+                        ['$len(server_load)-1', $server_load[len(server_load)-1] ]
+                        ]);
+
+                var options = {
+title: 'Company Performance',
+       hAxis: {title: 'Year',  titleTextStyle: {color: 'red'}}
+                };
+
+                var chart = new google.visualization.AreaChart(document.getElementById('chart_div'));
+                chart.draw(data, options);
+            }
+        </script>
+    </head>
+    <body>
+        <div id="chart_div" style="width: 900px; height: 500px;"></div>
+    </body>
+</html>
