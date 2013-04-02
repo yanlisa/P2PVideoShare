@@ -1,4 +1,4 @@
-$def with (nodes_info, n_nodes, videos_info, server_load)
+$def with (nodes_info, n_nodes, videos_info, server_load, server_load_avg)
 <!DOCTYPE html>
 <html lang="en">
     <head>
@@ -9,10 +9,10 @@ $def with (nodes_info, n_nodes, videos_info, server_load)
             google.setOnLoadCallback(drawChart);
             function drawChart() {
                 var data = google.visualization.arrayToDataTable([
-                        ['Time', 'Server load'],
-                        $for i in range(len(server_load)-1):
-                            ['$i', $server_load[i] ],
-                        ['$len(server_load)-1', $server_load[len(server_load)-1] ]
+                        ['Time', 'Server load for users', 'Server load for caches'],
+                        $for i in range(len(server_load[0])-1):
+                            ['$i', $server_load[0][i], $server_load[1][i] ],
+                        ['$(len(server_load[0])-1)', $server_load[0][len(server_load[0])-1], $server_load[1][len(server_load[0])-1] ]
                         ]);
 
                 var options = {
@@ -27,6 +27,8 @@ title: 'Server Load',
     </head>
     <body>
         <p><h3>Server load</h3>
+        Average server load for users = $server_load_avg[0] Mbps<br>
+        Average server load for caches = $server_load_avg[1] Mbps<br>
         <div id="chart_div" style="width: 1400px; height: 500px;"></div>
         </p>
         <p><h3>Node information</h3>
