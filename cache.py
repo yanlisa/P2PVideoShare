@@ -21,6 +21,12 @@ BUFFER_LENGTH = 10
 path = "."
 tracker_address = load_tracker_address() # set in helper.
 
+# CACHE RESOURCE
+#BANDWIDTH_CAP = 2000 # (Kbps)
+BANDWIDTH_CAP = 6500 # (Kbps)
+STORAGE_CAP_IN_MB = 45 # (MB)
+#STORAGE_CAP_IN_MB = 45 # (MB)
+
 T_rate = .01
 T_storage = .01
 T_topology = 600
@@ -77,18 +83,37 @@ class Cache(object):
         stream_rate = int(cache_config[4])
         # num_of_chunks_cache_stores = int(cache_config[5])
 
-        # Variables for algorithms
-        eps = .1
-        average_streaming_rate = 500 # Kbps
-        average_length = 600 # sec
-        self.eps_x = eps
-        self.eps_f = eps / 500 / 8
-        self.eps_la = eps / 100
-        self.eps_mu = eps / pow(average_length, 2) / 10
-        self.eps_k = eps
+        if True:
+            # Variables for algorithms
+            average_streaming_rate = 3000 # Kbps
+            average_length = 120 # sec
 
-        self.bandwidth_cap = 2000 # (Kbps)
-        self.storage_cap_in_MB = 50 # (MB)
+            scale = 1
+            self.eps_x = 10 * scale
+            self.eps_k = 1 * scale
+            self.eps_la = 1 * scale
+            self.eps_f = .001 * scale
+            self.eps_mu = .0000001 * scale
+
+            print '[cache.py] EPS'
+            print '[cache.py] eps_x ', self.eps_x
+            print '[cache.py] eps_f ', self.eps_f
+            print '[cache.py] eps_k ', self.eps_k
+            print '[cache.py] eps_la ', self.eps_la
+            print '[cache.py] eps_mu ', self.eps_mu
+        else:
+            # Variables for algorithms
+            eps = .01
+            average_streaming_rate = 3000 # Kbps
+            average_length = 120 # sec
+            self.eps_x = eps * 100
+            self.eps_f = eps / 500 / 8
+            self.eps_la = eps / 100
+            self.eps_mu = eps / pow(average_length, 2) / 10
+            self.eps_k = eps
+
+        self.bandwidth_cap = BANDWIDTH_CAP # (Kbps)
+        self.storage_cap_in_MB = STORAGE_CAP_IN_MB # (MB)
         self.storage_cap = self.storage_cap_in_MB * 1000 * 1000 # (Bytes)
 
         self.dual_la = 0 # dual variable for BW
@@ -164,9 +189,9 @@ class Cache(object):
        # if (a > b)
        #     Illegal bound specified, a(lower bound) must be less than or equal to b(upper bound
        # end
-       if y > b:
+       if y >= b:
            return min(0, h)
-       elif y < a:
+       elif y <= a:
            return max(0, h)
        else:
            return h
@@ -178,24 +203,12 @@ class Cache(object):
     def rate_update_optimal(self, T_period):
         while True:
             time.sleep(T_period)
+            print '[cache.py] RATE ALLOCATION BEGINS'
             handlers = self.get_handlers()
             if len(handlers) == 0:
                 if DEBUGGING_MSG:
                     print '[cache.py] No user is connected'
             else:
-                sum_rate = 0
-                for i in range(len(handlers)):
-                    handler = handlers[i]
-                    if handler._closed == True:
-                        continue
-                    video_name = self.get_watching_video(i)
-                    packet_size = self.movie_LUT.chunk_size_lookup(video_name)
-                    current_rate = self.get_conn_rate(i)
-                    sum_rate = sum_rate + current_rate * packet_size / 1000 / BUFFER_LENGTH * 8
-                self.sum_rate = sum_rate
-                if DEBUGGING_MSG:
-                    print '[cache.py] BW usage ' + str(self.sum_rate) + '/' + str(self.bandwidth_cap)
-
                 sum_x = 0
                 for i in range(len(handlers)):
                     ## 1. UPDATE PRIMAL_X
@@ -216,11 +229,12 @@ class Cache(object):
                     delta_x = self.bound(g - (self.dual_la + self.dual_k[i]), \
                                         self.primal_x[i], 0, self.bandwidth_cap)
                     self.primal_x[i] += self.eps_x * delta_x
+                    self.primal_x[i] = max(self.primal_x[i], 0)
                     sum_x += self.primal_x[i]
 
                     # Apply it if it goes over some rate
                     rate_per_chunk = packet_size / 1000 / BUFFER_LENGTH * 8 # (Kbps)
-                    assigned_rate = round(self.primal_x[i] / rate_per_chunk)
+                    assigned_rate = max(round(self.primal_x[i] / rate_per_chunk), 0)
                     num_of_stored_chunks = len(self.get_chunks(video_name)) # FIX : it should be video(i)
                     self.set_conn_rate(i, min(assigned_rate, num_of_stored_chunks))
                     #current_rate = self.get_conn_rate(i)
@@ -232,13 +246,16 @@ class Cache(object):
                     if DEBUGGING_MSG:
                         print '[cache.py] total rate = ', (rate_per_chunk * 20)
                     delta_k = self.bound(self.primal_x[i] - self.primal_f[video_name] * rate_per_chunk * 20, self.dual_k[i], 0, INFINITY)
+                    print '[cache.py] User ' + str(i) + ' delta_k ' + str(delta_k)
                     self.dual_k[i] += self.eps_k * delta_k
+                    self.dual_k[i] = max(0, self.dual_k[i])
                     print '[cache.py] User ' + str(i) + ' dual_k ' + str(self.dual_k[i])
 
                 ## 3. UPDATE DUAL_LA
                 print '[cache.py] sum_x ' , sum_x
                 delta_la = self.bound(sum_x - self.bandwidth_cap, self.dual_la, 0, INFINITY)
                 self.dual_la += self.eps_la * delta_la
+                self.dual_la = max(self.dual_la, 0)
                 print '[cache.py] dual_la ' + str(self.dual_la)
 
 
@@ -323,12 +340,6 @@ class Cache(object):
             parsed_form = parse_chunks(resp_RETR)
             fname, framenum, binary_g, chunks = parsed_form
             print '[cache.py] Finished downloading: Frame %s Chunk %s' % (framenum, chunks)
-
-            # while True:
-            #     time.sleep(0.5)
-            #     folder_name = 'video-' + video_name + '/' + video_name + '.' + str(i) + '.dir/'
-            #     if chunk_exists_in_frame_dir(folder_name, index) == True:
-            #         break
         return True
 
     def storage_update(self, T_period):
@@ -338,12 +349,14 @@ class Cache(object):
     def storage_update_optimal(self, T_period):
         while True:
             time.sleep(T_period)
+            print '[cache.py] STORAGE ALLOCATION BEGINS'
             handlers = self.get_handlers()
             if len(handlers) == 0:
                 if DEBUGGING_MSG:
                     print '[cache.py] No user is connected'
             else:
                 sum_storage_virtual = 0
+                video_check_list = {}
                 for i in range(len(handlers)):
                     handler = handlers[i]
                     if handler._closed == True:
@@ -353,6 +366,11 @@ class Cache(object):
                     # Open connection
                     current_rate = self.get_conn_rate(i)
                     video_name = self.get_watching_video(i)
+                    if video_name in video_check_list.keys():
+                        continue
+                    else:
+                        video_check_list[video_name] = True
+                        print '[cache.py] Updating primal_f for video', video_name
                     packet_size = self.movie_LUT.chunk_size_lookup(video_name)
                     frame_num = self.movie_LUT.frame_num_lookup(video_name)
                     additional_storage_needed = packet_size * frame_num # Rough
@@ -366,10 +384,12 @@ class Cache(object):
                         if self.get_watching_video(j) == video_name:
                             dual_k_sum += self.dual_k[j]
                     print '[cache.py] dual_k_sum = ', dual_k_sum
+                    print '[cache.py] dual_mu = ', self.dual_mu
                     if video_name not in self.primal_f.keys():
                         self.primal_f[video_name] = 0.0
                     delta_f = self.bound(dual_k_sum - frame_num * BUFFER_LENGTH * self.dual_mu, self.primal_f[video_name], 0, 1)
                     self.primal_f[video_name] += self.eps_f * delta_f
+                    self.primal_f[video_name] = max(self.primal_f[video_name], 0)
                     sum_storage_virtual += self.primal_f[video_name] * self.movie_LUT.size_bytes_lookup(video_name)
 
                     print '[cache.py] primal_f[' + video_name + '] = ' + str(self.primal_f[video_name])
@@ -381,7 +401,7 @@ class Cache(object):
                     stored_chunks = self.get_chunks(video_name)
                     print '[cache.py] stored_chunks ', stored_chunks
                     num_stored_chunks = len(stored_chunks)
-                    assigned_num_of_chunks = int(self.primal_f[video_name] * 20) # ceiling
+                    assigned_num_of_chunks = max(int(self.primal_f[video_name] * 20), 0) # ceiling
                     print '[cache.py] num_stored_chunks ', num_stored_chunks
                     print '[cache.py] assigned_num_of_chks ', assigned_num_of_chunks
                     if assigned_num_of_chunks > num_stored_chunks:
@@ -410,11 +430,30 @@ class Cache(object):
                                 print '[cache.py] storage Usage' , int(self.sum_storage/1000/1000) , '(MB) /' , int(self.storage_cap/1000/1000) , '(MB)'
                     else:
                         print '[cache.py] storage not updated'
+
+                ## 2. UPDATE DUAL_K
+                for i in range(len(handlers)):
+                    handler = handlers[i]
+                    if handler._closed == True:
+                        print '[cache.py] Connection ' + str(i) + ' is closed'
+                        continue
+                    video_name = self.get_watching_video(i)
+                    packet_size = self.movie_LUT.chunk_size_lookup(video_name)
+                    if packet_size == 0:
+                        continue
+                    rate_per_chunk = packet_size / 1000 / BUFFER_LENGTH * 8 # (Kbps)
+                    delta_k = self.bound(self.primal_x[i] - self.primal_f[video_name] * rate_per_chunk * 20, self.dual_k[i], 0, INFINITY)
+                    print '[cache.py] User ' + str(i) + ' delta_k ' + str(delta_k)
+                    self.dual_k[i] += self.eps_k * delta_k
+                    self.dual_k[i] = max(0, self.dual_k[i])
+                    print '[cache.py] User ' + str(i) + ' dual_k ' + str(self.dual_k[i])
+
                 # Need to update dual_mu
                 print '[cache.py] self.sum_storage ', self.sum_storage
                 print '[cache.py] self.sum_storage_virtual ', sum_storage_virtual
                 delta_mu = self.bound(sum_storage_virtual - self.storage_cap, self.dual_mu, 0, INFINITY)
                 self.dual_mu += self.eps_mu * delta_mu
+                self.dual_mu = max(self.dual_mu, 0)
                 print '[cache.py] dual_mu ' + str(self.dual_mu)
 
     def storage_update_greedy(self, T_period):
@@ -579,13 +618,15 @@ class CacheHandler(StreamHandler):
         files = Queue.Queue()
         if not chunks:
             return files
-        iterator = self.run_as_current_user(self.fs.get_list_dir, path)
+        file_list_iterator = self.run_as_current_user(self.fs.get_list_dir, path)
+        file_list = list(file_list_iterator)
 
         print "[cache.py]", chunks
-        for x in range(len(chunks)):
-            liststr = iterator.next()
-            filename = ((liststr.split(' ')[-1]).split('\r'))[0]
-            chunk_num = (filename.split('_')[0]).split('.')[-1]
+        for x in range(len(file_list)):
+            each_file = file_list[x]
+            print "[cache.py]", x, "th file", each_file
+            filename = ((each_file.split(' ')[-1]).split('\r'))[0]
+            chunk_num = (each_file.split('_')[0]).split('.')[-1]
             if chunk_num.isdigit() and int(chunk_num) in chunks:
                 filepath = path + '/' + filename
                 print "filepath ", filepath

@@ -10,34 +10,64 @@ urls = (
 app = web.application(urls, globals())
 render = web.template.render('templates/')
 
+def time_from_timestamp(timestamp):
+    (h, m, s) = timestamp.split(':')
+    return int(h) * 3600 + int(m) * 60 + int(s)
+
 def get_server_load():
     try:
-        f = open('server/server_load.txt', 'r')
+        f_user = open('server/server_load_user.txt', 'r')
+        f_cache = open('server/server_load_cache.txt', 'r')
+        f = [f_user, f_cache]
         base_time_stamp = 0
-        server_load = [0] * 3600 * 24
+        server_load_user = [0] * 3600 * 24 # 1 Day
+        server_load_cache = [0] * 3600 * 24 # 1 Day
         max_time = 0
+        ## Server load for users
         while True:
-            input_line = f.readline()
+            input_line = f_user.readline()
             if len(input_line) ==0:
                 break # EOF
             parsed_str = input_line.split(' ')
-            (h, m, s) = parsed_str[1].split(':')
-            time = int(h) * 3600 + int(m) * 60 + int(s)
+            time = time_from_timestamp(parsed_str[1])
             if base_time_stamp == 0:
                 base_time_stamp = time
             time -= base_time_stamp
             if time > max_time:
                 max_time = time
-            server_load[time] += int(parsed_str[2])
-        f.close()
+            server_load_user[time] += int(parsed_str[2])
+
+        ## Server load for caches
+        while True:
+            input_line = f_cache.readline()
+            if len(input_line) ==0:
+                break # EOF
+            parsed_str = input_line.split(' ')
+            time = time_from_timestamp(parsed_str[1])
+            if base_time_stamp == 0:
+                base_time_stamp = time
+            time -= base_time_stamp
+            if time > max_time:
+                max_time = time
+            server_load_cache[time] += int(parsed_str[2])
+        f_user.close()
+        f_cache.close()
+        print '[tracker.py] server_load_user:', server_load_user
+        print '[tracker.py] server_load_cache:', server_load_cache
         if False:
             f2 = open('server/server_load_manipulated.txt', 'w')
             for i in range(3600 * 24):
                 f2.write(str(i) + ' ' + str(server_load[i])+ '\n')
             f2.close()
-        return server_load[:max_time+1]
+
+        for i in range(max_time + 1):
+            server_load_user[i] = float(server_load_user[i]) * 8 / 1000 / 1000
+        for i in range(max_time + 1):
+            server_load_cache[i] = float(server_load_cache[i]) * 8 / 1000 / 1000
+
+        return [server_load_user[:max_time+1], server_load_cache[:max_time+1]]
     except:
-        return [0]
+        return [[0], [0]]
 
 class test:
     def GET(self):
@@ -81,7 +111,9 @@ class overview:
         print '[tracker.py] n_nodes ', n_nodes
         print '[tracker.py] videos_info ', videos_info2
 
-        return render.overview(nodes_info2, n_nodes, videos_info2, get_server_load())
+        server_load = get_server_load()
+        average_server_load = [sum(server_load[0])/len(server_load[0]), sum(server_load[1])/len(server_load[1])]
+        return render.overview(nodes_info2, n_nodes, videos_info2, server_load, average_server_load)
 
 class request:
     def parse_request(self, request_str):
@@ -123,10 +155,13 @@ class request:
                 res = db_manager.get_server_for_cache()
                 return str(res[0].ip) + ' ' + str(res[0].port)
             elif req_type == 'GET_CACHES_ADDRESS':
+                # req = "user-hyunah-1 & 10"
+                arg_user_name = req_arg.split('_')[0]
+                arg_num_of_caches = req_arg.split('_')[1]
                 n_of_current_caches = db_manager.get_num_of_caches()
-                n_of_returned_caches = min(n_of_current_caches, int(req_arg))
+                n_of_returned_caches = min(n_of_current_caches, int(arg_num_of_caches))
                 print '[tracker.py] n_of_returned_caches', n_of_returned_caches
-                caches = db_manager.get_many_caches(n_of_returned_caches)
+                caches = db_manager.get_many_caches(arg_user_name, n_of_returned_caches)
                 ret_str = ''
                 for cache in caches:
                     ret_str = ret_str + str(cache.ip) + ' ' + str(cache.port) + '\n'

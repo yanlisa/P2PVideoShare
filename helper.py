@@ -36,7 +36,7 @@ class MovieLUT():
         if video_name in self.movies_LUT:
             return self.movies_LUT[video_name][feature_index]
         else:
-            print '[server.py] The video ', video_name, ' does not exist.'
+            print '[helper.py] The video ', video_name, ' does not exist.'
             return 0
 
     def frame_num_lookup(self, video_name):
@@ -55,8 +55,8 @@ class MovieLUT():
         """Size of last chunk, in bytes."""
         return self.gen_lookup(video_name, self.last_chunk_size_index)
 
-def retrieve_caches_address_from_tracker(tracker_address, num_of_caches):
-    req_str = 'GET_CACHES_ADDRESS&' + str(num_of_caches)
+def retrieve_caches_address_from_tracker(tracker_address, num_of_caches, user_name):
+    req_str = 'GET_CACHES_ADDRESS&' + str(user_name) + '_' + str(num_of_caches)
     ret_str = urllib2.urlopen(tracker_address + req_str).read()
     print '[helper.py] req_str :' + req_str
     print '[helper.py] ret_str :' + ret_str

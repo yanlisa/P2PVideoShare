@@ -18,6 +18,12 @@ tracker_address = load_tracker_address()
 path = "."
 movie_config_file = '../config/video_info.csv'
 
+def log_load(fname, load):
+    f = open(fname, 'a')
+    current_time = strftime("%Y-%m-%d %H:%M:%S")
+    f.write(current_time + ' ' + str(load) + '\n')
+    f.close()
+
 class StreamFTPServer(ftpserver.FTPServer):
     """One instance of the server is created every time this file is run.
     On a new client connection, the server makes a new FTP connection handler.
@@ -218,10 +224,11 @@ class StreamHandler(ftpserver.FTPHandler):
         parsedform = parse_chunks(file)
         if parsedform:
             filename, framenum, binary_g, chunks = parsedform
-            f = open('server_load.txt', 'a')
-            current_time = strftime("%Y-%m-%d %H:%M:%S")
-            f.write(current_time + ' ' + str(len(chunks)) + '\n')
-            f.close()
+            each_chunk_size = self.movie_LUT.chunk_size_lookup(filename)
+            if binary_g == 1: # Download of user
+                log_load('server_load_user.txt', int(each_chunk_size) * len(chunks))
+            elif binary_g == 0: # Download of caches
+                log_load('server_load_cache.txt', int(each_chunk_size) * len(chunks))
             try:
                 # filename should be prefixed by "file-" in order to be valid.
                 # frame number is expected to exist for this cache.
@@ -294,7 +301,8 @@ class StreamHandler(ftpserver.FTPHandler):
                     chunk_num = (filename.split('_')[0]).split('.')[-1]
                     if chunk_num.isdigit() and int(chunk_num) in chunks:
                         filepath = path + '/' + filename
-                        print filepath
+                        if DEBUGGING_MSG:
+                            print filepath
                         fd = self.run_as_current_user(self.fs.open, filepath, 'rb')
                         files.put(fd)
                 except StopIteration, err:

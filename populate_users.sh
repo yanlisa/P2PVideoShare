@@ -1,3 +1,9 @@
+./populate_users_video.sh hyunah 3
+./populate_users_video.sh hyunah2 3
+./populate_users_video.sh hyunah3 0
+./populate_users_video.sh hyunah4 0
+
+<<COMMENT
 ./populate_users_video.sh GangnamStyle 2
 sleep .1
 ./populate_users_video.sh MementoTrailer 2
@@ -8,3 +14,4 @@ sleep .1
 sleep .1
 ./populate_users_video.sh hyunah 2
 sleep .1
+COMMENT

@@ -8,10 +8,15 @@ from ftplib import error_perm
 from zfec import filefec
 import random
 import urllib2
+import csv
 
 # Debugging MSG
 DEBUGGING_MSG = True
 VLC_PLAYER_USE = False
+
+# Topology
+USER_TOPOLOGY_UPDATE = False
+T_choke = 5 # Choke period
 
 # Global parameters
 CACHE_DOWNLOAD_DURATION = 8 # sec
@@ -29,9 +34,10 @@ class P2PUser():
         become dynamic when the tracker is implemented.
         """
         self.packet_size = 1000
-        my_ip = user_name
-        my_port = 0
-        register_to_tracker_as_user(tracker_address, my_ip, my_port, video_name)
+        self.user_name = user_name
+        self.my_ip = user_name
+        self.my_port = 0
+        register_to_tracker_as_user(tracker_address, self.my_ip, self.my_port, video_name)
 
         # Connect to the server
         # Cache will get a response when each chunk is downloaded from the server.
@@ -71,9 +77,17 @@ class P2PUser():
             self.manager.start_playing()
         # TODO: add decoding.
 
+    def connected_caches():
+        f = open(config_file)
+        fs = csv.reader(f, delimiter = ' ')
+        for row in fs:
+            if (DEBUGGING_MSG): print '[server.py] Loading movie : ', row
+            movie_name = row[0]
+            self.movies_LUT[movie_name] = (int(row[1]), int(row[2]), int(row[3]), int(row[4]), int(row[5]), int(row[6]))
+
     def download(self, video_name, start_frame):
         # Connect to the caches
-        cache_ip_addr = retrieve_caches_address_from_tracker(self.tracker_address, 100)
+        cache_ip_addr = retrieve_caches_address_from_tracker(self.tracker_address, 100, self.user_name)
         connected_caches = set([])
         self.num_of_caches = min(self.num_of_caches, len(cache_ip_addr))
         connected_caches_index = [0] * self.num_of_caches
@@ -102,7 +116,6 @@ class P2PUser():
         # the queue.
         base_file = open('video-' + video_name + '/' + base_file_name, 'ab')
         base_file_full_path = os.path.abspath('video-' + video_name + '/' + base_file_name)
-        T_choke = 5 # Choke period
 
         for frame_number in xrange(start_frame, num_frames + 1):
             effective_rates = [0]*len(self.clients)
@@ -181,19 +194,25 @@ class P2PUser():
             server_request = []
             chosen_chunks = list(chosen_chunks)
             num_chunks_rx_predicted = len(chosen_chunks)
-            if (num_chunks_rx_predicted >= 20):
-                print "[user.py] 20 chunks assigned to caches; assume server will not be called."
-            else:
+            if True:
                 server_request = chunks_to_request(chosen_chunks, range(0, 40), 20 - num_chunks_rx_predicted)
-                if server_request:
-                    server_request_string = '%'.join(server_request)
-                    # server should always be set with flag_deficit = 0 (has all chunks)
-                    server_request_string = server_request_string + '&' + str(0)
-                    self.server_client.put_instruction(inst_RETR + '.' + server_request_string)
-                    if(DEBUGGING_MSG):
-                        print "[user.py] Requesting from server: ", server_request
-                elif (DEBUGGING_MSG):
-                    print "No unique chunks from server requested."
+                server_request_string = '%'.join(server_request)
+                server_request_string = server_request_string + '&' + str(1) ## DOWNLOAD FROM SERVER : binary_g = 1
+                self.server_client.put_instruction(inst_RETR + '.' + server_request_string)
+            else:
+                if (num_chunks_rx_predicted >= 20):
+                    print "[user.py] 20 chunks assigned to caches; assume server will not be called."
+                else:
+                    server_request = chunks_to_request(chosen_chunks, range(0, 40), 20 - num_chunks_rx_predicted)
+                    if server_request:
+                        server_request_string = '%'.join(server_request)
+                        # server should always be set with flag_deficit = 0 (has all chunks)
+                        server_request_string = server_request_string + '&' + str(1) ## DOWNLOAD FROM SERVER : binary_g = 1
+                        self.server_client.put_instruction(inst_RETR + '.' + server_request_string)
+                        if(DEBUGGING_MSG):
+                            print "[user.py] Requesting from server: ", server_request
+                    elif (DEBUGGING_MSG):
+                        print "No unique chunks from server requested."
 
             num_of_chks_from_server = len(server_request)
             #update_server_load(tracker_address, video_name, num_of_chks_from_server)
@@ -226,7 +245,7 @@ class P2PUser():
                 if addtl_server_request:
                     addtl_server_request_string = '%'.join(addtl_server_request)
                     # server should always be set with flag_deficit = 0 (has all chunks)
-                    addtl_server_request_string = addtl_server_request_string + '&' + str(0)
+                    addtl_server_request_string = addtl_server_request_string + '&' + str(1) ## DOWNLOAD FROM SERVER : binary_g = 1
                     self.server_client.put_instruction(inst_RETR + '.' + addtl_server_request_string)
                     if(DEBUGGING_MSG):
                         print "[user.py] Requesting from server: ", addtl_server_request
@@ -278,25 +297,26 @@ class P2PUser():
             if frame_number == 1 and VLC_PLAYER_USE:
                 self.VLC_start_video(base_file_full_path)
 
-            if frame_number % T_choke == 0 and len(not_connected_caches): # Topology update
-                rate_vector = [0] * self.num_of_caches
-                for i in range(num_of_caches):
-                    rate_vector[i] = len(assigned_chunks[i])
-                client_index = rate_vector.index(min(rate_vector))
-                worst_cache_index = connected_caches_index[client_index]
-                new_cache_index = random.sample(not_connected_caches, 1)
+            if USER_TOPOLOGY_UPDATE:
+                if frame_number % T_choke == 0 and len(not_connected_caches): # Topology update
+                    rate_vector = [0] * self.num_of_caches
+                    for i in range(num_of_caches):
+                        rate_vector[i] = len(assigned_chunks[i])
+                    client_index = rate_vector.index(min(rate_vector))
+                    worst_cache_index = connected_caches_index[client_index]
+                    new_cache_index = random.sample(not_connected_caches, 1)
 
-                if len(new_cache_index) > 0:
-                    new_cache_index = new_cache_index[0]
-                    connected_caches_index[client_index] = new_cache_index
-                    self.clients[client_index] = ThreadClient(cache_ip_addr[new_cache_index], self.packet_size, worst_cache_index)
-                    connected_caches.add(new_cache_index)
-                    connected_caches.remove(worst_cache_index)
-                    not_connected_caches.add(worst_cache_index)
-                    not_connected_caches.remove(new_cache_index)
+                    if len(new_cache_index) > 0:
+                        new_cache_index = new_cache_index[0]
+                        connected_caches_index[client_index] = new_cache_index
+                        self.clients[client_index] = ThreadClient(cache_ip_addr[new_cache_index], self.packet_size, worst_cache_index)
+                        connected_caches.add(new_cache_index)
+                        connected_caches.remove(worst_cache_index)
+                        not_connected_caches.add(worst_cache_index)
+                        not_connected_caches.remove(new_cache_index)
 
-                    print '[user.py] Topology Update : ', worst_cache_index, cache_ip_addr[worst_cache_index], 'is chocked.'
-                    print '[user.py] Topology Update : ', new_cache_index, cache_ip_addr[new_cache_index], 'is added.'
+                        print '[user.py] Topology Update : ', worst_cache_index, cache_ip_addr[worst_cache_index], 'is chocked.'
+                        print '[user.py] Topology Update : ', new_cache_index, cache_ip_addr[new_cache_index], 'is added.'
 
         for client in self.clients:
             client.put_instruction('QUIT')

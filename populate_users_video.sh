@@ -15,7 +15,7 @@ do
     rm -r video*
     python ../../user.py $1 "user-"$1"-"$i > ../../log/user_$1_$i.txt &
     cd ".."
-    sleep 1
+    sleep 2
 done
 cd ".."
 

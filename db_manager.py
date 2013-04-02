@@ -1,5 +1,10 @@
 import web
 import ast
+import csv
+
+# TOPOLOGY_CONFIG
+FIXED_TOPOLOGY = True
+topology_config_file = 'config/topology_config.csv'
 
 db = web.database(dbn='sqlite', db='tracker.db')
 
@@ -73,8 +78,24 @@ def remove_cache(input_ip, input_port):
 def get_cache(node_id):
     return db.select('nodes', where="type_of_node='cache' AND id=$node_id", order='id', vars=locals()).list()
 
-def get_many_caches(num_of_caches):
-    return db.query("SELECT * FROM nodes WHERE type_of_node='cache' ORDER BY RANDOM() LIMIT %d" % num_of_caches).list()
+def get_many_caches(user_name, num_of_caches):
+    res = db.query("SELECT * FROM nodes WHERE type_of_node='cache' ORDER BY RANDOM() LIMIT %d" % num_of_caches).list()
+
+    f = open(topology_config_file)
+    fs = csv.reader(f, delimiter = ' ')
+    for row in fs:
+        row_user_name = row[0]
+        if row_user_name == user_name:
+            connectable_caches = map(int, row[1:])
+            print '[db_manager.py]', connectable_caches
+            break
+
+    res2 = []
+    print '[db_manager.py]', res
+    for cache in res:
+        if int(cache.port) in connectable_caches:
+            res2.append(cache)
+    return res2
 
 def get_num_of_caches():
     results = db.query("SELECT count(*) AS ct FROM nodes WHERE type_of_node='cache'")
