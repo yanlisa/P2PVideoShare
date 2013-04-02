@@ -3,7 +3,7 @@ import ast
 import csv
 
 # TOPOLOGY_CONFIG
-FIXED_TOPOLOGY = True
+FIXED_TOPOLOGY = False
 topology_config_file = 'config/topology_config.csv'
 
 db = web.database(dbn='sqlite', db='tracker.db')
@@ -81,21 +81,23 @@ def get_cache(node_id):
 def get_many_caches(user_name, num_of_caches):
     res = db.query("SELECT * FROM nodes WHERE type_of_node='cache' ORDER BY RANDOM() LIMIT %d" % num_of_caches).list()
 
-    f = open(topology_config_file)
-    fs = csv.reader(f, delimiter = ' ')
-    for row in fs:
-        row_user_name = row[0]
-        if row_user_name == user_name:
-            connectable_caches = map(int, row[1:])
-            print '[db_manager.py]', connectable_caches
-            break
-
-    res2 = []
-    print '[db_manager.py]', res
-    for cache in res:
-        if int(cache.port) in connectable_caches:
-            res2.append(cache)
-    return res2
+    if not FIXED_TOPOLOGY:
+        return res
+    else:
+        f = open(topology_config_file)
+        fs = csv.reader(f, delimiter = ' ')
+        for row in fs:
+            row_user_name = row[0]
+            if row_user_name == user_name:
+                connectable_caches = map(int, row[1:])
+                print '[db_manager.py]', connectable_caches
+                break
+        res2 = []
+        print '[db_manager.py]', res
+        for cache in res:
+            if int(cache.port) in connectable_caches:
+                res2.append(cache)
+        return res2
 
 def get_num_of_caches():
     results = db.query("SELECT count(*) AS ct FROM nodes WHERE type_of_node='cache'")
