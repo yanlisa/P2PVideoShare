@@ -11,6 +11,10 @@ from helper import *
 
 # Debugging MSG
 DEBUGGING_MSG = False
+
+# Algorithm DEBUGGING
+POSITIVE_CONSTRAINT = True
+
 # Cache Configuration
 cache_config_file = '../../config/cache_config.csv'
 
@@ -23,13 +27,14 @@ tracker_address = load_tracker_address() # set in helper.
 
 # CACHE RESOURCE
 #BANDWIDTH_CAP = 2000 # (Kbps)
-BANDWIDTH_CAP = 6500 # (Kbps)
-STORAGE_CAP_IN_MB = 45 # (MB)
+BANDWIDTH_CAP = 7500 # (Kbps)
+STORAGE_CAP_IN_MB = 300 # (MB)
 #STORAGE_CAP_IN_MB = 45 # (MB)
 
 T_rate = .01
 T_storage = .01
 T_topology = 600
+STORAGE_UPDATE_PERIOD_OUTER = 50
 
 # IP Table
 class ThreadStreamFTPServer(StreamFTPServer, threading.Thread):
@@ -88,10 +93,10 @@ class Cache(object):
             average_streaming_rate = 3000 # Kbps
             average_length = 120 # sec
 
-            scale = 1
-            self.eps_x = 10 * scale
+            scale = .1
+            self.eps_x = 1 * scale
             self.eps_k = 1 * scale
-            self.eps_la = 1 * scale
+            self.eps_la = .3 * scale
             self.eps_f = .001 * scale
             self.eps_mu = .0000001 * scale
 
@@ -229,7 +234,8 @@ class Cache(object):
                     delta_x = self.bound(g - (self.dual_la + self.dual_k[i]), \
                                         self.primal_x[i], 0, self.bandwidth_cap)
                     self.primal_x[i] += self.eps_x * delta_x
-                    self.primal_x[i] = max(self.primal_x[i], 0)
+                    if POSITIVE_CONSTRAINT:
+                        self.primal_x[i] = max(self.primal_x[i], 0)
                     sum_x += self.primal_x[i]
 
                     # Apply it if it goes over some rate
@@ -248,14 +254,16 @@ class Cache(object):
                     delta_k = self.bound(self.primal_x[i] - self.primal_f[video_name] * rate_per_chunk * 20, self.dual_k[i], 0, INFINITY)
                     print '[cache.py] User ' + str(i) + ' delta_k ' + str(delta_k)
                     self.dual_k[i] += self.eps_k * delta_k
-                    self.dual_k[i] = max(0, self.dual_k[i])
+                    if POSITIVE_CONSTRAINT:
+                        self.dual_k[i] = max(0, self.dual_k[i])
                     print '[cache.py] User ' + str(i) + ' dual_k ' + str(self.dual_k[i])
 
                 ## 3. UPDATE DUAL_LA
                 print '[cache.py] sum_x ' , sum_x
                 delta_la = self.bound(sum_x - self.bandwidth_cap, self.dual_la, 0, INFINITY)
                 self.dual_la += self.eps_la * delta_la
-                self.dual_la = max(self.dual_la, 0)
+                if POSITIVE_CONSTRAINT:
+                    self.dual_la = max(self.dual_la, 0)
                 print '[cache.py] dual_la ' + str(self.dual_la)
 
 
@@ -347,8 +355,11 @@ class Cache(object):
         # self.storage_update_greedy(T_period)
 
     def storage_update_optimal(self, T_period):
+        ct = 0
         while True:
             time.sleep(T_period)
+
+            ct += 1
             print '[cache.py] STORAGE ALLOCATION BEGINS'
             handlers = self.get_handlers()
             if len(handlers) == 0:
@@ -404,32 +415,33 @@ class Cache(object):
                     assigned_num_of_chunks = max(int(self.primal_f[video_name] * 20), 0) # ceiling
                     print '[cache.py] num_stored_chunks ', num_stored_chunks
                     print '[cache.py] assigned_num_of_chks ', assigned_num_of_chunks
-                    if assigned_num_of_chunks > num_stored_chunks:
-                        if len(stored_chunks) >= 20:
-                            pass
+                    if ct % STORAGE_UPDATE_PERIOD_OUTER == 0:
+                        if assigned_num_of_chunks > num_stored_chunks:
+                            if len(stored_chunks) >= 20:
+                                pass
+                            else:
+                                chunk_index = random.sample( list(set(range(0,40)) - set(map(int, stored_chunks))), 1 ) # Sample one out of missing chunks
+                                if self.download_one_chunk_from_server(video_name, chunk_index) == True:
+                                    new_chunks = list(set(self.get_chunks(video_name)) | set(map(str, chunk_index)))
+                                    self.set_chunks(video_name, new_chunks)
+                                    update_chunks_for_cache(tracker_address, self.address[0], self.address[1], video_name, new_chunks)
+                                    self.sum_storage = self.sum_storage + additional_storage_needed
+                                    print '[cache.py] chunk add done'
+                                    print '[cache.py] storage Usage' , int(self.sum_storage/1000/1000) , '(MB) /' , int(self.storage_cap/1000/1000) , '(MB)'
+                        elif assigned_num_of_chunks < num_stored_chunks:
+                            if len(stored_chunks) == 0:
+                                pass
+                            else:
+                                chunk_index = random.sample( list(set(stored_chunks)), 1 )
+                                if self.remove_one_chunk(video_name, chunk_index) == True:
+                                    new_chunks = list(set(self.get_chunks(video_name)) - set(map(str, chunk_index)))
+                                    self.set_chunks(video_name, new_chunks)
+                                    update_chunks_for_cache(tracker_address, self.address[0], self.address[1], video_name, new_chunks)
+                                    self.sum_storage = self.sum_storage - additional_storage_needed
+                                    print '[cache.py] chunk ', chunk_index, ' is dropped'
+                                    print '[cache.py] storage Usage' , int(self.sum_storage/1000/1000) , '(MB) /' , int(self.storage_cap/1000/1000) , '(MB)'
                         else:
-                            chunk_index = random.sample( list(set(range(0,40)) - set(map(int, stored_chunks))), 1 ) # Sample one out of missing chunks
-                            if self.download_one_chunk_from_server(video_name, chunk_index) == True:
-                                new_chunks = list(set(self.get_chunks(video_name)) | set(map(str, chunk_index)))
-                                self.set_chunks(video_name, new_chunks)
-                                update_chunks_for_cache(tracker_address, self.address[0], self.address[1], video_name, new_chunks)
-                                self.sum_storage = self.sum_storage + additional_storage_needed
-                                print '[cache.py] chunk add done'
-                                print '[cache.py] storage Usage' , int(self.sum_storage/1000/1000) , '(MB) /' , int(self.storage_cap/1000/1000) , '(MB)'
-                    elif assigned_num_of_chunks < num_stored_chunks:
-                        if len(stored_chunks) == 0:
-                            pass
-                        else:
-                            chunk_index = random.sample( list(set(stored_chunks)), 1 )
-                            if self.remove_one_chunk(video_name, chunk_index) == True:
-                                new_chunks = list(set(self.get_chunks(video_name)) - set(map(str, chunk_index)))
-                                self.set_chunks(video_name, new_chunks)
-                                update_chunks_for_cache(tracker_address, self.address[0], self.address[1], video_name, new_chunks)
-                                self.sum_storage = self.sum_storage - additional_storage_needed
-                                print '[cache.py] chunk ', chunk_index, ' is dropped'
-                                print '[cache.py] storage Usage' , int(self.sum_storage/1000/1000) , '(MB) /' , int(self.storage_cap/1000/1000) , '(MB)'
-                    else:
-                        print '[cache.py] storage not updated'
+                            print '[cache.py] storage not updated'
 
                 ## 2. UPDATE DUAL_K
                 for i in range(len(handlers)):
@@ -445,7 +457,8 @@ class Cache(object):
                     delta_k = self.bound(self.primal_x[i] - self.primal_f[video_name] * rate_per_chunk * 20, self.dual_k[i], 0, INFINITY)
                     print '[cache.py] User ' + str(i) + ' delta_k ' + str(delta_k)
                     self.dual_k[i] += self.eps_k * delta_k
-                    self.dual_k[i] = max(0, self.dual_k[i])
+                    if POSITIVE_CONSTRAINT:
+                        self.dual_k[i] = max(0, self.dual_k[i])
                     print '[cache.py] User ' + str(i) + ' dual_k ' + str(self.dual_k[i])
 
                 # Need to update dual_mu
@@ -453,7 +466,8 @@ class Cache(object):
                 print '[cache.py] self.sum_storage_virtual ', sum_storage_virtual
                 delta_mu = self.bound(sum_storage_virtual - self.storage_cap, self.dual_mu, 0, INFINITY)
                 self.dual_mu += self.eps_mu * delta_mu
-                self.dual_mu = max(self.dual_mu, 0)
+                if POSITIVE_CONSTRAINT:
+                    self.dual_mu = max(self.dual_mu, 0)
                 print '[cache.py] dual_mu ' + str(self.dual_mu)
 
     def storage_update_greedy(self, T_period):

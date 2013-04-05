@@ -9,21 +9,25 @@ from zfec import filefec
 import random
 import urllib2
 import csv
+import math
+import sys
 
 # Debugging MSG
 DEBUGGING_MSG = True
 VLC_PLAYER_USE = False
 
 # Topology
-USER_TOPOLOGY_UPDATE = False
-T_choke = 5 # Choke period
+USER_TOPOLOGY_UPDATE = True
+T_choke = 3 # Choke period
+T_choke2 = 3 # Choke period
+eps_choke = 1 # Choke parameter
 
 # Global parameters
 CACHE_DOWNLOAD_DURATION = 8 # sec
 SERVER_DOWNLOAD_DURATION = 2 # sec
 DECODE_WAIT_DURATION = 0.1 # sec
 tracker_address = load_tracker_address()
-num_of_caches = 5
+num_of_caches = 3
 
 class P2PUser():
 
@@ -86,19 +90,29 @@ class P2PUser():
             self.movies_LUT[movie_name] = (int(row[1]), int(row[2]), int(row[3]), int(row[4]), int(row[5]), int(row[6]))
 
     def download(self, video_name, start_frame):
+        sys.stdout.flush()
+        connected_caches = []
+        not_connected_caches = []
         # Connect to the caches
         cache_ip_addr = retrieve_caches_address_from_tracker(self.tracker_address, 100, self.user_name)
-        connected_caches = set([])
+        #connected_caches = set([])
         self.num_of_caches = min(self.num_of_caches, len(cache_ip_addr))
-        connected_caches_index = [0] * self.num_of_caches
-        not_connected_caches = set(range(len(cache_ip_addr)))
+        #connected_caches_index = [0] * self.num_of_caches
+        #not_connected_caches = set(range(len(cache_ip_addr)))
+
+        choke_state = 0 # 0 : usual state, 1 : overhead state
+        choke_ct = 0
 
         for i in range(self.num_of_caches):
-            self.clients.append(ThreadClient(cache_ip_addr[i], self.packet_size, i))
-            connected_caches.add(i)
-            connected_caches_index[i] = i
-            print '[user.py] ', i, 'th connection : ' , cache_ip_addr
-        not_connected_caches = not_connected_caches - connected_caches
+            each_client = ThreadClient(cache_ip_addr[i], self.packet_size, i)
+            self.clients.append(each_client)
+            connected_caches.append(each_client)
+            print '[user.py] ', i, 'th connection is CONNECTED : ' , cache_ip_addr[i]
+
+        for i in range(self.num_of_caches, len(cache_ip_addr)):
+            each_client = ThreadClient(cache_ip_addr[i], self.packet_size, i)
+            not_connected_caches.append(each_client)
+            print '[user.py] ', i, 'th connection is RESERVED: ' , cache_ip_addr[i]
 
         available_chunks = set([])
         self.clients[0].put_instruction('VLEN file-%s' % (video_name))
@@ -298,25 +312,60 @@ class P2PUser():
                 self.VLC_start_video(base_file_full_path)
 
             if USER_TOPOLOGY_UPDATE:
-                if frame_number % T_choke == 0 and len(not_connected_caches): # Topology update
-                    rate_vector = [0] * self.num_of_caches
-                    for i in range(num_of_caches):
-                        rate_vector[i] = len(assigned_chunks[i])
-                    client_index = rate_vector.index(min(rate_vector))
-                    worst_cache_index = connected_caches_index[client_index]
-                    new_cache_index = random.sample(not_connected_caches, 1)
+                if choke_state == 0: # Normal state
+                    print '[user.py] Normal state : ', choke_ct
+                    choke_ct += 1
+                    if choke_ct == T_choke:
+                        choke_ct = 0
+                        if len(not_connected_caches) == 0:
+                            pass
+                        else: # Add a new cache temporarily
+                            new_cache_index = random.sample(range(len(not_connected_caches)), 1)
+                            if new_cache_index >= 0:
+                                new_cache = not_connected_caches[new_cache_index[0]]
+                                self.clients.append(new_cache)
+                                connected_caches.append(new_cache)
+                                not_connected_caches.remove(new_cache)
+                                print '[user.py] Topology Update : Temporarily added ', new_cache
+                                choke_state = 1 # Now, move to transitional state
+                                choke_ct = 0
 
-                    if len(new_cache_index) > 0:
-                        new_cache_index = new_cache_index[0]
-                        connected_caches_index[client_index] = new_cache_index
-                        self.clients[client_index] = ThreadClient(cache_ip_addr[new_cache_index], self.packet_size, worst_cache_index)
-                        connected_caches.add(new_cache_index)
-                        connected_caches.remove(worst_cache_index)
-                        not_connected_caches.add(worst_cache_index)
-                        not_connected_caches.remove(new_cache_index)
+                elif choke_state == 1: # Overhead state
+                    print '[user.py] Overhead state : ', choke_ct
+                    choke_ct += 1
+                    if choke_ct == T_choke2: # Temporary period to spend with temporarily added node
+                        rate_vector = [0] * len(self.clients)
+                        p_vector = [0] * len(self.clients)
+                        for i in range(len(self.clients)):
+                            rate_vector[i] = len(assigned_chunks[i])
+                            p_vector[i] = math.exp( -eps_choke * rate_vector[i])
 
-                        print '[user.py] Topology Update : ', worst_cache_index, cache_ip_addr[worst_cache_index], 'is chocked.'
-                        print '[user.py] Topology Update : ', new_cache_index, cache_ip_addr[new_cache_index], 'is added.'
+# >>> cdf = [(1, 0), (2,0.1), (3,0.15), (4,0.2), (5,0.4), (6,0.8)]
+                        p_sum = sum(p_vector)
+                        for i in range(len(self.clients)):
+                            p_vector[i] /= p_sum
+
+                        cdf = [(0,0)] * len(self.clients)
+                        cdf[0] = (0, 0)
+                        for i in range(1, len(self.clients)):
+                            cdf[i] = (i, cdf[i-1][1] + p_vector[i-1])
+
+                        print '[user.py] cdf :', cdf
+                        client_index = max(i for r in [random.random()] for i,c in cdf if c <= r) # http://stackoverflow.com/questions/4265988/generate-random-numbers-with-a-given-numerical-distribution
+                        # client_index = rate_vector.index(min(rate_vector))
+
+                        removed_cache = self.clients[client_index]
+                        self.clients.remove(removed_cache)
+                        connected_caches.remove(removed_cache)
+                        not_connected_caches.append(removed_cache)
+
+                        print '[user.py] Topology Update : ', removed_cache, 'is chocked.'
+
+                        choke_state = 0 # Now, move to normal state
+                        choke_ct = 0
+
+
+################# WHY "connected_caches_index" was being used?
 
         for client in self.clients:
             client.put_instruction('QUIT')
