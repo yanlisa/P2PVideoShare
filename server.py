@@ -13,7 +13,7 @@ from time import gmtime, strftime
 # Debugging MSG
 DEBUGGING_MSG = True
 # Cache Configuration
-server_address = ("localhost", 61000)
+server_address = ("0.0.0.0", 61000)
 tracker_address = load_tracker_address()
 path = "."
 movie_config_file = '../config/video_info.csv'
@@ -539,9 +539,16 @@ def main():
     authorizer.add_anonymous(path, perm='elr')
     handler = StreamHandler
     handler.authorizer = authorizer
+    handler.passive_ports = range(61000, 65535)
+
+    # Set public address.
+    # public_address = '107.21.135.254' # Nick EC2
+    public_address = '174.129.174.31' # Lisa EC2
+    handler.masquerade_address = public_address
+    req_str = 'REGISTER_SERVER&' + public_address + '_' + str(server_address[1])
 
     # Register server to tracker
-    req_str = 'REGISTER_SERVER&' + server_address[0] + '_' + str(server_address[1])
+    # req_str = 'REGISTER_SERVER&' + server_address[0] + '_' + str(server_address[1])
     ret_str = urllib2.urlopen(tracker_address + req_str).read()
     print ret_str
     if not ret_str == 'Server is registered':
@@ -567,9 +574,6 @@ def main():
             print err_msg
             return err_msg
 
-    # handler.masquerade_address = '107.21.135.254' # Nick EC2
-    # handler.masquerade_address = '174.129.174.31' # Lisa EC2
-    handler.passive_ports = range(60000, 65535)
     ftpd = StreamFTPServer(server_address, handler, stream_rate)
     ftpd.serve_forever()
 

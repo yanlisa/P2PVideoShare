@@ -71,7 +71,7 @@ class Cache(object):
         # Parse cache configuration
         # [ cache_id,
         #   private_ip, port #,
-        #   masq_ip,
+        #   public_ip,
         #   stream_rate,
         #   num_of_chunks_cache_stores ]
         self.packet_size = 2504
@@ -82,9 +82,10 @@ class Cache(object):
 
         cache_id = int(cache_config[0])
         self.address = (cache_config[1], int(cache_config[2]))
-        register_to_tracker_as_cache(tracker_address, self.address[0], self.address[1])
-        print '[cache.py] Address : ', self.address
-        masq_address = cache_config[3]
+        self.public_address = cache_config[3]
+        register_to_tracker_as_cache(tracker_address, self.public_address, self.address[1])
+        # register_to_tracker_as_cache(tracker_address, self.address[0], self.address[1])
+        print '[cache.py] Address : ', (self.public_address, self.address[1])
         stream_rate = int(cache_config[4])
         # num_of_chunks_cache_stores = int(cache_config[5])
 
@@ -139,8 +140,10 @@ class Cache(object):
         handler.authorizer = self.authorizer
         self.movie_LUT = retrieve_MovieLUT_from_tracker(tracker_address)
         handler.movie_LUT = self.movie_LUT
-        # handler.masquerade_address = '107.21.135.254'
         handler.passive_ports = range(60000, 65535)
+
+        # set public.
+        handler.masquerade_address = self.public_address
 
         handler.rates = [0]*MAX_CONNS # in chunks per frame
         # handler.chunks = [chunks]*MAX_VIDEOS
@@ -148,6 +151,7 @@ class Cache(object):
         handler.binary_g = [0]*MAX_CONNS # binary: provided chunks sufficient for conn
         handler.watching_video = ['']*MAX_CONNS
 
+        # Create server on this cache.
         self.mini_server = ThreadStreamFTPServer(self.address, handler, stream_rate)
         print "Cache streaming rate set to ", self.mini_server.stream_rate
         handler.set_movies_path(path)

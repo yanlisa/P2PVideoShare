@@ -11,5 +11,5 @@ ippublic=`./ip_public.sh`
 for (( i=1; i <= $numcaches; i++ ))
 do
     printf -v j "%03d" $i
-    echo "$j ${iplocal} 60$j ${ippublic} 15000000" >> cache_config.csv
+    echo "$j 0.0.0.0 60$j ${ippublic} 15000000" >> cache_config.csv
 done
