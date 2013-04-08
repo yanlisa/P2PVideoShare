@@ -7,6 +7,7 @@ from pyftpdlib import ftpserver
 import Queue, time, re
 import threading
 import threadclient
+import resource
 from helper import parse_chunks, MovieLUT, load_tracker_address
 from time import gmtime, strftime
 
@@ -18,11 +19,18 @@ tracker_address = load_tracker_address()
 path = "."
 movie_config_file = '../config/video_info.csv'
 
-def log_load(fname, load):
-    f = open(fname, 'a')
+def log_load(log_type, load):
+    # Open log files
+    f_log_user = open('server_load_user.txt', 'a')
+    f_log_cache = open('server_load_cache.txt', 'a')
     current_time = strftime("%Y-%m-%d %H:%M:%S")
-    f.write(current_time + ' ' + str(load) + '\n')
-    f.close()
+    if log_type == 'user':
+        f_log = f_log_user
+    elif log_type == 'cache':
+        f_log = f_log_cache
+    f_log.write(current_time + ' ' + str(load) + '\n')
+    f_log_user.close()
+    f_log_cache.close()
 
 class StreamFTPServer(ftpserver.FTPServer):
     """One instance of the server is created every time this file is run.
@@ -157,6 +165,11 @@ class StreamHandler(ftpserver.FTPHandler):
     # accommodate variable streaming rate, use VariableThrottledDTPHandler.
 
     def __init__(self, conn, server, index=0, spec_rate=0):
+
+        print '[server.py] ftpserver.FTPHandler.timeout', ftpserver.FTPHandler.timeout
+        ftpserver.FTPHandler.timeout = 10000 # TIMEOUT SETUP
+        print '[server.py] ftpserver.FTPHandler.timeout', ftpserver.FTPHandler.timeout
+
         (super(StreamHandler, self)).__init__(conn, server)
         self._close_connection = False
         self.producer = ftpserver.FileProducer
@@ -167,6 +180,11 @@ class StreamHandler(ftpserver.FTPHandler):
         self.chunkproducer = FileChunkProducer
         self.proto_cmds = proto_cmds
         self.index = index # user connection number
+
+        #### TIMEOUT IS SETUP HERE
+        print '[server.py] self.timeout = ', self.timeout
+        self.timeout = 10000
+        print '[server.py] self.timeout2 = ', self.timeout
 
         if spec_rate != 0:
             self.stream_rate = spec_rate
@@ -226,9 +244,9 @@ class StreamHandler(ftpserver.FTPHandler):
             filename, framenum, binary_g, chunks = parsedform
             each_chunk_size = self.movie_LUT.chunk_size_lookup(filename)
             if binary_g == 1: # Download of user
-                log_load('server_load_user.txt', int(each_chunk_size) * len(chunks))
+                log_load('user', int(each_chunk_size) * len(chunks))
             elif binary_g == 0: # Download of caches
-                log_load('server_load_cache.txt', int(each_chunk_size) * len(chunks))
+                log_load('cache', int(each_chunk_size) * len(chunks))
             try:
                 # filename should be prefixed by "file-" in order to be valid.
                 # frame number is expected to exist for this cache.
@@ -574,6 +592,16 @@ def main():
             print err_msg
             return err_msg
 
+<<<<<<< HEAD
+=======
+    # handler.masquerade_address = '107.21.135.254' # Nick EC2
+    # handler.masquerade_address = '174.129.174.31' # Lisa EC2
+    handler.passive_ports = range(60000, 65535)
+
+    # max # of open files
+    resource.setrlimit(resource.RLIMIT_NOFILE, (5000,-1))
+
+>>>>>>> Timeout issue resolved
     ftpd = StreamFTPServer(server_address, handler, stream_rate)
     ftpd.serve_forever()
 

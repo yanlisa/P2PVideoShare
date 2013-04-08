@@ -254,6 +254,8 @@ class P2PUser():
             num_chunks_rx = len(chunk_nums_rx)
             if (num_chunks_rx >= 20):
                 print "[user.py] No additional chunks to download from the server."
+                print '[user.py] Sending an empty RETR'
+                self.server_client.put_instruction(inst_RETR + '.&1')
             else:
                 addtl_server_request = chunks_to_request(chunk_nums_rx, range(0, 40), 20 - num_chunks_rx)
                 if addtl_server_request:

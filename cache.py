@@ -7,6 +7,7 @@ import random
 import csv
 import time
 import threading
+import resource
 from helper import *
 
 # Debugging MSG
@@ -212,7 +213,8 @@ class Cache(object):
     def rate_update_optimal(self, T_period):
         while True:
             time.sleep(T_period)
-            print '[cache.py] RATE ALLOCATION BEGINS'
+            if DEBUGGING_MSG:
+                print '[cache.py] RATE ALLOCATION BEGINS'
             handlers = self.get_handlers()
             if len(handlers) == 0:
                 if DEBUGGING_MSG:
@@ -277,7 +279,8 @@ class Cache(object):
             time.sleep(T_period)
             handlers = self.get_handlers()
             if len(handlers) == 0:
-                print '[cache.py] No user is connected'
+                if DEBUGGING_MSG:
+                    print '[cache.py] No user is connected'
             else:
                 sum_rate = 0
                 for i in range(len(handlers)):
@@ -294,7 +297,8 @@ class Cache(object):
                 for i in range(len(handlers)):
                     handler = handlers[i]
                     if handler._closed == True:
-                        print '[cache.py] Connection ' + str(i) + ' is closed'
+                        if DEBUGGING_MSG:
+                            print '[cache.py] Connection ' + str(i) + ' is closed'
                         continue
                     video_name = self.get_watching_video(i)
                     print '[cache.py] User ' + str(i) + ' is watching ' + str(video_name)
@@ -364,7 +368,8 @@ class Cache(object):
             time.sleep(T_period)
 
             ct += 1
-            print '[cache.py] STORAGE ALLOCATION BEGINS'
+            if DEBUGGING_MSG:
+                print '[cache.py] STORAGE ALLOCATION BEGINS'
             handlers = self.get_handlers()
             if len(handlers) == 0:
                 if DEBUGGING_MSG:
@@ -422,7 +427,8 @@ class Cache(object):
                     if ct % STORAGE_UPDATE_PERIOD_OUTER == 0:
                         if assigned_num_of_chunks > num_stored_chunks:
                             if len(stored_chunks) >= 20:
-                                pass
+                                print '[cache.py] Downloading nothing from server'
+                                self.download_one_chunk_from_server(video_name, '')
                             else:
                                 chunk_index = random.sample( list(set(range(0,40)) - set(map(int, stored_chunks))), 1 ) # Sample one out of missing chunks
                                 if self.download_one_chunk_from_server(video_name, chunk_index) == True:
@@ -454,10 +460,14 @@ class Cache(object):
                         print '[cache.py] Connection ' + str(i) + ' is closed'
                         continue
                     video_name = self.get_watching_video(i)
+                    if video_name not in self.primal_f.keys():
+                        self.primal_f[video_name] = 0.0
                     packet_size = self.movie_LUT.chunk_size_lookup(video_name)
                     if packet_size == 0:
                         continue
                     rate_per_chunk = packet_size / 1000 / BUFFER_LENGTH * 8 # (Kbps)
+                    print '[cache.py] self.primal_f', self.primal_f
+                    print '[cache.py] self.primal_f[video_name]', self.primal_f[video_name]
                     delta_k = self.bound(self.primal_x[i] - self.primal_f[video_name] * rate_per_chunk * 20, self.dual_k[i], 0, INFINITY)
                     print '[cache.py] User ' + str(i) + ' delta_k ' + str(delta_k)
                     self.dual_k[i] += self.eps_k * delta_k
@@ -711,6 +721,7 @@ def main():
         print '[cache.py] cache.py needs an argument "cache_id"'
         sys.exit()
 
+    resource.setrlimit(resource.RLIMIT_NOFILE, (5000,-1))
     cache = Cache(config)
     cache.start_cache()
 

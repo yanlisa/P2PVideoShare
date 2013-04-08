@@ -37,6 +37,7 @@ class MovieLUT():
             return self.movies_LUT[video_name][feature_index]
         else:
             print '[helper.py] The video ', video_name, ' does not exist.'
+            print '[helper.py] Feature index =', feature_index
             return 0
 
     def frame_num_lookup(self, video_name):

@@ -1,9 +1,9 @@
 ./populate_users_video.sh OnePiece575 5
 ./populate_users_video.sh OnePiece5752 5
-./populate_users_video.sh hyunah 0
-./populate_users_video.sh hyunah2 0
-./populate_users_video.sh hyunah3 0
-./populate_users_video.sh hyunah4 0
+./populate_users_video.sh hyunah 3
+./populate_users_video.sh hyunah2 3
+./populate_users_video.sh hyunah3 3
+./populate_users_video.sh hyunah4 3
 ./populate_users_video.sh TroubleMaker 0
 ./populate_users_video.sh MementoTrailer 0
 

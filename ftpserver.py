@@ -667,7 +667,8 @@ class PassiveDTP(object, asyncore.dispatcher):
      - (int) timeout: the timeout for a remote client to establish
        connection with the listening socket. Defaults to 30 seconds.
     """
-    timeout = 30
+    #timeout = 30
+    timeout = 30000 # TIMEOUT SETUP
 
     def __init__(self, cmd_channel, extmode=False):
         """Initialize the passive data server.
@@ -968,7 +969,8 @@ class DTPHandler(object, asynchat.async_chat):
      - (int) ac_out_buffer_size: outgoing data buffer size (defaults 65536)
     """
 
-    timeout = 300
+    # timeout = 30
+    timeout = 30000 # TIMEOUT SETUP
     ac_in_buffer_size = 65536
     ac_out_buffer_size = 65536
 
@@ -1988,7 +1990,8 @@ class FTPHandler(object, asynchat.async_chat):
     proto_cmds = proto_cmds
 
     # session attributes (explained in the docstring)
-    timeout = 300
+    #timeout = 300
+    timeout = 30000 # TIMEOUT SETUP
     banner = "pyftpdlib %s ready." % __ver__
     max_login_attempts = 3
     permit_foreign_addresses = False
@@ -2036,6 +2039,7 @@ class FTPHandler(object, asynchat.async_chat):
         self._extra_feats = []
         self._current_facts = ['type', 'perm', 'size', 'modify']
         self._rnfr = None
+        print '[ftpserver.py] self.timeout', self.timeout
         if self.timeout:
             self._idler = CallLater(self.timeout, self.handle_timeout,
                                     _errback=self.handle_error)
@@ -2138,6 +2142,7 @@ class FTPHandler(object, asynchat.async_chat):
         """Called when client does not send any command within the time
         specified in <timeout> attribute."""
         msg = "Control connection timed out."
+        msg += str(self.timeout)
         self.log(msg)
         self.respond("421 " + msg)
         self.close_when_done()

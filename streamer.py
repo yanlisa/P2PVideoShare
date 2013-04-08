@@ -21,7 +21,7 @@ from socket import _GLOBAL_DEFAULT_TIMEOUT
 
 class StreamFTP(threading.Thread, FTP, object):
     def __init__(self, host='', user='', passwd='', acct='',
-                 timeout=100.0, chunk_size=2504):
+                 chunk_size=2504):
         if DEBUGGING_MSG:
             print "DEBUG, host : ", host
         self.instr_queue = Queue.Queue()
@@ -31,9 +31,8 @@ class StreamFTP(threading.Thread, FTP, object):
         self.chunks = []
         self.chunk_size = chunk_size
         self.resp_RETR = False # When set, puts chunk/frame num in resp_queue after received.
-        self.timeout = timeout
 
-        FTP.__init__(self, timeout = 100)
+        FTP.__init__(self)
         host_ip_address = host[0]
         host_port_num = host[1]
         FTP.connect(self, host_ip_address, host_port_num, 3)
