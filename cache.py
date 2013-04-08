@@ -434,7 +434,7 @@ class Cache(object):
                                 if self.download_one_chunk_from_server(video_name, chunk_index) == True:
                                     new_chunks = list(set(self.get_chunks(video_name)) | set(map(str, chunk_index)))
                                     self.set_chunks(video_name, new_chunks)
-                                    update_chunks_for_cache(tracker_address, self.address[0], self.address[1], video_name, new_chunks)
+                                    update_chunks_for_cache(tracker_address, self.public_address, self.address[1], video_name, new_chunks)
                                     self.sum_storage = self.sum_storage + additional_storage_needed
                                     print '[cache.py] chunk add done'
                                     print '[cache.py] storage Usage' , int(self.sum_storage/1000/1000) , '(MB) /' , int(self.storage_cap/1000/1000) , '(MB)'
@@ -446,7 +446,7 @@ class Cache(object):
                                 if self.remove_one_chunk(video_name, chunk_index) == True:
                                     new_chunks = list(set(self.get_chunks(video_name)) - set(map(str, chunk_index)))
                                     self.set_chunks(video_name, new_chunks)
-                                    update_chunks_for_cache(tracker_address, self.address[0], self.address[1], video_name, new_chunks)
+                                    update_chunks_for_cache(tracker_address, self.public_address, self.address[1], video_name, new_chunks)
                                     self.sum_storage = self.sum_storage - additional_storage_needed
                                     print '[cache.py] chunk ', chunk_index, ' is dropped'
                                     print '[cache.py] storage Usage' , int(self.sum_storage/1000/1000) , '(MB) /' , int(self.storage_cap/1000/1000) , '(MB)'
