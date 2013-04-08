@@ -592,16 +592,9 @@ def main():
             print err_msg
             return err_msg
 
-<<<<<<< HEAD
-=======
-    # handler.masquerade_address = '107.21.135.254' # Nick EC2
-    # handler.masquerade_address = '174.129.174.31' # Lisa EC2
-    handler.passive_ports = range(60000, 65535)
-
     # max # of open files
     resource.setrlimit(resource.RLIMIT_NOFILE, (5000,-1))
 
->>>>>>> Timeout issue resolved
     ftpd = StreamFTPServer(server_address, handler, stream_rate)
     ftpd.serve_forever()
 
