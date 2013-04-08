@@ -721,7 +721,7 @@ def main():
         print '[cache.py] cache.py needs an argument "cache_id"'
         sys.exit()
 
-    resource.setrlimit(resource.RLIMIT_NOFILE, (5000,-1))
+    #resource.setrlimit(resource.RLIMIT_NOFILE, (5000,-1))
     cache = Cache(config)
     cache.start_cache()
 
