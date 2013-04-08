@@ -593,7 +593,7 @@ def main():
             return err_msg
 
     # max # of open files
-    resource.setrlimit(resource.RLIMIT_NOFILE, (5000,-1))
+    #resource.setrlimit(resource.RLIMIT_NOFILE, (5000,-1))
 
     ftpd = StreamFTPServer(server_address, handler, stream_rate)
     ftpd.serve_forever()
