@@ -448,7 +448,7 @@ class Cache(object):
                     rate_per_chunk = packet_size / 1000 / BUFFER_LENGTH * 8 # (Kbps)
                     if log_ct == 0:
                         print '[cache.py] self.primal_f', self.primal_f
-                        print '[cache.py] self.primal_f[video_name]', self.primal_f[video_name]
+                        print '[cache.py] self.primal_f[', video_name, '] = ', self.primal_f[video_name]
                     delta_k = self.bound(self.primal_x[i] - self.primal_f[video_name] * rate_per_chunk * 20, self.dual_k[i], 0, INFINITY)
                     if log_ct == 0:
                         print '[cache.py] User ' + str(i) + ' delta_k ' + str(delta_k)
