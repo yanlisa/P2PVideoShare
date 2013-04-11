@@ -140,6 +140,7 @@ class Cache(object):
         # allow anonymous login.
         self.authorizer.add_anonymous(path, perm='elr')
         handler = CacheHandler
+        handler.parentCache = self
         # handler.timeout = 1
         handler.authorizer = self.authorizer
         self.movie_LUT = retrieve_MovieLUT_from_tracker(tracker_address)
@@ -507,6 +508,7 @@ class CacheHandler(StreamHandler):
     connected = []
     stream_rate = 10*1024 # Default is 10 Kbps
     def __init__(self, conn, server, index=0, spec_rate=0):
+        print '[cache.py]', index
         super(CacheHandler, self).__init__(conn, server, index, spec_rate)
 
     def close(self): # Callback function on a connection close
@@ -557,6 +559,7 @@ class CacheHandler(StreamHandler):
         """
         if DEBUGGING_MSG:
             print file
+        print '[cache.py] primal_x to this link', self.parentCache.primal_x[self.index]
         parsedform = parse_chunks(file)
         if parsedform:
             filename, framenum, binary_g, chunks = parsedform
