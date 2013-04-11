@@ -140,6 +140,7 @@ class Cache(object):
         # allow anonymous login.
         self.authorizer.add_anonymous(path, perm='elr')
         handler = CacheHandler
+        handler.parentCache = self
         # handler.timeout = 1
         handler.authorizer = self.authorizer
         self.movie_LUT = retrieve_MovieLUT_from_tracker(tracker_address)
@@ -507,6 +508,7 @@ class CacheHandler(StreamHandler):
     connected = []
     stream_rate = 10*1024 # Default is 10 Kbps
     def __init__(self, conn, server, index=0, spec_rate=0):
+        print '[cache.py]', index
         super(CacheHandler, self).__init__(conn, server, index, spec_rate)
 
     def close(self): # Callback function on a connection close
@@ -580,7 +582,15 @@ class CacheHandler(StreamHandler):
                 why = ftpserver._strerror(err)
                 self.respond('550 %s.' % why)
 
+            parentCache = self.parentCache
+            print '[cache.py] primal_x to this link was', parentCache.primal_x[self.index]
+            packet_size = parentCache.movie_LUT.chunk_size_lookup(filename)
+            rate_per_chunk = packet_size / 1000 / BUFFER_LENGTH * 8 # (Kbps)
+            parentCache.primal_x[self.index] = rate_per_chunk * len(chunks)
+            print '[cache.py] primal_x is forced down to', parentCache.primal_x[self.index]
+
             CacheHandler.binary_g[self.index] = binary_g
+            self.parentCache.primal_x[self.index] =
             #CacheHandler.connected[self.index] = True
             CacheHandler.watching_video[self.index] = filename
             producer = self.chunkproducer(files, self._current_type)
