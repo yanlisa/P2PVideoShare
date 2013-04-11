@@ -16,6 +16,7 @@ class ThreadClient(object):
         """
         Makes a StreamFTP thread and starts it.
         """
+	self.address = address
         self.client = StreamFTP(address)
         self.client.set_chunk_size(packet_size)
         self.client.set_callback(self.chunkcallback)
