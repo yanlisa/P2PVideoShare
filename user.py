@@ -19,7 +19,7 @@ VLC_PLAYER_USE = False
 # Topology
 USER_TOPOLOGY_UPDATE = True
 T_choke = 3 # Choke period
-T_choke2 = 3 # Choke period
+T_choke2 = 2 # Choke period
 eps_choke = 1 # Choke parameter
 
 # Global parameters
@@ -94,6 +94,7 @@ class P2PUser():
         not_connected_caches = []
         # Connect to the caches
         cache_ip_addr = retrieve_caches_address_from_tracker(self.tracker_address, 100, self.user_name)
+	self.cache_ip_addr = cache_ip_addr
         #connected_caches = set([])
         self.num_of_caches = min(self.num_of_caches, len(cache_ip_addr))
         #connected_caches_index = [0] * self.num_of_caches
@@ -331,6 +332,8 @@ class P2PUser():
                                 print '[user.py] Topology Update : Temporarily added ', new_cache.address
                                 choke_state = 1 # Now, move to transitional state
                                 choke_ct = 0
+                                print '[user.py] Topology Update : Now the state is changed to overhead staet'
+				print '[user.py]', connected_caches, not_connected_caches, self.clients	
 
                 elif choke_state == 1: # Overhead state
                     print '[user.py] Overhead state : ', choke_ct
@@ -360,7 +363,8 @@ class P2PUser():
             		removed_cache.put_instruction('QUIT')
                         self.clients.remove(removed_cache)
                         connected_caches.remove(removed_cache)
-                        not_connected_caches.append(removed_cache)
+            		new_cache = ThreadClient(self.cache_ip_addr[i], 1000, client_index)
+                        not_connected_caches.append(new_cache)
 
                         print '[user.py] Topology Update : ', removed_cache, 'is chocked.'
 
@@ -412,6 +416,7 @@ def main():
     #test_user = P2PUser(tracker_address, video_name, packet_size)
     video_name = sys.argv[1]
     user_name = sys.argv[2]
+    print '[user.py]', tracker_address
     test_user = P2PUser(tracker_address, video_name, user_name)
     test_user.download(video_name, 1)
     test_user.disconnect(tracker_address, video_name, user_name)
