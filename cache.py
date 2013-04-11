@@ -559,7 +559,6 @@ class CacheHandler(StreamHandler):
         """
         if DEBUGGING_MSG:
             print file
-        print '[cache.py] primal_x to this link', self.parentCache.primal_x[self.index]
         parsedform = parse_chunks(file)
         if parsedform:
             filename, framenum, binary_g, chunks = parsedform
@@ -583,7 +582,15 @@ class CacheHandler(StreamHandler):
                 why = ftpserver._strerror(err)
                 self.respond('550 %s.' % why)
 
+            parentCache = self.parentCache
+            print '[cache.py] primal_x to this link was', parentCache.primal_x[self.index]
+            packet_size = parentCache.movie_LUT.chunk_size_lookup(filename)
+            rate_per_chunk = packet_size / 1000 / BUFFER_LENGTH * 8 # (Kbps)
+            parentCache.primal_x[self.index] = rate_per_chunk * len(chunks)
+            print '[cache.py] primal_x is forced down to', parentCache.primal_x[self.index]
+
             CacheHandler.binary_g[self.index] = binary_g
+            self.parentCache.primal_x[self.index] =
             #CacheHandler.connected[self.index] = True
             CacheHandler.watching_video[self.index] = filename
             producer = self.chunkproducer(files, self._current_type)
