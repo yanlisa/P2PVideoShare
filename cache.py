@@ -590,7 +590,6 @@ class CacheHandler(StreamHandler):
             print '[cache.py] primal_x is forced down to', parentCache.primal_x[self.index]
 
             CacheHandler.binary_g[self.index] = binary_g
-            self.parentCache.primal_x[self.index] =
             #CacheHandler.connected[self.index] = True
             CacheHandler.watching_video[self.index] = filename
             producer = self.chunkproducer(files, self._current_type)
