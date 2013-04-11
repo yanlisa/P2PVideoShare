@@ -90,7 +90,6 @@ class P2PUser():
             self.movies_LUT[movie_name] = (int(row[1]), int(row[2]), int(row[3]), int(row[4]), int(row[5]), int(row[6]))
 
     def download(self, video_name, start_frame):
-        sys.stdout.flush()
         connected_caches = []
         not_connected_caches = []
         # Connect to the caches
@@ -132,6 +131,7 @@ class P2PUser():
         base_file_full_path = os.path.abspath('video-' + video_name + '/' + base_file_name)
 
         for frame_number in xrange(start_frame, num_frames + 1):
+            sys.stdout.flush()
             effective_rates = [0]*len(self.clients)
             assigned_chunks = [0]*len(self.clients)
 
@@ -328,7 +328,7 @@ class P2PUser():
                                 self.clients.append(new_cache)
                                 connected_caches.append(new_cache)
                                 not_connected_caches.remove(new_cache)
-                                print '[user.py] Topology Update : Temporarily added ', new_cache
+                                print '[user.py] Topology Update : Temporarily added ', new_cache.address
                                 choke_state = 1 # Now, move to transitional state
                                 choke_ct = 0
 
@@ -357,6 +357,7 @@ class P2PUser():
                         # client_index = rate_vector.index(min(rate_vector))
 
                         removed_cache = self.clients[client_index]
+            		removed_cache.put_instruction('QUIT')
                         self.clients.remove(removed_cache)
                         connected_caches.remove(removed_cache)
                         not_connected_caches.append(removed_cache)
@@ -366,17 +367,12 @@ class P2PUser():
                         choke_state = 0 # Now, move to normal state
                         choke_ct = 0
 
-
-################# WHY "connected_caches_index" was being used?
-
+    def disconnect(self, tracker_address, video_name, user_name):
         for client in self.clients:
             client.put_instruction('QUIT')
         self.server_client.put_instruction('QUIT')
         print "[user.py] Closed all connections."
 
-    def disconnect(self, tracker_address, video_name, user_name):
-        for client in self.clients:
-            client.put_instruction('QUIT')
         my_ip = user_name
         my_port = 0
         my_video_name = video_name

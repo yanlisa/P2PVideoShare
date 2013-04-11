@@ -38,7 +38,7 @@ STORAGE_CAP_IN_MB = 300 # (MB)
 T_rate = .01
 T_storage = .01
 T_topology = 600
-STORAGE_UPDATE_PERIOD_OUTER = 50
+STORAGE_UPDATE_PERIOD_OUTER = 30
 
 # IP Table
 class ThreadStreamFTPServer(StreamFTPServer, threading.Thread):
@@ -98,7 +98,7 @@ class Cache(object):
             average_streaming_rate = 3000 # Kbps
             average_length = 120 # sec
 
-            scale = .1
+            scale = 1
             self.eps_x = 1 * scale
             self.eps_k = 1 * scale
             self.eps_la = .3 * scale
@@ -266,7 +266,8 @@ class Cache(object):
                     if DEBUGGING_MSG:
                         print '[cache.py] total rate = ', (rate_per_chunk * 20)
                     delta_k = self.bound(self.primal_x[i] - self.primal_f[video_name] * rate_per_chunk * 20, self.dual_k[i], 0, INFINITY)
-                    print '[cache.py] User ' + str(i) + ' delta_k ' + str(delta_k)
+                    if log_ct == 0:
+		        print '[cache.py] User ' + str(i) + ' delta_k ' + str(delta_k)
                     self.dual_k[i] += self.eps_k * delta_k
                     if POSITIVE_CONSTRAINT:
                         self.dual_k[i] = max(0, self.dual_k[i])
@@ -275,13 +276,13 @@ class Cache(object):
 
                 ## 3. UPDATE DUAL_LA
                 if log_ct == 0:
-                print '[cache.py] sum_x ' , sum_x
+		    print '[cache.py] sum_x ' , sum_x
                 delta_la = self.bound(sum_x - self.bandwidth_cap, self.dual_la, 0, INFINITY)
                 self.dual_la += self.eps_la * delta_la
                 if POSITIVE_CONSTRAINT:
                     self.dual_la = max(self.dual_la, 0)
                 if log_ct == 0:
-                print '[cache.py] dual_la ' + str(self.dual_la)
+                    print '[cache.py] dual_la ' + str(self.dual_la)
 
     def remove_one_chunk(self, video_name, index):
         # It should remove all the downloaded chunks at cache
@@ -526,7 +527,7 @@ class CacheHandler(StreamHandler):
 
     def set_packet_rate(self, new_rate):
         CacheHandler.rates[self.index] = new_rate
-        print "Packet rate has been set within CacheHandler for: %d conn to rate %d" % (self.index, new_rate)
+#        print "Packet rate has been set within CacheHandler for: %d conn to rate %d" % (self.index, new_rate)
 
     def ftp_CNKS(self, arg):
         """
