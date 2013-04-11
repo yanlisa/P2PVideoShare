@@ -3,7 +3,7 @@ import urllib2
 import csv
 
 DEBUGGING_MSG = True
-tracker_address = "http://107.22.68.35:8081/req/" # Kang1 EC2
+tracker_address = "http://54.235.225.132:8081/req/" # Kang1 EC2
 # tracker_address = "http://174.129.174.31:8081/req/" # Lisa EC2
 # tracker_address = "http://localhost:8081/req/"
 

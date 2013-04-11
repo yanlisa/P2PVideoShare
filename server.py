@@ -562,7 +562,7 @@ def main():
     # Set public address.
     # public_address = '107.21.135.254' # Nick EC2
     # public_address = '174.129.174.31' # Lisa EC2
-    public_address = '107.22.68.35' #Kang EC2
+    public_address = '54.235.225.132' #Kang EC2
     handler.masquerade_address = public_address
     req_str = 'REGISTER_SERVER&' + public_address + '_' + str(server_address[1])
 
