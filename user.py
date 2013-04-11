@@ -382,6 +382,7 @@ class P2PUser():
         my_video_name = video_name
         deregister_to_tracker_as_user(tracker_address, my_ip, my_port, video_name)
         print "[user.py] BYE"
+        sys.stdout.flush()
 
 
 def chunks_to_request(A, B, num_ret):
