@@ -204,25 +204,12 @@ class P2PUser():
             server_request = []
             chosen_chunks = list(chosen_chunks)
             num_chunks_rx_predicted = len(chosen_chunks)
-            if True:
-                server_request = chunks_to_request(chosen_chunks, range(0, 40), 20 - num_chunks_rx_predicted)
-                server_request_string = '%'.join(server_request)
-                server_request_string = server_request_string + '&' + str(1) ## DOWNLOAD FROM SERVER : binary_g = 1
-                self.server_client.put_instruction(inst_RETR + '.' + server_request_string)
-            else:
-                if (num_chunks_rx_predicted >= 20):
-                    print "[user.py] 20 chunks assigned to caches; assume server will not be called."
-                else:
-                    server_request = chunks_to_request(chosen_chunks, range(0, 40), 20 - num_chunks_rx_predicted)
-                    if server_request:
-                        server_request_string = '%'.join(server_request)
-                        # server should always be set with flag_deficit = 0 (has all chunks)
-                        server_request_string = server_request_string + '&' + str(1) ## DOWNLOAD FROM SERVER : binary_g = 1
-                        self.server_client.put_instruction(inst_RETR + '.' + server_request_string)
-                        if(DEBUGGING_MSG):
-                            print "[user.py] Requesting from server: ", server_request
-                    elif (DEBUGGING_MSG):
-                        print "No unique chunks from server requested."
+            server_request = chunks_to_request(chosen_chunks, range(0, 40), 20 - num_chunks_rx_predicted)
+            server_request_string = '%'.join(server_request)
+            server_request_string = server_request_string + '&' + str(1) ## DOWNLOAD FROM SERVER : binary_g = 1
+            self.server_client.put_instruction(inst_RETR + '.' + server_request_string)
+            if(DEBUGGING_MSG):
+                print "[user.py] Requesting from server: ", server_request
 
             num_of_chks_from_server = len(server_request)
             #update_server_load(tracker_address, video_name, num_of_chks_from_server)
