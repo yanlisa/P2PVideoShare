@@ -168,29 +168,24 @@ class P2PUser():
                 if return_str[0] == '':
                     available_chunks[i] = []
                 else:
-                    available_chunks[i] = return_str[0].split('%')
+                    available_chunks[i] = map(str, return_str[0].split('%'))
+                    for j in range(len(available_chunks[i])):
+                        available_chunks[i][j] = available_chunks[i][j].zfill(2)
                 print '[user.py]', return_str[1]
                 rates[i] = int(return_str[1])
                 union_chunks = list( set(union_chunks) | set(available_chunks[i]) )
 
+            ## index assignment here
+            # Assign chunks to cache using cache_chunks_to_request.
             print '[user.py]', available_chunks
-            # index assignment here
-            chosen_chunks = set([])
-            sum_rate_so_far = 0
-            for i in range(len(self.clients)):
-                effective_available_chunks = list(set(available_chunks[i]) - chosen_chunks)
-                effective_rates[i] = min(rates[i], len(effective_available_chunks), 20 - sum_rate_so_far)
-                sum_rate_so_far = sum_rate_so_far + effective_rates[i]
 
-                print '[user.py] CACHE ', i, 'eff_chunks ', effective_available_chunks
-                print '[user.py] CACHE ', i, 'eff_rate', effective_rates[i]
-                assigned_chunks[i] = list(set(random.sample(effective_available_chunks, effective_rates[i])))
-                # Temporarily convert str list to int list, sort it, convert it back
-                print '[user.py] CACHE ', i, 'assigned_chunks', assigned_chunks[i]
-                int_assigned_chunks = map(int, assigned_chunks[i])
-                int_assigned_chunks.sort()
-                assigned_chunks[i] = map(str, int_assigned_chunks)
-                chosen_chunks = (chosen_chunks | set(assigned_chunks[i]))
+            assigned_chunks = cache_chunks_to_request(available_chunks, rates)
+
+            effective_rates = [0]*len(rates)
+            for i in range(len(rates)):
+                effective_rates[i] = len(assigned_chunks[i])
+
+            chosen_chunks = [j for i in assigned_chunks for j in i]
 
             flag_deficit = (sum(effective_rates) < 20) # True if user needs more rate from caches
 
@@ -333,7 +328,7 @@ class P2PUser():
                                 choke_state = 1 # Now, move to transitional state
                                 choke_ct = 0
                                 print '[user.py] Topology Update : Now the state is changed to overhead staet'
-				print '[user.py]', connected_caches, not_connected_caches, self.clients	
+				print '[user.py]', connected_caches, not_connected_caches, self.clients
 
                 elif choke_state == 1: # Overhead state
                     print '[user.py] Overhead state : ', choke_ct
@@ -384,6 +379,56 @@ class P2PUser():
         print "[user.py] BYE"
         sys.stdout.flush()
 
+def cache_chunks_to_request(available_chunks, rates):
+    """
+    (a) Sort the packets by their rarity (defined by the presence of packets in multiple caches).
+    (b) Starting with the rarest first, assign the rarest packet to the cache with the lowest used BW ratio currently. Pop off the rarest packet and decrement the bandwidth of the assigned cache.
+    (c) Repeat until all packets have been assigned a cache source, or until 20 chunks have been assigned.
+    """
+
+    # index assignment here
+    chunk_locs = {}
+    assigned_chunks = [list()]*len(rates)
+    for i in range(len(rates)):
+        for j in available_chunks[i]:
+            if rates[i]:
+                if j in chunk_locs:
+                    (chunk_locs[j]).append(i)
+                else:
+                    chunk_locs[j] = [i]
+
+    # sort chunks by rarest first
+    chunk_freqs = Queue.PriorityQueue()
+    for chunk in chunk_locs:
+        chunk_freqs.put((len(chunk_locs[chunk]), chunk))
+
+    # from rarest first, make chunk request list by assigning next available chunk
+    # to carrier with the lowest ratio of used cache rate so far (fairness)
+    for i in range(20):
+        if chunk_freqs.empty():
+            break
+        freq, chunk = chunk_freqs.get()
+        best_location = -1
+        for cache in chunk_locs[chunk]:
+            ratio_bw_used = float(len(assigned_chunks[cache]))/rates[cache]
+            if best_location == -1:
+                if ratio_bw_used < 1:
+                    best_location = cache
+                    # print "No best_location set for chunk %s, as ratio bw is %d: %f" % (chunk, cache, ratio_bw_used)
+            else:
+                best_locations_ratio_bw = float(len(assigned_chunks[best_location]))/rates[best_location]
+                # print "%d:%f vs. %d:current best %f" % (cache, ratio_bw_used, best_location, best_locations_ratio_bw)
+                if ratio_bw_used < best_locations_ratio_bw:
+                    best_location = cache
+                    # print "best location for chunk %s determined to be %d" % (chunk, best_location)
+        if best_location == -1:
+            continue
+        if not assigned_chunks[best_location]:
+            assigned_chunks[best_location] = [str(chunk)]
+        else:
+            (assigned_chunks[best_location]).append(str(chunk))
+
+    return assigned_chunks
 
 def chunks_to_request(A, B, num_ret):
     """ Find the elements in B that are not in A. From these elements, return a
