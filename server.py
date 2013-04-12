@@ -10,6 +10,7 @@ import threadclient
 import resource
 from helper import parse_chunks, MovieLUT, load_tracker_address
 from time import gmtime, strftime
+import commands
 
 # Debugging MSG
 DEBUGGING_MSG = True
@@ -560,9 +561,11 @@ def main():
     handler.passive_ports = range(61000, 65535)
 
     # Set public address.
-    # public_address = '107.21.135.254' # Nick EC2
-    # public_address = '174.129.174.31' # Lisa EC2
-    public_address = '54.235.225.132' #Kang EC2
+    # public_address = '54.235.225.132' #Kang EC2
+    temp_str = commands.getstatusoutput('../config/ip_public.sh')
+    public_address = temp_str[-1].split('\n')[-1]
+    print public_address
+
     handler.masquerade_address = public_address
     req_str = 'REGISTER_SERVER&' + public_address + '_' + str(server_address[1])
 

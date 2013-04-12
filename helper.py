@@ -1,11 +1,13 @@
 import os
 import urllib2
 import csv
+import commands
 
 DEBUGGING_MSG = True
-tracker_address = "http://54.242.109.150:8081/req/" # Kang1 EC2
-# tracker_address = "http://174.129.174.31:8081/req/" # Lisa EC2
-# tracker_address = "http://localhost:8081/req/"
+
+(temp, temp_str1) = commands.getstatusoutput('~/ftp-git/tracker_ip.sh')
+temp_str2 = temp_str1.replace('.','-').split('-')
+tracker_address = 'http://' + '.'.join(temp_str2[1:5]) + ':8081/req/'
 
 def load_tracker_address():
     return tracker_address
