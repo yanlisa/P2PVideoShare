@@ -1,6 +1,10 @@
-num_of_caches=5
+num_of_caches=15
 base_port=49152 # this is the first of the private ports, so we won't disrupt
                 # operations using reserved ports.
+cd "config"
+./edit_cache_config.sh
+cd ".."
+
 if [ ! -d "caches" ]; then
     mkdir "caches"
 fi
