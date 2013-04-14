@@ -11,6 +11,7 @@ import urllib2
 import csv
 import math
 import sys
+import numpy
 
 # Debugging MSG
 DEBUGGING_MSG = True
@@ -27,7 +28,7 @@ CACHE_DOWNLOAD_DURATION = 8 # sec
 SERVER_DOWNLOAD_DURATION = 2 # sec
 DECODE_WAIT_DURATION = 0.1 # sec
 tracker_address = load_tracker_address()
-num_of_caches = 3
+num_of_caches = 5
 
 class P2PUser():
 
@@ -209,7 +210,7 @@ class P2PUser():
             server_request_string = server_request_string + '&' + str(1) ## DOWNLOAD FROM SERVER : binary_g = 1
             self.server_client.put_instruction(inst_RETR + '.' + server_request_string)
             if(DEBUGGING_MSG):
-                print "[user.py] Requesting from server: ", server_request
+                print "[user.py] Requesting from server: ", server_request, ", Request string: ", server_request_string
 
             num_of_chks_from_server = len(server_request)
             #update_server_load(tracker_address, video_name, num_of_chks_from_server)
@@ -348,7 +349,7 @@ class P2PUser():
             		new_cache = ThreadClient(self.cache_ip_addr[i], 1000, client_index)
                         not_connected_caches.append(new_cache)
 
-                        print '[user.py] Topology Update : ', removed_cache, 'is chocked.'
+                        print '[user.py] Topology Update : ', removed_cache.address, 'is chocked.'
 
                         choke_state = 0 # Now, move to normal state
                         choke_ct = 0
