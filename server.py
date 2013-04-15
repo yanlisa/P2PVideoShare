@@ -568,9 +568,9 @@ def main():
 
     # Set public address.
     # public_address = '54.235.225.132' #Kang EC2
-    # temp_str = commands.getstatusoutput('../config/ip_public.sh')
-    # public_address = temp_str[-1].split('\n')[-1]
-    public_address = '0.0.0.0'
+    temp_str = commands.getstatusoutput('../config/ip_public.sh')
+    public_address = temp_str[-1].split('\n')[-1]
+    # public_address = '0.0.0.0'
     print public_address
 
     handler.masquerade_address = public_address
