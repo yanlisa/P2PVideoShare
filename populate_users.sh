@@ -1,4 +1,4 @@
-num_of_users=20
+num_of_users=10
 if [ ! -z "$1" ] ; then
     num_of_users=$1
 fi
