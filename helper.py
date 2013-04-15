@@ -186,5 +186,5 @@ def parse_chunks(arg):
     if len(parts[2]) == 0:
         return (filename, framenum, int(binarystr), [])
     else:
-        chunks = map(str, (parts[2]).split('%'))
+        chunks = map(int, (parts[2]).split('%'))
         return (filename, framenum, int(binarystr), chunks)
