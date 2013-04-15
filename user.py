@@ -11,7 +11,6 @@ import urllib2
 import csv
 import math
 import sys
-import numpy
 
 # Debugging MSG
 DEBUGGING_MSG = True
