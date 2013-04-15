@@ -232,6 +232,12 @@ class StreamHandler(ftpserver.FTPHandler):
         # open data channel
         self._dtp_acceptor = self.passive_dtp(self, extmode, self.stream_rate)
 
+    def ftp_NOOP(self, line):
+        log_load('user', 0)
+        # pasted from ftpserver
+        """Do nothing."""
+        self.respond("200 I successfully done nothin'.")
+
     def ftp_RETR(self, file):
         """Retrieve the specified file (transfer from the server to the
         client).
@@ -562,8 +568,9 @@ def main():
 
     # Set public address.
     # public_address = '54.235.225.132' #Kang EC2
-    temp_str = commands.getstatusoutput('../config/ip_public.sh')
-    public_address = temp_str[-1].split('\n')[-1]
+    # temp_str = commands.getstatusoutput('../config/ip_public.sh')
+    # public_address = temp_str[-1].split('\n')[-1]
+    public_address = '0.0.0.0'
     print public_address
 
     handler.masquerade_address = public_address

@@ -11,6 +11,7 @@ import urllib2
 import csv
 import math
 import sys
+import thread
 
 # Debugging MSG
 DEBUGGING_MSG = True
@@ -155,6 +156,7 @@ class P2PUser():
             # get available chunks lists from cache A and B.
             inst_CNKS = 'CNKS ' + filename
             inst_RETR = 'RETR ' + filename
+            inst_NOOP = 'NOOP'
 
             ###### DECIDING WHICH CHUNKS TO DOWNLOAD FROM CACHES: TIME 0 ######
 
@@ -219,7 +221,11 @@ class P2PUser():
 
             # immediately stop cache downloads.
             for client in self.clients:
-                client.client.abort()
+                try:
+                    client.client.abort()
+                except:
+                    print "[user.py] Cache connections suddenly aborted. Stopping all download."
+                    return 
             print "[user.py] Cache connections aborted for frame %d" % (frame_number)
 
             ###### REQUEST ADDITIONAL CHUNKS FROM SERVER: TIME 8 (CACHE_DOWNLOAD_DURATION) ######
@@ -237,8 +243,8 @@ class P2PUser():
             num_chunks_rx = len(chunk_nums_rx)
             if (num_chunks_rx >= 20):
                 print "[user.py] No additional chunks to download from the server."
-                print '[user.py] Sending an empty RETR'
-                self.server_client.put_instruction(inst_RETR + '.&1')
+                print '[user.py] Sending a NOOP'
+                self.server_client.put_instruction(inst_NOOP)
             else:
                 addtl_server_request = chunks_to_request(chunk_nums_rx, range(0, 40), 20 - num_chunks_rx)
                 if addtl_server_request:
@@ -444,15 +450,40 @@ def chunks_to_request(A, B, num_ret):
     list_diff.sort()
     return list_diff[:min(len(set_B - set_A), num_ret)]
 
-def main():
-    print "Arguments:", sys.argv
-    #test_user = P2PUser(tracker_address, video_name, packet_size)
-    video_name = sys.argv[1]
-    user_name = sys.argv[2]
-    print '[user.py]', tracker_address
-    test_user = P2PUser(tracker_address, video_name, user_name)
-    test_user.download(video_name, 1)
+def thread_duration_control(test_user, tracker_address, video_name, user_name):
+    # call using:
+    # thread.start_new_thread(thread_duration_control, (test_user, tracker_address, video_name, user_name))
+
+    mu = 20
+    close_time = random.expovariate(1/float(mu))
+    print "Waiting %f until close." % close_time
+    sleep(close_time)
+    print "Countdown finished. Closing connection."
     test_user.disconnect(tracker_address, video_name, user_name)
+
+def main():
+    mu = 5
+
+    print '[user.py]', tracker_address
+    # Discover movies.
+    movie_LUT = retrieve_MovieLUT_from_tracker(tracker_address)
+    
+    movies = movie_LUT.movies_LUT.keys()
+    movies = ['OnePiece575', 'hyunah', 'hyunah2', 'hyunah3']
+
+    while True:
+        wait_time = random.expovariate(1/float(mu))
+        sleep(wait_time)
+
+        os.system("rm -r video*")
+
+        video_name = random.choice(movies) # uniformly pick from movies
+        user_name = 'user-' + video_name
+        print '[user.py] Starting to watch video %s' % video_name
+        test_user = P2PUser(tracker_address, video_name, user_name)
+        test_user.download(video_name, 1)
+        test_user.disconnect(tracker_address, video_name, user_name)
+        print '[user.py] Download of video %s finished.' % video_name
 
 if __name__ == "__main__":
     main()
