@@ -464,7 +464,7 @@ def thread_duration_control(test_user, tracker_address, video_name, user_name):
     test_user.disconnect(tracker_address, video_name, user_name)
 
 def main():
-    mu = 100
+    mu = 10
 
     print '[user.py]', tracker_address
     # Discover movies.
