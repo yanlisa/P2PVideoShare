@@ -476,7 +476,8 @@ def main():
 
     while True:
         wait_time = random.expovariate(1/float(mu))
-        sleep(wait_time)
+        print '[user.py] wait time:', wait_time
+        #sleep(wait_time)
 
         os.system("rm -r video*")
 
