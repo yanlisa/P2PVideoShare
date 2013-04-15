@@ -348,10 +348,10 @@ class P2PUser():
                         # client_index = rate_vector.index(min(rate_vector))
 
                         removed_cache = self.clients[client_index]
-            		removed_cache.put_instruction('QUIT')
+                        removed_cache.put_instruction('QUIT')
                         self.clients.remove(removed_cache)
                         connected_caches.remove(removed_cache)
-            		new_cache = ThreadClient(self.cache_ip_addr[i], 1000, client_index)
+                        new_cache = ThreadClient(self.cache_ip_addr[i], 1000, client_index)
                         not_connected_caches.append(new_cache)
 
                         print '[user.py] Topology Update : ', removed_cache.address, 'is chocked.'

@@ -129,6 +129,7 @@ class StreamFTP(threading.Thread, FTP, object):
             fn_name = cmd.split(' ')[0]
             if fn_name == "QUIT":
                 self.quit()
+                print "[streamer.py] Thread closes"
                 break
             elif fn_name == "RETR":
                 fname = cmd.split(' ')[1]
