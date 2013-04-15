@@ -95,7 +95,7 @@ class P2PUser():
         not_connected_caches = []
         # Connect to the caches
         cache_ip_addr = retrieve_caches_address_from_tracker(self.tracker_address, 100, self.user_name)
-	self.cache_ip_addr = cache_ip_addr
+        self.cache_ip_addr = cache_ip_addr
         #connected_caches = set([])
         self.num_of_caches = min(self.num_of_caches, len(cache_ip_addr))
         #connected_caches_index = [0] * self.num_of_caches
@@ -111,7 +111,7 @@ class P2PUser():
             print '[user.py] ', i, 'th connection is CONNECTED : ' , cache_ip_addr[i]
 
         for i in range(self.num_of_caches, len(cache_ip_addr)):
-            each_client = ThreadClient(cache_ip_addr[i], self.packet_size, i)
+            each_client = (cache_ip_addr[i], self.packet_size, i)
             not_connected_caches.append(each_client)
             print '[user.py] ', i, 'th connection is RESERVED: ' , cache_ip_addr[i]
 
@@ -313,11 +313,12 @@ class P2PUser():
                         else: # Add a new cache temporarily
                             new_cache_index = random.sample(range(len(not_connected_caches)), 1)
                             if new_cache_index >= 0:
-                                new_cache = not_connected_caches[new_cache_index[0]]
+                                new_cache_meta = not_connected_caches[new_cache_index[0]]
+                                new_cache = ThreadClient(new_cache_meta)
                                 self.clients.append(new_cache)
                                 connected_caches.append(new_cache)
-                                not_connected_caches.remove(new_cache)
-                                print '[user.py] Topology Update : Temporarily added ', new_cache.address
+                                not_connected_caches.remove(new_cache_meta)
+                                print '[user.py] Topology Update : Temporarily added ', new_cache_meta.address
                                 choke_state = 1 # Now, move to transitional state
                                 choke_ct = 0
                                 print '[user.py] Topology Update : Now the state is changed to overhead staet'
@@ -351,8 +352,8 @@ class P2PUser():
                         removed_cache.put_instruction('QUIT')
                         self.clients.remove(removed_cache)
                         connected_caches.remove(removed_cache)
-                        new_cache = ThreadClient(self.cache_ip_addr[i], 1000, client_index)
-                        not_connected_caches.append(new_cache)
+                        new_cache_meta = (self.cache_ip_addr[client_index], 1000, client_index)
+                        not_connected_caches.append(new_cache_meta)
 
                         print '[user.py] Topology Update : ', removed_cache.address, 'is chocked.'
 
