@@ -314,15 +314,16 @@ class P2PUser():
                             new_cache_index = random.sample(range(len(not_connected_caches)), 1)
                             if new_cache_index >= 0:
                                 new_cache_meta = not_connected_caches[new_cache_index[0]]
-                                new_cache = ThreadClient(new_cache_meta)
+                                new_cache = ThreadClient(*new_cache_meta)
                                 self.clients.append(new_cache)
                                 connected_caches.append(new_cache)
                                 not_connected_caches.remove(new_cache_meta)
-                                print '[user.py] Topology Update : Temporarily added ', new_cache_meta.address
+                                print '[user.py] Topology Update : Temporarily added ', new_cache.address
                                 choke_state = 1 # Now, move to transitional state
                                 choke_ct = 0
                                 print '[user.py] Topology Update : Now the state is changed to overhead staet'
-				print '[user.py]', connected_caches, not_connected_caches, self.clients
+                                #print '[user.py]', connected_caches, not_connected_caches, self.clients
+                                print '[user.py] conneced caches', self.clients
 
                 elif choke_state == 1: # Overhead state
                     print '[user.py] Overhead state : ', choke_ct
@@ -463,7 +464,7 @@ def thread_duration_control(test_user, tracker_address, video_name, user_name):
     test_user.disconnect(tracker_address, video_name, user_name)
 
 def main():
-    mu = 100
+    mu = 1
 
     print '[user.py]', tracker_address
     # Discover movies.
@@ -486,6 +487,7 @@ def main():
         test_user.download(video_name, 1)
         test_user.disconnect(tracker_address, video_name, user_name)
         print '[user.py] Download of video %s finished.' % video_name
+        break
 
 if __name__ == "__main__":
     main()
