@@ -31,6 +31,7 @@ class StreamFTP(threading.Thread, FTP, object):
         self.chunks = []
         self.chunk_size = chunk_size
         self.resp_RETR = False # When set, puts chunk/frame num in resp_queue after received.
+        self.end_flag = False
 
         FTP.__init__(self)
         host_ip_address = host[0]
@@ -122,6 +123,8 @@ class StreamFTP(threading.Thread, FTP, object):
         self.login('','')
         self.set_pasv(True) # Trying Passive mode
         while 1:
+            if self.end_flag:
+                break
             cmd = self.instr_queue.get()
             fn_name = cmd.split(' ')[0]
             if fn_name == "QUIT":
