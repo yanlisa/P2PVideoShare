@@ -487,7 +487,6 @@ def main():
         test_user.download(video_name, 1)
         test_user.disconnect(tracker_address, video_name, user_name)
         print '[user.py] Download of video %s finished.' % video_name
-        break
 
 if __name__ == "__main__":
     main()
