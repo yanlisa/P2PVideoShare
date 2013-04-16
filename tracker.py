@@ -12,12 +12,12 @@ app = web.application(urls, globals())
 render = web.template.render('templates/')
 user_population = {}
 
-def log_load(user_population):
+def log_load():
     # Open log files
     f_log = open('user_population.txt', 'a')
     current_time = strftime("%Y-%m-%d %H:%M:%S")
-    output_str1 = ' '.join(map(str, a.keys()))
-    output_str = ' '.join(map(str, a.values()))
+    output_str1 = ' '.join(map(str, user_population.keys()))
+    output_str = ' '.join(map(str, user_population.values()))
     f_log.write(current_time + ' ' + output_str1 + ' ' + output_str + '\n')
     f_log.close()
 
@@ -185,7 +185,10 @@ class request:
                 arg_watching_video = req_arg.split('_')[2]
                 db_manager.add_user(arg_ip, arg_port, arg_watching_video)
 
-                user_population[arg_vname] += 1
+                print '[tracker.py] Accessing...'
+                print '[tracker.py] user_pop', user_population
+                user_population[str(arg_watching_video)] += 1
+                log_load()
 
                 return 'User is registered'
             elif req_type == 'REGISTER_CACHE':
@@ -222,8 +225,10 @@ class request:
                 arg_last_chunk_size = split_arg[6]
                 db_manager.add_video(arg_vname, arg_n_of_frames, arg_code_param_n, arg_code_param_k, arg_total_size, arg_chunk_size, arg_last_chunk_size)
 
-                if arg_vname is not in user_population.keys():
-                    user_population[arg_vname] = 0
+                if str(arg_vname) not in user_population.keys():
+                    user_population[str(arg_vname)] = 0
+                    print '[tracker.py] arg_vname', str(arg_vname)
+                    print '[tracker.py] user_pop', user_population
 
                 return 'Video is registered'
             elif req_type == 'GET_ALL_VIDEOS':
@@ -244,9 +249,10 @@ class request:
                 arg_watching_video = req_arg.split('_')[2]
                 db_manager.remove_user(arg_ip, arg_port, arg_watching_video)
 
-                user_population[arg_vname] -= 1
+                user_population[str(arg_watching_video)] += 1
+                log_load()
 
-               return 'User is removed'
+                return 'User is removed'
             elif req_type == 'REMOVE_CACHE':
                 arg_ip = req_arg.split('_')[0]
                 arg_port = req_arg.split('_')[1]
