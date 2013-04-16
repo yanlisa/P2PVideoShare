@@ -14,7 +14,7 @@ user_population = {}
 
 def log_load():
     # Open log files
-    f_log = open('user_population.txt', 'a')
+    f_log = open('log/user_population.txt', 'a')
     current_time = strftime("%Y-%m-%d %H:%M:%S")
     output_str1 = ' '.join(map(str, user_population.keys()))
     output_str = ' '.join(map(str, user_population.values()))
