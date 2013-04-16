@@ -468,7 +468,7 @@ def thread_duration_control(test_user, tracker_address, video_name, user_name):
     test_user.disconnect(tracker_address, video_name, user_name)
 
 def main():
-    mu = 10
+    mu = 100
 
     # Create unique user ID
     user_id = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(6))
@@ -483,13 +483,13 @@ def main():
 
     while True:
         wait_time = random.expovariate(1/float(mu))
-        # print '[user.py] wait time:', wait_time
-        #sleep(wait_time)
+        print '[user.py] wait time:', wait_time
+        sleep(wait_time)
 
         os.system("rm -r video*")
 
         video_name = random.choice(movies) # uniformly pick from movies
-        user_name = 'user-' + user_id 
+        user_name = 'user-' + user_id
         print '[user.py] Starting to watch video %s' % video_name
         sys.stdout.flush()
         test_user = P2PUser(tracker_address, video_name, user_name)
