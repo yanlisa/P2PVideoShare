@@ -476,11 +476,11 @@ def zipfCDF(n, zipf_param=1):
     for i in range(0,n):
         a[i] = pow(i+1, -zipf_param)
     b = normListSumTo(a)
-    c = [(1,0)]*n
+    c = [(0,0)]*n
     print b
     print c
     for i in range(1,n):
-        c[i] = (i+1, c[i-1][1] + b[i-1])
+        c[i] = (i, c[i-1][1] + b[i-1])
     return c
 
 def main():
