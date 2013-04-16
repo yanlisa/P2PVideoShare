@@ -249,7 +249,7 @@ class request:
                 arg_watching_video = req_arg.split('_')[2]
                 db_manager.remove_user(arg_ip, arg_port, arg_watching_video)
 
-                user_population[str(arg_watching_video)] += 1
+                user_population[str(arg_watching_video)] -= 1
                 log_load()
 
                 return 'User is removed'
