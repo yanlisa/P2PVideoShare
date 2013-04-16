@@ -5,10 +5,11 @@ import commands
 
 DEBUGGING_MSG = True
 
-(temp, temp_str1) = commands.getstatusoutput('~/ftp-git/tracker_ip.sh')
-temp_str2 = temp_str1.replace('.','-').split('-')
-tracker_address = 'http://' + '.'.join(temp_str2[1:5]) + ':8081/req/'
-print temp_str2
+# (temp, temp_str1) = commands.getstatusoutput('~/ftp-git/tracker_ip.sh')
+# temp_str2 = temp_str1.replace('.','-').split('-')
+# tracker_address = 'http://' + '.'.join(temp_str2[1:5]) + ':8081/req/'
+tracker_address = 'http://0.0.0.0:8081/req/'
+# print temp_str2
 print tracker_address
 
 def load_tracker_address():
@@ -65,7 +66,6 @@ def retrieve_caches_address_from_tracker(tracker_address, num_of_caches, user_na
     req_str = 'GET_CACHES_ADDRESS&' + str(user_name) + '_' + str(num_of_caches)
     print '[helper.py] req_str :' + req_str
     ret_str = urllib2.urlopen(tracker_address + req_str).read()
-    print '[helper.py] ret_str :' + ret_str
 
     res = [''] * num_of_caches
     ret_str_split = ret_str.split('\n')
@@ -74,7 +74,8 @@ def retrieve_caches_address_from_tracker(tracker_address, num_of_caches, user_na
         if each_row == '':
             return res[:ct]
         parsed_row = each_row.split(' ')
-        print parsed_row
+        if DEBUGGING_MSG:
+            print '[helper.py] ', parsed_row
         res[ct] = [parsed_row[0], int(parsed_row[1])]
         ct = ct + 1
     return None

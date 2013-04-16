@@ -173,13 +173,13 @@ class P2PUser():
                     available_chunks[i] = map(str, return_str[0].split('%'))
                     for j in range(len(available_chunks[i])):
                         available_chunks[i][j] = available_chunks[i][j].zfill(2)
-                print '[user.py]', return_str[1]
                 rates[i] = int(return_str[1])
                 union_chunks = list( set(union_chunks) | set(available_chunks[i]) )
 
             ## index assignment here
             # Assign chunks to cache using cache_chunks_to_request.
-            print '[user.py]', available_chunks
+            print '[user.py] Rates ', rates
+            print '[user.py] Available chunks', available_chunks
 
             assigned_chunks = cache_chunks_to_request(available_chunks, rates)
 
@@ -207,13 +207,17 @@ class P2PUser():
             chosen_chunks = list(chosen_chunks)
             num_chunks_rx_predicted = len(chosen_chunks)
             server_request = chunks_to_request(chosen_chunks, range(0, 40), 20 - num_chunks_rx_predicted)
-            server_request_string = '%'.join(server_request)
-            server_request_string = server_request_string + '&' + str(1) ## DOWNLOAD FROM SERVER : binary_g = 1
-            self.server_client.put_instruction(inst_RETR + '.' + server_request_string)
-            if(DEBUGGING_MSG):
-                print "[user.py] Requesting from server: ", server_request, ", Request string: ", server_request_string
-
             num_of_chks_from_server = len(server_request)
+            if num_of_chks_from_server == 0:
+                self.server_client.put_instruction(inst_NOOP)
+                print '[user.py] Caches handling 20 chunks, so no request to server. Sending a NOOP'
+            else:
+                server_request_string = '%'.join(server_request)
+                server_request_string = server_request_string + '&' + str(1) ## DOWNLOAD FROM SERVER : binary_g = 1
+                self.server_client.put_instruction(inst_RETR + '.' + server_request_string)
+                if(DEBUGGING_MSG):
+                    print "[user.py] Requesting from server: ", server_request, ", Request string: ", server_request_string
+
             #update_server_load(tracker_address, video_name, num_of_chks_from_server)
 
             sleep(CACHE_DOWNLOAD_DURATION)
@@ -242,8 +246,7 @@ class P2PUser():
             addtl_server_request = []
             num_chunks_rx = len(chunk_nums_rx)
             if (num_chunks_rx >= 20):
-                print "[user.py] No additional chunks to download from the server."
-                print '[user.py] Sending a NOOP'
+                print "[user.py] No additional chunks to download from the server. Sending a NOOP"
                 self.server_client.put_instruction(inst_NOOP)
             else:
                 addtl_server_request = chunks_to_request(chunk_nums_rx, range(0, 40), 20 - num_chunks_rx)
@@ -476,7 +479,7 @@ def main():
 
     while True:
         wait_time = random.expovariate(1/float(mu))
-        print '[user.py] wait time:', wait_time
+        # print '[user.py] wait time:', wait_time
         #sleep(wait_time)
 
         os.system("rm -r video*")
@@ -484,10 +487,12 @@ def main():
         video_name = random.choice(movies) # uniformly pick from movies
         user_name = 'user-' + video_name
         print '[user.py] Starting to watch video %s' % video_name
+        sys.stdout.flush()
         test_user = P2PUser(tracker_address, video_name, user_name)
         test_user.download(video_name, 1)
         test_user.disconnect(tracker_address, video_name, user_name)
         print '[user.py] Download of video %s finished.' % video_name
+        sys.stdout.flush()
 
 if __name__ == "__main__":
     main()
