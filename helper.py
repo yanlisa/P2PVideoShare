@@ -135,6 +135,12 @@ def update_server_load(tracker_address, video_name, num_of_chks_from_server):
     print '[helper.py] ret_str ', ret_str
     return ret_str
 
+def chunk_delete_all_in_frame_dir(folder_name):
+    filelist = os.listdir(folder_name)
+    for f in filelist:
+        print '[helper.py] deleting file', f
+        os.remove(f)
+
 def chunk_exists_in_frame_dir(folder_name, chunk_index):
     # returns True if the chunk exists
     chunksNums = []
