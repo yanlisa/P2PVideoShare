@@ -467,9 +467,24 @@ def thread_duration_control(test_user, tracker_address, video_name, user_name):
     print "Countdown finished. Closing connection."
     test_user.disconnect(tracker_address, video_name, user_name)
 
+def normListSumTo(L, sumTo=1):
+    sum = reduce(lambda x,y:x+y, L)
+    return [ x/(sum*1.0)*sumTo for x in L]
+
+def zipfCDF(n, zipf_param=1):
+    a = [0]*n
+    for i in range(0,n):
+        a[i] = pow(i+1, -zipf_param)
+    b = normListSumTo(a)
+    c = [(1,0)]*n
+    print b
+    print c
+    for i in range(1,n):
+        c[i] = (i+1, c[i-1][1] + b[i-1])
+    return c
+
 def main():
     mu = 100
-
     # Create unique user ID
     user_id = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(6))
 
@@ -480,6 +495,9 @@ def main():
     movies = movie_LUT.movies_LUT.keys()
     #movies = ['OnePiece575', 'hyunah', 'hyunah2', 'hyunah3']
     movies = ['hyunah', 'hyunah2', 'hyunah3', 'hyunah4']
+    zipf_param = 1
+    cdf = zipfCDF(len(movies), zipf_param) # Popularity CDF
+    print '[user.py] Popularity cdf', cdf
 
     while True:
         wait_time = random.expovariate(1/float(mu))
@@ -487,8 +505,8 @@ def main():
         sleep(wait_time)
 
         os.system("rm -r video*")
-
-        video_name = random.choice(movies) # uniformly pick from movies
+        video_index = max(i for r in [random.random()] for i,c in cdf if c <= r) # http://stackoverflow.com/questions/4265988/generate-random-numbers-with-a-given-numerical-distribution
+        video_name = movies[video_index] # uniformly pick from movies
         user_name = 'user-' + user_id
         print '[user.py] Starting to watch video %s' % video_name
         sys.stdout.flush()
