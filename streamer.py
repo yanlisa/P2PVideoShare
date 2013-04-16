@@ -36,6 +36,7 @@ class StreamFTP(threading.Thread, FTP, object):
         FTP.__init__(self)
         host_ip_address = host[0]
         host_port_num = host[1]
+        self.host_address = (host_ip_address, host_port_num)
         FTP.connect(self, host_ip_address, host_port_num, 3)
         #FTP.__init__(self, host, user, passwd, acct, timeout)
         threading.Thread.__init__(self)
@@ -66,17 +67,15 @@ class StreamFTP(threading.Thread, FTP, object):
         self.conn.settimeout(self.timeout)
         if self.chunk_size:
             blocksize = self.chunk_size
-        try:
-            while 1:
-                #data = self.conn.recv(blocksize)
+        while 1:
+            #data = self.conn.recv(blocksize)
+            try:
                 data = self.conn.recv(self.chunk_size)
-                if not data:
-                    break
-                callback(data)
-        except:
-            if DEBUGGING_MSG:
-                print "Unexpected error:", sys.exc_info()[0]
-            raise
+            except Exception as e:
+                raise type(e), type(e)(e.message + 'host is ' + str(self.host_address)), sys.exc_info()[2]
+            if not data:
+                break
+            callback(data)
         self.conn.close()
         self.conn = None
         if self.resp_RETR:
@@ -148,7 +147,7 @@ class StreamFTP(threading.Thread, FTP, object):
                 except:
                     # something else happened while running.  Not much is known.
                     # Let the operator know.
-                    logging.exception("Unexpected error" + str(sys.exc_info()[0]))
+                    logging.exception("Unexpected error in conn to " + str(self.host_address) + ":" + str(sys.exc_info()[0]))
                     break
             elif fn_name == "ABOR":
                 resp = self.abort()
@@ -167,7 +166,7 @@ class StreamFTP(threading.Thread, FTP, object):
                     logging.exception("Connection closed.  Related info: " + str(sys.exc_info()[0]))
                     break
                 except:
-                    logging.exception("Unexpected error: " + str(sys.exc_info()[0]))
+                    logging.exception("Unexpected error in conn to " + str(self.host_address) + ":" + str(sys.exc_info()[0]))
                     break
 
 def runrecv(packet_size, fname):

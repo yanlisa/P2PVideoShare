@@ -12,6 +12,7 @@ import csv
 import math
 import sys
 import thread
+import string
 
 # Debugging MSG
 DEBUGGING_MSG = True
@@ -469,6 +470,9 @@ def thread_duration_control(test_user, tracker_address, video_name, user_name):
 def main():
     mu = 10
 
+    # Create unique user ID
+    user_id = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(6))
+
     print '[user.py]', tracker_address
     # Discover movies.
     movie_LUT = retrieve_MovieLUT_from_tracker(tracker_address)
@@ -485,7 +489,7 @@ def main():
         os.system("rm -r video*")
 
         video_name = random.choice(movies) # uniformly pick from movies
-        user_name = 'user-' + video_name
+        user_name = 'user-' + user_id 
         print '[user.py] Starting to watch video %s' % video_name
         sys.stdout.flush()
         test_user = P2PUser(tracker_address, video_name, user_name)
