@@ -157,6 +157,7 @@ class P2PUser():
 
             # FAKE USER is deleting all chunks and receiving again again
             chunk_delete_all_in_frame_dir(folder_name)
+            print '[user.py] deleting successfully...'
 
             # get available chunks lists from cache A and B.
             inst_CNKS = 'CNKS ' + filename

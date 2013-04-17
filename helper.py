@@ -139,8 +139,10 @@ def chunk_delete_all_in_frame_dir(folder_name):
     try:
         filelist = os.listdir(folder_name)
         for f in filelist:
-            print '[helper.py] deleting file', f
-            os.remove(f)
+            file_path = os.path.join(folder_name, f)
+            print '[helper.py] deleting file', file_path
+            if os.path.isfile(file_path):
+                os.unlink(file_path)
     except:
         pass
 
