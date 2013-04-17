@@ -133,7 +133,7 @@ class P2PUser():
         base_file = open('video-' + video_name + '/' + base_file_name, 'ab')
         base_file_full_path = os.path.abspath('video-' + video_name + '/' + base_file_name)
 
-        frame_number = 0
+        frame_number = 1
         while True:
             sys.stdout.flush()
             effective_rates = [0]*len(self.clients)
