@@ -156,7 +156,7 @@ class P2PUser():
             folder_name = 'video-' + video_name + '/' + video_name + '.' + str(frame_number) + '.dir/'
 
             # FAKE USER is deleting all chunks and receiving again again
-            chunk_exists_in_frame_dir(folder_name)
+            chunk_delete_all_in_frame_dir(folder_name)
 
             # get available chunks lists from cache A and B.
             inst_CNKS = 'CNKS ' + filename
