@@ -134,7 +134,7 @@ class P2PUser():
         base_file_full_path = os.path.abspath('video-' + video_name + '/' + base_file_name)
 
         frame_number = 1
-        while True:
+        for i in range(30):
             sys.stdout.flush()
             effective_rates = [0]*len(self.clients)
             assigned_chunks = [0]*len(self.clients)
@@ -504,14 +504,16 @@ def main():
     cdf = zipfCDF(len(movies), zipf_param) # Popularity CDF
     print '[user.py] Popularity cdf', cdf
 
-    while True:
-        wait_time = random.expovariate(1/float(mu))
+    for i in range(2):
+        print '[user.py] i == ', i
         print '[user.py] wait time:', wait_time
-        sleep(wait_time)
 
         os.system("rm -r video*")
         video_index = max(i for r in [random.random()] for i,c in cdf if c <= r) # http://stackoverflow.com/questions/4265988/generate-random-numbers-with-a-given-numerical-distribution
-        video_name = movies[video_index] # uniformly pick from movies
+        if i == 0:
+            video_name = movies[video_index]
+        elif i == 1:
+            video_name = movies[3-video_index]
         user_name = 'user-' + user_id
         print '[user.py] Starting to watch video %s' % video_name
         sys.stdout.flush()
