@@ -134,7 +134,7 @@ class P2PUser():
         base_file_full_path = os.path.abspath('video-' + video_name + '/' + base_file_name)
 
         frame_number = 1
-        for i in range(5):
+        for i in range(100):
             sys.stdout.flush()
             effective_rates = [0]*len(self.clients)
             assigned_chunks = [0]*len(self.clients)
