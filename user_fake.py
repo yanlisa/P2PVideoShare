@@ -306,7 +306,7 @@ class P2PUser():
             if frame_number != start_frame:
                 print 'size of base file:', os.path.getsize('video-' + video_name + '/' + base_file_name)
             print 'trying to decode'
-            filefec.decode_from_files(base_file, chunksList)
+            #filefec.decode_from_files(base_file, chunksList)
             print 'decoded.  Size of base file =', os.path.getsize('video-' + video_name + '/' + base_file_name)
             if frame_number == 1 and VLC_PLAYER_USE:
                 self.VLC_start_video(base_file_full_path)
