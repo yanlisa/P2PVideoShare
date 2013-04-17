@@ -136,6 +136,7 @@ class StreamFTP(threading.Thread, FTP, object):
                     if self.chunk_size == 0 and DEBUGGING_MSG:
                         print "[streamer.py] No chunk size set for RETR: ", fname, \
                             ". Please set chunk size using INTL command."
+                    print "[stream.py] cmd, self.chunk_size, fname", cmd, self.chunk_size, fname
                     resp = self.retrbinary(cmd, self.callback(self.chunk_size, fname))
                 except socket.error:
                     # something strange happened with the connection; most
