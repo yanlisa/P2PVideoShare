@@ -141,6 +141,8 @@ def chunk_delete_all_in_frame_dir(folder_name):
         for f in filelist:
             print '[helper.py] deleting file', f
             os.remove(f)
+    except:
+        pass
 
 def chunk_exists_in_frame_dir(folder_name, chunk_index):
     # returns True if the chunk exists
