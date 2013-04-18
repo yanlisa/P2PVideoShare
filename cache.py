@@ -38,7 +38,7 @@ STORAGE_CAP_IN_MB = 100 # (MB)
 T_rate = .01
 T_storage = .01
 T_topology = 600
-STORAGE_UPDATE_PERIOD_OUTER = 300
+STORAGE_UPDATE_PERIOD_OUTER = 1000
 
 # IP Table
 class ThreadStreamFTPServer(StreamFTPServer, threading.Thread):
