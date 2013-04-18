@@ -2,6 +2,7 @@ num_of_users=15
 if [ ! -z "$1" ] ; then
     num_of_users=$1
 fi
+rm log/*
 if [ ! -d "users" ]; then
     mkdir "users"
 fi

@@ -5,6 +5,8 @@ cd "config"
 ./edit_cache_config.sh
 cd ".."
 
+rm log/*
+
 if [ ! -d "caches" ]; then
     mkdir "caches"
 fi
