@@ -163,21 +163,27 @@ def chunk_nums_in_frame_dir(folder_name):
     # returns an array of chunk numbers (ints) in this frame.
     # folder_name ends in '/'.
     # assumes chunk filenames end in chunk number.
-    chunksNums = []
-    for chunk_name in os.listdir(folder_name):
-        chunk_suffix = (chunk_name.split('_')[0].split('.'))[-1]
-        if chunk_suffix.isdigit():
-            chunksNums.append(chunk_suffix)
-    return chunksNums
+    try:
+        chunksNums = []
+        for chunk_name in os.listdir(folder_name):
+            chunk_suffix = (chunk_name.split('_')[0].split('.'))[-1]
+            if chunk_suffix.isdigit():
+                chunksNums.append(chunk_suffix)
+        return chunksNums
+    except:
+        return []
 
 def chunk_files_in_frame_dir(folder_name):
     # opens file objects for each file in the directory.
     # folder_name ends in '/'.
-    chunksList = []
-    for chunk_name in os.listdir(folder_name):
-        chunkFile = open(folder_name + chunk_name, 'rb')
-        chunksList.append(chunkFile)
-    return chunksList
+    try:
+        chunksList = []
+        for chunk_name in os.listdir(folder_name):
+            chunkFile = open(folder_name + chunk_name, 'rb')
+            chunksList.append(chunkFile)
+        return chunksList
+    except:
+        return []
 
 def parse_chunks(arg):
     """Returns file name, chunks, and frame number.
