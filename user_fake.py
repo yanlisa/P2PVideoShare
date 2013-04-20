@@ -489,7 +489,7 @@ def zipfCDF(n, zipf_param=1):
     return c
 
 def main():
-    mu = 1
+    mu = 200
     # Create unique user ID
     user_id = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(6))
 
@@ -508,7 +508,9 @@ def main():
     print '[user.py] Popularity cdf', cdf
 
     for i in range(2):
+        wait_time = random.expovariate(1/float(mu))
         print '[user.py] i == ', i
+        sleep(wait_time)
 
         os.system("rm -r video*")
         video_index = max(i for r in [random.random()] for i,c in cdf if c <= r) # http://stackoverflow.com/questions/4265988/generate-random-numbers-with-a-given-numerical-distribution
