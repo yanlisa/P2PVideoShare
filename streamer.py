@@ -20,6 +20,13 @@ except ImportError:
 from socket import _GLOBAL_DEFAULT_TIMEOUT
 
 class StreamFTP(threading.Thread, FTP, object):
+    class MyException(Exception):
+        def _get_message(self):
+            return self._message
+        def _set_message(self, message):
+            self._message = message
+        message = property(_get_message, _set_message)
+
     def __init__(self, host='', user='', passwd='', acct='',
                  chunk_size=2504):
         if DEBUGGING_MSG:
@@ -71,7 +78,7 @@ class StreamFTP(threading.Thread, FTP, object):
             #data = self.conn.recv(blocksize)
             try:
                 data = self.conn.recv(self.chunk_size)
-            except Exception as e:
+            except MyException as e:
                 raise type(e), type(e)(e.message + 'host is ' + str(self.host_address)), sys.exc_info()[2]
             if not data:
                 break
