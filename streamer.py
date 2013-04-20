@@ -78,7 +78,7 @@ class StreamFTP(threading.Thread, FTP, object):
             #data = self.conn.recv(blocksize)
             try:
                 data = self.conn.recv(self.chunk_size)
-            except MyException as e:
+            except self.MyException as e:
                 raise type(e), type(e)(e.message + 'host is ' + str(self.host_address)), sys.exc_info()[2]
             if not data:
                 break
