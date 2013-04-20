@@ -134,7 +134,7 @@ class P2PUser():
         base_file_full_path = os.path.abspath('video-' + video_name + '/' + base_file_name)
 
         frame_number = 1
-        for i in range(25):
+        for i in range(500):
             sys.stdout.flush()
             effective_rates = [0]*len(self.clients)
             assigned_chunks = [0]*len(self.clients)
@@ -498,8 +498,11 @@ def main():
     movie_LUT = retrieve_MovieLUT_from_tracker(tracker_address)
 
     movies = movie_LUT.movies_LUT.keys()
-    #movies = ['OnePiece575', 'hyunah', 'hyunah2', 'hyunah3']
-    movies = ['hyunah', 'hyunah2', 'hyunah3', 'hyunah4']
+    number_of_videos = 20
+    movies = []
+    movies.append('hyunah')
+    for i in range(2, number_of_videos + 1):
+        movies.append('hyunah' + str(i))
     zipf_param = 1
     cdf = zipfCDF(len(movies), zipf_param) # Popularity CDF
     print '[user.py] Popularity cdf', cdf
