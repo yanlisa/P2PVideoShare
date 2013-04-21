@@ -20,7 +20,7 @@ VLC_PLAYER_USE = False
 
 # Topology
 USER_TOPOLOGY_UPDATE = True
-T_choke = 3 # Choke period
+T_choke = 1 # Choke period
 T_choke2 = 2 # Choke period
 eps_choke = 1 # Choke parameter
 
@@ -29,7 +29,7 @@ CACHE_DOWNLOAD_DURATION = 8 # sec
 SERVER_DOWNLOAD_DURATION = 2 # sec
 DECODE_WAIT_DURATION = 0.1 # sec
 tracker_address = load_tracker_address()
-num_of_caches = 5
+num_of_caches = 4
 
 class P2PUser():
 
