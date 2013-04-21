@@ -502,14 +502,20 @@ def main():
     cdf = zipfCDF(len(movies), zipf_param) # Popularity CDF
     print '[user.py] Popularity cdf', cdf
 
+    runtime_ct = 0
     while True:
+        runtime_ct += 1
         wait_time = random.expovariate(1/float(mu))
         print '[user.py] wait time:', wait_time
         sleep(wait_time)
 
         os.system("rm -r video*")
         video_index = max(i for r in [random.random()] for i,c in cdf if c <= r) # http://stackoverflow.com/questions/4265988/generate-random-numbers-with-a-given-numerical-distribution
-        video_name = movies[video_index] # uniformly pick from movies
+        if runtime_ct > 5:
+            print '[user.py] New popularity is applied'
+            video_name = movies[number_of_videos - video_index - 1]
+        else:
+            video_name = movies[video_index] # uniformly pick from movies
         user_name = 'user-' + user_id
         print '[user.py] Starting to watch video %s' % video_name
         sys.stdout.flush()
