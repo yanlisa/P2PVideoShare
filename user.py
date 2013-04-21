@@ -484,7 +484,7 @@ def zipfCDF(n, zipf_param=1):
     return c
 
 def main():
-    mu = 100
+    mu = 10
     # Create unique user ID
     user_id = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(6))
 
