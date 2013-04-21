@@ -134,7 +134,7 @@ class P2PUser():
         base_file_full_path = os.path.abspath('video-' + video_name + '/' + base_file_name)
 
         frame_number = 1
-        for i in range(500):
+        for i in range(30):
             sys.stdout.flush()
             effective_rates = [0]*len(self.clients)
             assigned_chunks = [0]*len(self.clients)
@@ -517,7 +517,7 @@ def main():
         if i == 0:
             video_name = movies[video_index]
         elif i == 1:
-            video_name = movies[3-video_index]
+            video_name = movies[19-video_index]
         user_name = 'user-' + user_id
         print '[user.py] Starting to watch video %s' % video_name
         sys.stdout.flush()
