@@ -31,8 +31,8 @@ tracker_address = load_tracker_address() # set in helper.
 
 # CACHE RESOURCE
 #BANDWIDTH_CAP = 2000 # (Kbps)
-BANDWIDTH_CAP = 8000 * 2# (Kbps)
-STORAGE_CAP_IN_MB = 60 * 2 # (MB)
+BANDWIDTH_CAP = 8000 * 3# (Kbps)
+STORAGE_CAP_IN_MB = 60 * 3 # (MB)
 #STORAGE_CAP_IN_MB = 45 # (MB)
 
 T_rate = .01
