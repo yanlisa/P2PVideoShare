@@ -20,7 +20,7 @@ VLC_PLAYER_USE = False
 
 # Topology
 USER_TOPOLOGY_UPDATE = True
-T_choke = 3 # Choke period
+T_choke = 1 # Choke period
 T_choke2 = 2 # Choke period
 eps_choke = 1 # Choke parameter
 
@@ -511,7 +511,7 @@ def main():
 
         os.system("rm -r video*")
         video_index = max(i for r in [random.random()] for i,c in cdf if c <= r) # http://stackoverflow.com/questions/4265988/generate-random-numbers-with-a-given-numerical-distribution
-        if runtime_ct > 5:
+        if runtime_ct > 1000:
             print '[user.py] New popularity is applied'
             video_name = movies[number_of_videos - video_index - 1]
         else:
