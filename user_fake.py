@@ -29,7 +29,7 @@ CACHE_DOWNLOAD_DURATION = 8 # sec
 SERVER_DOWNLOAD_DURATION = 2 # sec
 DECODE_WAIT_DURATION = 0.1 # sec
 tracker_address = load_tracker_address()
-num_of_caches = 10
+num_of_caches = 5
 
 class P2PUser():
 
@@ -489,7 +489,7 @@ def zipfCDF(n, zipf_param=1):
     return c
 
 def main():
-    mu = 100
+    mu = 20
     # Create unique user ID
     user_id = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(6))
 
