@@ -352,6 +352,7 @@ class StreamHandler(ftpserver.FTPHandler):
     def ftp_VLEN(self, filename):
         """Checks the total frames available on this server for the desired
         movie."""
+        print "[server.py] VLEN is called"
         video_name = filename.split('file-')[-1]
         vlen_items = [self.movie_LUT.frame_num_lookup(video_name),
                     self.movie_LUT.size_bytes_lookup(video_name),
@@ -360,8 +361,8 @@ class StreamHandler(ftpserver.FTPHandler):
                     self.movie_LUT.code_param_n_lookup(video_name),
                     self.movie_LUT.code_param_k_size_lookup(video_name)]
         vlen_str = '&'.join(map(str, vlen_items))
-        self.push_dtp_data(vlen_str, isproducer=False, cmd="VLEN")
         print vlen_str
+        self.push_dtp_data(vlen_str, isproducer=False, cmd="VLEN")
 
     def ftp_CNKS(self, line):
         """

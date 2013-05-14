@@ -118,7 +118,9 @@ class P2PUser():
             print '[user.py] ', i, 'th connection is RESERVED: ' , cache_ip_addr[i]
 
         available_chunks = set([])
+        print '[user.py] putting VLEN'
         self.clients[0].put_instruction('VLEN file-%s' % (video_name))
+        print '[user.py] retrieving VLEN'
         vlen_str = self.clients[0].get_response().split('\n')[0]
         vlen_items = vlen_str.split('&')
         print "VLEN: ", vlen_items
