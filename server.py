@@ -156,7 +156,7 @@ class StreamHandler(ftpserver.FTPHandler):
     -If type is of the form 'chunk-<filename>.<int>', send all
     """
     stream_rate = 10000*1024 # default (10 Kbps)
-    max_chunks = 40
+    max_chunks = 200
     movies_path = path
 
     # Change PassiveDTP connection handler to handle variable streaming rate.
@@ -356,7 +356,9 @@ class StreamHandler(ftpserver.FTPHandler):
         vlen_items = [self.movie_LUT.frame_num_lookup(video_name),
                     self.movie_LUT.size_bytes_lookup(video_name),
                     self.movie_LUT.chunk_size_lookup(video_name),
-                    self.movie_LUT.last_chunk_size_lookup(video_name)]
+                    self.movie_LUT.last_chunk_size_lookup(video_name),
+                    self.movie_LUT.code_param_n_lookup(video_name),
+                    self.movie_LUT.code_param_k_size_lookup(video_name)]
         vlen_str = '&'.join(map(str, vlen_items))
         self.push_dtp_data(vlen_str, isproducer=False, cmd="VLEN")
         print vlen_str

@@ -121,7 +121,8 @@ class P2PUser():
         vlen_str = self.clients[0].get_response().split('\n')[0]
         vlen_items = vlen_str.split('&')
         print "VLEN: ", vlen_items
-        num_frames = int(vlen_items[0])
+        num_frames, code_param_n, code_param_k = int(vlen_itmes[0]), int(vlen_items[4]), int(vlen_items[5])
+
         base_file_name = video_name + '.flv'
         try:
             os.mkdir('video-' + video_name)
@@ -160,7 +161,6 @@ class P2PUser():
             inst_NOOP = 'NOOP'
 
             ###### DECIDING WHICH CHUNKS TO DOWNLOAD FROM CACHES: TIME 0 ######
-
             available_chunks = [0]*len(self.clients) # available_chunks[i] = cache i's availble chunks
             rates = [0]*len(self.clients) # rates[i] = cache i's offered rate
             union_chunks = [] # union of all available indices
@@ -182,7 +182,7 @@ class P2PUser():
             print '[user.py] Rates ', rates
             print '[user.py] Available chunks', available_chunks
 
-            assigned_chunks = cache_chunks_to_request(available_chunks, rates)
+            assigned_chunks = cache_chunks_to_request(available_chunks, rates, code_param_n, code_param_k)
 
             effective_rates = [0]*len(rates)
             for i in range(len(rates)):
@@ -190,7 +190,7 @@ class P2PUser():
 
             chosen_chunks = [j for i in assigned_chunks for j in i]
 
-            flag_deficit = (sum(effective_rates) < 20) # True if user needs more rate from caches
+            flag_deficit = (sum(effective_rates) < code_param_k) # True if user needs more rate from caches
 
             # request assigned chunks
             for i in range(len(self.clients)):
@@ -207,11 +207,11 @@ class P2PUser():
             server_request = []
             chosen_chunks = list(chosen_chunks)
             num_chunks_rx_predicted = len(chosen_chunks)
-            server_request = chunks_to_request(chosen_chunks, range(0, 40), 20 - num_chunks_rx_predicted)
+            server_request = chunks_to_request(chosen_chunks, range(0, code_param_n), code_param_k - num_chunks_rx_predicted)
             num_of_chks_from_server = len(server_request)
             if num_of_chks_from_server == 0:
                 self.server_client.put_instruction(inst_NOOP)
-                print '[user.py] Caches handling 20 chunks, so no request to server. Sending a NOOP'
+                print '[user.py] Caches handling code_param_k chunks, so no request to server. Sending a NOOP'
             else:
                 server_request_string = '%'.join(server_request)
                 server_request_string = server_request_string + '&' + str(1) ## DOWNLOAD FROM SERVER : binary_g = 1
@@ -246,11 +246,11 @@ class P2PUser():
             chunk_nums_rx = list (set(chunk_nums_in_frame_dir(folder_name)) | set(server_request))
             addtl_server_request = []
             num_chunks_rx = len(chunk_nums_rx)
-            if (num_chunks_rx >= 20):
+            if (num_chunks_rx >= code_param_k):
                 print "[user.py] No additional chunks to download from the server. Sending a NOOP"
                 self.server_client.put_instruction(inst_NOOP)
             else:
-                addtl_server_request = chunks_to_request(chunk_nums_rx, range(0, 40), 20 - num_chunks_rx)
+                addtl_server_request = chunks_to_request(chunk_nums_rx, range(0, code_param_n), code_param_k - num_chunks_rx)
                 if addtl_server_request:
                     addtl_server_request_string = '%'.join(addtl_server_request)
                     # server should always be set with flag_deficit = 0 (has all chunks)
@@ -286,10 +286,10 @@ class P2PUser():
 
             chunk_nums = chunk_nums_in_frame_dir(folder_name)
             num_chunks_rx = len(chunk_nums)
-            if num_chunks_rx >= 20 and DEBUGGING_MSG:
-                print "[user.py] Received 20 packets"
+            if num_chunks_rx >= code_param_k and DEBUGGING_MSG:
+                print "[user.py] Received", code_param_k, "packets"
             else:
-                print "[user.py] Did not receive 20 packets for this frame."
+                print "[user.py] Did not receive", code_param_k, "packets for this frame."
 
             # abort the connection to the server
             self.server_client.client.abort()
@@ -338,8 +338,6 @@ class P2PUser():
                         for i in range(len(self.clients)):
                             rate_vector[i] = len(assigned_chunks[i])
                             p_vector[i] = math.exp( -eps_choke * rate_vector[i])
-
-# >>> cdf = [(1, 0), (2,0.1), (3,0.15), (4,0.2), (5,0.4), (6,0.8)]
                         p_sum = sum(p_vector)
                         for i in range(len(self.clients)):
                             p_vector[i] /= p_sum
@@ -351,8 +349,6 @@ class P2PUser():
 
                         print '[user.py] cdf :', cdf
                         client_index = max(i for r in [random.random()] for i,c in cdf if c <= r) # http://stackoverflow.com/questions/4265988/generate-random-numbers-with-a-given-numerical-distribution
-                        # client_index = rate_vector.index(min(rate_vector))
-
                         removed_cache = self.clients[client_index]
                         removed_cache.put_instruction('QUIT')
                         self.clients.remove(removed_cache)
@@ -378,7 +374,7 @@ class P2PUser():
         print "[user.py] BYE"
         sys.stdout.flush()
 
-def cache_chunks_to_request(available_chunks, rates):
+def cache_chunks_to_request(available_chunks, rates, code_param_n, code_param_k):
     """
     (a) Sort the packets by their rarity (defined by the presence of packets in multiple caches).
     (b) Starting with the rarest first, assign the rarest packet to the cache with the lowest used BW ratio currently. Pop off the rarest packet and decrement the bandwidth of the assigned cache.
@@ -403,7 +399,7 @@ def cache_chunks_to_request(available_chunks, rates):
 
     # from rarest first, make chunk request list by assigning next available chunk
     # to carrier with the lowest ratio of used cache rate so far (fairness)
-    for i in range(20):
+    for i in range(code_param_k):
         if chunk_freqs.empty():
             break
         freq, chunk = chunk_freqs.get()
@@ -493,11 +489,6 @@ def main():
     movie_LUT = retrieve_MovieLUT_from_tracker(tracker_address)
 
     movies = movie_LUT.movies_LUT.keys()
-    number_of_videos = 20
-    movies = []
-    movies.append('hyunah')
-    for i in range(2, number_of_videos + 1):
-        movies.append('hyunah' + str(i))
     zipf_param = 1
     cdf = zipfCDF(len(movies), zipf_param) # Popularity CDF
     print '[user.py] Popularity cdf', cdf

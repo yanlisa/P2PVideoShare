@@ -237,6 +237,8 @@ class Cache(object):
                             print '[cache.py] Connection ' + str(i) + ' is closed'
                         continue
                     video_name = self.get_watching_video(i)
+                    code_param_n = self.movie_LUT.code_param_n_lookup(video_name)
+                    code_param_k = self.movie_LUT.code_param_k_lookup(video_name)
                     if DEBUGGING_MSG:
                         print '[cache.py] User ' + str(i) + ' is watching ' + str(video_name)
                     packet_size = self.movie_LUT.chunk_size_lookup(video_name)
@@ -265,8 +267,8 @@ class Cache(object):
                     if video_name not in self.primal_f.keys():
                         self.primal_f[video_name] = 0.0
                     if DEBUGGING_MSG:
-                        print '[cache.py] total rate = ', (rate_per_chunk * 20)
-                    delta_k = self.bound(self.primal_x[i] - self.primal_f[video_name] * rate_per_chunk * 20, self.dual_k[i], 0, INFINITY)
+                        print '[cache.py] total rate = ', (rate_per_chunk * code_param_k)
+                    delta_k = self.bound(self.primal_x[i] - self.primal_f[video_name] * rate_per_chunk * code_param_k, self.dual_k[i], 0, INFINITY)
                     if log_ct == 0:
 		        print '[cache.py] User ' + str(i) + ' delta_k ' + str(delta_k)
                     self.dual_k[i] += self.eps_k * delta_k
@@ -363,6 +365,8 @@ class Cache(object):
                         video_check_list[video_name] = True
                         if log_ct == 0:
                             print '[cache.py] Updating primal_f for video', video_name
+                    code_param_n = self.movie_LUT.code_param_n_lookup(video_name)
+                    code_param_k = self.movie_LUT.code_param_k_lookup(video_name)
                     packet_size = self.movie_LUT.chunk_size_lookup(video_name)
                     frame_num = self.movie_LUT.frame_num_lookup(video_name)
                     additional_storage_needed = packet_size * frame_num # Rough
@@ -397,18 +401,18 @@ class Cache(object):
                     if log_ct == 0:
                         print '[cache.py] stored_chunks ', stored_chunks
                     num_stored_chunks = len(stored_chunks)
-                    assigned_num_of_chunks = max(int(self.primal_f[video_name] * 20), 0) # ceiling
+                    assigned_num_of_chunks = max(int(self.primal_f[video_name] * code_param_k), 0) # ceiling
                     if log_ct == 0:
                         print '[cache.py] num_stored_chunks ', num_stored_chunks
                         print '[cache.py] assigned_num_of_chks ', assigned_num_of_chunks
                     if ct % STORAGE_UPDATE_PERIOD_OUTER == 0:
                         if assigned_num_of_chunks > num_stored_chunks:
-                            if len(stored_chunks) >= 20:
+                            if len(stored_chunks) >= code_param_k:
                                 if log_ct == 0:
                                     print '[cache.py] Downloading nothing from server'
                                 self.download_one_chunk_from_server(video_name, '')
                             else:
-                                chunk_index = random.sample( list(set(range(0,40)) - set(map(int, stored_chunks))), 1 ) # Sample one out of missing chunks
+                                chunk_index = random.sample( list(set(range(0,code_param_n)) - set(map(int, stored_chunks))), 1 ) # Sample one out of missing chunks
                                 if self.download_one_chunk_from_server(video_name, chunk_index) == True:
                                     new_chunks = list(set(self.get_chunks(video_name)) | set(map(str, chunk_index)))
                                     self.set_chunks(video_name, new_chunks)
@@ -451,7 +455,7 @@ class Cache(object):
                     if log_ct == 0:
                         print '[cache.py] self.primal_f', self.primal_f
                         print '[cache.py] self.primal_f[', video_name, '] = ', self.primal_f[video_name]
-                    delta_k = self.bound(self.primal_x[i] - self.primal_f[video_name] * rate_per_chunk * 20, self.dual_k[i], 0, INFINITY)
+                    delta_k = self.bound(self.primal_x[i] - self.primal_f[video_name] * rate_per_chunk * code_param_k, self.dual_k[i], 0, INFINITY)
                     if log_ct == 0:
                         print '[cache.py] User ' + str(i) + ' delta_k ' + str(delta_k)
                     self.dual_k[i] += self.eps_k * delta_k

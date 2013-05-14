@@ -62,6 +62,14 @@ class MovieLUT():
         """Size of last chunk, in bytes."""
         return self.gen_lookup(video_name, self.last_chunk_size_index)
 
+    def code_param_n_lookup(self, video_name):
+        """Number of frames for this video."""
+        return self.gen_lookup(video_name, self.code_param_n_index)
+
+    def code_param_k_lookup(self, video_name):
+        """Number of frames for this video."""
+        return self.gen_lookup(video_name, self.code_param_k_index)
+
 def retrieve_caches_address_from_tracker(tracker_address, num_of_caches, user_name):
     req_str = 'GET_CACHES_ADDRESS&' + str(user_name) + '_' + str(num_of_caches)
     print '[helper.py] req_str :' + req_str

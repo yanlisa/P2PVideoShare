@@ -1,4 +1,4 @@
-num_of_caches=15
+num_of_caches=5
 base_port=49152 # this is the first of the private ports, so we won't disrupt
                 # operations using reserved ports.
 cd "config"
