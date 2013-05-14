@@ -454,6 +454,7 @@ class FTP:
           The response code.
         """
         if callback is None: callback = print_line
+        print '[ftplib.py]', cmd
         resp = self.sendcmd('TYPE A')
         conn = self.transfercmd(cmd)
         fp = conn.makefile('rb')
