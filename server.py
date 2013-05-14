@@ -359,7 +359,7 @@ class StreamHandler(ftpserver.FTPHandler):
                     self.movie_LUT.chunk_size_lookup(video_name),
                     self.movie_LUT.last_chunk_size_lookup(video_name),
                     self.movie_LUT.code_param_n_lookup(video_name),
-                    self.movie_LUT.code_param_k_size_lookup(video_name)]
+                    self.movie_LUT.code_param_k_lookup(video_name)]
         vlen_str = '&'.join(map(str, vlen_items))
         print vlen_str
         self.push_dtp_data(vlen_str, isproducer=False, cmd="VLEN")
