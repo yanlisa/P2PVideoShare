@@ -247,6 +247,7 @@ class P2PUser():
             # Add the chunks that have already been requested from server
 
             chunk_nums_rx = list (set(chunk_nums_in_frame_dir(folder_name)) | set(server_request))
+            print "[user.py] chunk_nums_rx", chunk_nums_rx
             addtl_server_request = []
             num_chunks_rx = len(chunk_nums_rx)
             if (num_chunks_rx >= code_param_k):
@@ -254,6 +255,7 @@ class P2PUser():
                 self.server_client.put_instruction(inst_NOOP)
             else:
                 addtl_server_request = chunks_to_request(chunk_nums_rx, range(0, code_param_n), code_param_k - num_chunks_rx)
+                print "[user.py] addtl_server_requests", addtl_server_request
                 if addtl_server_request:
                     addtl_server_request_string = '%'.join(addtl_server_request)
                     # server should always be set with flag_deficit = 0 (has all chunks)
