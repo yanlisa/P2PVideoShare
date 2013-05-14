@@ -319,7 +319,7 @@ class StreamHandler(ftpserver.FTPHandler):
         iterator = self.run_as_current_user(self.fs.get_list_dir, path)
         files = Queue.Queue()
         if chunks:
-            for x in xrange(self.max_chunks):
+            while True:
                 try:
                     liststr = iterator.next()
                     filename = ((liststr.split(' ')[-1]).split('\r'))[0]
@@ -331,11 +331,10 @@ class StreamHandler(ftpserver.FTPHandler):
                         fd = self.run_as_current_user(self.fs.open, filepath, 'rb')
                         files.put(fd)
                 except StopIteration, err:
-                    why = _strerror(err)
-                    self.respond('544 %s' %why)
                     break
             return files
-        for x in xrange(self.max_chunks):
+
+        while True:
             try:
                 liststr = iterator.next()
                 filename = ((liststr.split(' ')[-1]).split('\r'))[0]
