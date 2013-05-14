@@ -63,11 +63,11 @@ class MovieLUT():
         return self.gen_lookup(video_name, self.last_chunk_size_index)
 
     def code_param_n_lookup(self, video_name):
-        """Number of frames for this video."""
+        """Code parameter n for this video."""
         return self.gen_lookup(video_name, self.code_param_n_index)
 
     def code_param_k_lookup(self, video_name):
-        """Number of frames for this video."""
+        """Code parameter k for this video."""
         return self.gen_lookup(video_name, self.code_param_k_index)
 
 def retrieve_caches_address_from_tracker(tracker_address, num_of_caches, user_name):

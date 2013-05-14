@@ -53,6 +53,7 @@ class ThreadClient(object):
         """
         Receive response string from the shared response queue.
         """
+        print '[threadclient.py] get_response() is called'
         try:
             response_string = self.resp_queue.get()
             return response_string
