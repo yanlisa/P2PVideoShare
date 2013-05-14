@@ -92,6 +92,7 @@ class P2PUser():
             self.movies_LUT[movie_name] = (int(row[1]), int(row[2]), int(row[3]), int(row[4]), int(row[5]), int(row[6]))
 
     def download(self, video_name, start_frame):
+        print '[user.py] P2Puser starts downloading'
         connected_caches = []
         not_connected_caches = []
         # Connect to the caches
