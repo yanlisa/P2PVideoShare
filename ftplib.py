@@ -185,6 +185,7 @@ class FTP:
         while True:
             try:
                 line = self.file.readline()
+                print '[ftplib.py] line :', line
                 break
             except socket.error as ex:
                 if str(ex) == "[Errno 35] Resource temporarily unavailable":
