@@ -124,7 +124,7 @@ class P2PUser():
         vlen_str = self.clients[0].get_response().split('\n')[0]
         vlen_items = vlen_str.split('&')
         print "VLEN: ", vlen_items
-        num_frames, code_param_n, code_param_k = int(vlen_itmes[0]), int(vlen_items[4]), int(vlen_items[5])
+        num_frames, code_param_n, code_param_k = int(vlen_items[0]), int(vlen_items[4]), int(vlen_items[5])
 
         base_file_name = video_name + '.flv'
         try:
