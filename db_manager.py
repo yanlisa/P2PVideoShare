@@ -22,7 +22,7 @@ def remove_server_for_cache():
     db.delete('nodes', where="type_of_node='server_for_cache'", vars=locals())
 
 def get_server():
-    return db.select('nodes', where="type_of_node='server'", order='id').list()
+    return db.query("SELECT * FROM nodes WHERE type_of_node='server' ORDER BY RANDOM() LIMIT %d" % 1).list()
 
 def get_server_for_cache():
     return db.select('nodes', where="type_of_node='server_for_cache'", order='id').list()
