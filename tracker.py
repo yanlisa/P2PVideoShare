@@ -129,7 +129,8 @@ class overview:
 class request:
     def parse_request(self, request_str):
         # REQUEST_COMMAND & ARGUMENT
-        valid_req_strings = ['GET_SERVER_ADDRESS',
+        valid_req_strings = ['RESET',
+                            'GET_SERVER_ADDRESS',
                             'GET_SERVER_ADDRESS_FOR_CACHE',
                             'GET_CACHES_ADDRESS',
                             'GET_ALL_VIDEOS',
