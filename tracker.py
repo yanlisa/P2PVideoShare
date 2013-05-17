@@ -158,7 +158,12 @@ class request:
             return 'Invalid request'
         else:
             # REQUEST NODE INFO
-            if req_type == 'GET_SERVER_ADDRESS':
+            if req_type == 'RESET':
+                db_manager.remove_server()
+                db_manager.remove_server_for_cache()
+                db_manager.remove_all_videos()
+                db_manager.remove_all_nodes()
+            elif req_type == 'GET_SERVER_ADDRESS':
                 res = db_manager.get_server()
                 return str(res[0].ip) + ' ' + str(res[0].port)
             elif req_type == 'GET_SERVER_ADDRESS_FOR_CACHE':
@@ -200,10 +205,6 @@ class request:
                 arg_ip = req_arg.split('_')[0]
                 arg_port = req_arg.split('_')[1]
                 # remove existing server & videos
-                db_manager.remove_server()
-                db_manager.remove_server_for_cache()
-                db_manager.remove_all_videos()
-                db_manager.remove_all_nodes()
                 db_manager.add_server(arg_ip, arg_port)
                 return 'Server is registered'
             elif req_type == 'REGISTER_SERVER_FOR_CACHE':
