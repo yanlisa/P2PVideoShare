@@ -161,6 +161,7 @@ class P2PUser():
             # get available chunks lists from cache A and B.
             inst_CNKS = 'CNKS ' + filename
             inst_RETR = 'RETR ' + filename
+            inst_UPDG = 'UPDG '
             inst_NOOP = 'NOOP'
 
             ###### DECIDING WHICH CHUNKS TO DOWNLOAD FROM CACHES: TIME 0 ######
@@ -199,10 +200,10 @@ class P2PUser():
             for i in range(len(self.clients)):
                 client = self.clients[i]
                 client_request_string = '%'.join(assigned_chunks[i])
-                client_request_string = client_request_string + '&' + str(int(flag_deficit))
                 print "[user.py] [Client " + str(i) + "] flag_deficit: ", int(flag_deficit), \
                     ", Assigned chunks: ", assigned_chunks[i], \
                     ", Request string: ", client_request_string
+                client.put_instruction(inst_UPDG + str(flag_deficit))
                 client.put_instruction(inst_RETR + '.' + client_request_string)
 
             ###### DECIDING CHUNKS THAT HAVE TO BE DOWNLOADED FROM CACHE: TIME 0 ######
@@ -217,7 +218,6 @@ class P2PUser():
                 print '[user.py] Caches handling code_param_k chunks, so no request to server. Sending a NOOP'
             else:
                 server_request_string = '%'.join(server_request)
-                server_request_string = server_request_string + '&' + str(1) ## DOWNLOAD FROM SERVER : binary_g = 1
                 self.server_client.put_instruction(inst_RETR + '.' + server_request_string)
                 if(DEBUGGING_MSG):
                     print "[user.py] Requesting from server: ", server_request, ", Request string: ", server_request_string
@@ -259,7 +259,6 @@ class P2PUser():
                 if addtl_server_request:
                     addtl_server_request_string = '%'.join(addtl_server_request)
                     # server should always be set with flag_deficit = 0 (has all chunks)
-                    addtl_server_request_string = addtl_server_request_string + '&' + str(1) ## DOWNLOAD FROM SERVER : binary_g = 1
                     self.server_client.put_instruction(inst_RETR + '.' + addtl_server_request_string)
                     if(DEBUGGING_MSG):
                         print "[user.py] Requesting from server: ", addtl_server_request

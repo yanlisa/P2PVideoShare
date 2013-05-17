@@ -167,6 +167,8 @@ class StreamFTP(threading.Thread, FTP, object):
                     self.set_chunk_size(new_chunk_size)
             elif fn_name == "NOOP":
                 resp = self.voidcmd(cmd)
+            elif fn_name == "UPDG":
+                resp = self.voidcmd(cmd)
             else: # for any other command, call retrlines.
                 try:
                     resp = self.retrlines(cmd)

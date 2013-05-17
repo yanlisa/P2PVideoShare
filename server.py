@@ -145,6 +145,8 @@ proto_cmds['VLEN'] = dict(perm='l', auth=True, arg=True,
                               help='Syntax: VLEN (video length: number of frames total).')
 proto_cmds['CNKS'] = dict(perm='l', auth=True, arg=None,
                               help='Syntax: CNKS (list available chunk nums).')
+proto_cmds['UPDG'] = dict(perm='l', auth=True, arg=True,
+                              help='Syntax: UPDG (1 if satisfied, 0 if not).')
 proto_cmds['RETO'] = dict(perm='r', auth=True, arg=True,
                   help='Syntax: RETO <SP> file-name (retrieve a file).')
 
@@ -248,12 +250,15 @@ class StreamHandler(ftpserver.FTPHandler):
         """
         parsedform = parse_chunks(file)
         if parsedform:
-            filename, framenum, binary_g, chunks = parsedform
+            filename, framenum, chunks = parsedform
             each_chunk_size = self.movie_LUT.chunk_size_lookup(filename)
-            if binary_g == 1: # Download of user
-                log_load('user', int(each_chunk_size) * len(chunks))
-            elif binary_g == 0: # Download of caches
-                log_load('cache', int(each_chunk_size) * len(chunks))
+
+            ## Check ID & Log appropriately
+            #if self.ID.startswith('user'):
+            #    log_load('user', int(each_chunk_size) * len(chunks))
+            #elif self.ID.startswith('cache'):
+            #    log_load('cache', int(each_chunk_size) * len(chunks))
+
             try:
                 # filename should be prefixed by "file-" in order to be valid.
                 # frame number is expected to exist for this cache.
@@ -371,6 +376,13 @@ class StreamHandler(ftpserver.FTPHandler):
         data = str(self.chunks)
         data = data + '&' + str(self.max_chunks)
         self.push_dtp_data(data, isproducer=False, cmd="CNKS")
+
+    def ftp_UPDG(self, line):
+        """
+        FTP command: Update g(satisfaction signal) from users.
+        """
+        # Update G for this user
+        self.respond("200 I successfully updated g for the user.")
 
     def ftp_LIST(self, path):
         """Return a list of files in the specified directory to the

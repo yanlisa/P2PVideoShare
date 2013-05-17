@@ -321,7 +321,7 @@ class Cache(object):
             # wait till download is completed
             resp_RETR = self.server_client.get_response()
             parsed_form = parse_chunks(resp_RETR)
-            fname, framenum, binary_g, chunks = parsed_form
+            fname, framenum, chunks = parsed_form
             print '[cache.py] Finished downloading: Frame %s Chunk %s' % (framenum, chunks)
         return True
 
@@ -553,6 +553,14 @@ class CacheHandler(StreamHandler):
         #CacheHandler.connected[self.index] = True
         self.push_dtp_data(data, isproducer=False, cmd="CNKS")
 
+    def ftp_UPDG(self, line):
+        """
+        FTP command: Update g(satisfaction signal) from users.
+        """
+        # Update G for this user
+        CacheHandler.binary_g[self.index] = int(line)
+        self.respond("200 I successfully updated g=" + int(line) + " for the user.")
+
     def ftp_RETR(self, file):
         """Retrieve the specified file (transfer from the server to the
         client).
@@ -565,7 +573,7 @@ class CacheHandler(StreamHandler):
             print file
         parsedform = parse_chunks(file)
         if parsedform:
-            filename, framenum, binary_g, chunks = parsedform
+            filename, framenum, chunks = parsedform
             try:
                 # filename should be prefixed by "file-" in order to be valid.
                 # frame number is expected to exist for this cache.
@@ -581,7 +589,6 @@ class CacheHandler(StreamHandler):
                     print 'chunksdir', chunksdir
                     print 'framedir', framedir
                     print 'path', path
-                    print 'binary_g', binary_g
             except OSError, err:
                 why = ftpserver._strerror(err)
                 self.respond('550 %s.' % why)
@@ -593,7 +600,6 @@ class CacheHandler(StreamHandler):
             parentCache.primal_x[self.index] = rate_per_chunk * len(chunks)
             print '[cache.py] primal_x is forced down to', parentCache.primal_x[self.index]
 
-            CacheHandler.binary_g[self.index] = binary_g
             #CacheHandler.connected[self.index] = True
             CacheHandler.watching_video[self.index] = filename
             producer = self.chunkproducer(files, self._current_type)
