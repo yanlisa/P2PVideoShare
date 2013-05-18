@@ -276,12 +276,12 @@ class P2PUser():
             if server_request:
                 resp_RETR = self.server_client.get_response()
                 parsed_form = parse_chunks(resp_RETR)
-                fname, framenum, binary_g, chunks = parsed_form
+                fname, framenum, chunks = parsed_form
                 print "[user.py] Downloaded chunks from server: ", chunks
             if addtl_server_request:
                 resp_RETR = self.server_client.get_response()
                 parsed_form = parse_chunks(resp_RETR)
-                fname, framenum, binary_g, chunks = parsed_form
+                fname, framenum, chunks = parsed_form
                 print "[user.py] Downloaded chunks from server: ", chunks
 
             # Now play it
