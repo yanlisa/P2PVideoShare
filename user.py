@@ -200,7 +200,7 @@ class P2PUser():
             for i in range(len(self.clients)):
                 client = self.clients[i]
                 client_request_string = '%'.join(assigned_chunks[i])
-                print "[user.py] [Client " + str(i) + "] flag_deficit: ", int(flag_deficit, \
+                print "[user.py] [Client " + str(i) + "] flag_deficit: ", int(flag_deficit), \
                     ", Assigned chunks: ", assigned_chunks[i], \
                     ", Request string: ", client_request_string
                 client.put_instruction(inst_UPDG + flag_deficit)
