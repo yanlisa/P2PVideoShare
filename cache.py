@@ -559,7 +559,7 @@ class CacheHandler(StreamHandler):
         """
         # Update G for this user
         CacheHandler.binary_g[self.index] = int(line)
-        self.respond("200 I successfully updated g=" + int(line) + " for the user.")
+        self.respond("200 I successfully updated g=" + line + " for the user.")
 
     def ftp_RETR(self, file):
         """Retrieve the specified file (transfer from the server to the
