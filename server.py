@@ -145,7 +145,7 @@ proto_cmds['VLEN'] = dict(perm='l', auth=True, arg=True,
                               help='Syntax: VLEN (video length: number of frames total).')
 proto_cmds['CNKS'] = dict(perm='l', auth=True, arg=None,
                               help='Syntax: CNKS (list available chunk nums).')
-proto_cmds['UPDG'] = dict(perm='l', auth=True, arg=True,
+proto_cmds['UPDG'] = dict(perm=None, auth=True, arg=True,
                               help='Syntax: UPDG (1 if satisfied, 0 if not).')
 proto_cmds['RETO'] = dict(perm='r', auth=True, arg=True,
                   help='Syntax: RETO <SP> file-name (retrieve a file).')
