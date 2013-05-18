@@ -98,10 +98,15 @@ class P2PUser():
         inst_UPDG = 'UPDG '
 
         # self.clients : list of connected guys
-        ct_loop = 99
-        while True:
+
+	T_update_info = 5
+	T_buffer = CACHE_DOWNLOAD_DURATION + SERVER_DOWNLOAD_DURATION 
+	ct_period = int(T_buffer / T_update_info)
+        ct_loop = ct_period - 1
+        
+	while True:
             ct_loop += 1
-            if ct_loop = 100:
+            if ct_loop == ct_period:
                 # Copy self.clients to client_copy
                 clients_copy = []
                 for each in self.clients:
@@ -147,7 +152,7 @@ class P2PUser():
                     ", Assigned chunks: ", assigned_chunks[i]
                 client.put_instruction(inst_UPDG + str(flag_deficit))
 
-            sleep(0.1)
+            sleep(T_update_info)
 
     def download(self, video_name, start_frame):
         print '[user.py] P2Puser starts downloading'
@@ -195,7 +200,7 @@ class P2PUser():
         base_file = open('video-' + video_name + '/' + base_file_name, 'ab')
         base_file_full_path = os.path.abspath('video-' + video_name + '/' + base_file_name)
 
-        thread.start_new_thread( update_info, (video_name, code_param_n, code_param_k) )
+        thread.start_new_thread( self.update_info, (video_name, code_param_n, code_param_k) )
 
         for frame_number in xrange(start_frame, num_frames + 1):
             sys.stdout.flush()
