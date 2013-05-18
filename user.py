@@ -194,16 +194,16 @@ class P2PUser():
 
             chosen_chunks = [j for i in assigned_chunks for j in i]
 
-            flag_deficit = (sum(effective_rates) < code_param_k) # True if user needs more rate from caches
+            flag_deficit = int(sum(effective_rates) < code_param_k) # True if user needs more rate from caches
 
             # request assigned chunks
             for i in range(len(self.clients)):
                 client = self.clients[i]
                 client_request_string = '%'.join(assigned_chunks[i])
-                print "[user.py] [Client " + str(i) + "] flag_deficit: ", int(flag_deficit), \
+                print "[user.py] [Client " + str(i) + "] flag_deficit: ", int(flag_deficit, \
                     ", Assigned chunks: ", assigned_chunks[i], \
                     ", Request string: ", client_request_string
-                client.put_instruction(inst_UPDG + str(flag_deficit))
+                client.put_instruction(inst_UPDG + flag_deficit)
                 client.put_instruction(inst_RETR + '.' + client_request_string)
 
             ###### DECIDING CHUNKS THAT HAVE TO BE DOWNLOADED FROM CACHE: TIME 0 ######
