@@ -309,7 +309,6 @@ class Cache(object):
         chosen_chunks = index
         server_request = map(str, chosen_chunks)
         server_request_string = '%'.join(server_request)
-        server_request_string = server_request_string + '&' + str(0)
 
         self.server_client.put_instruction(inst_INTL) # set chunk_size to typical frame.
         for i in range(1, frame_num+1):
