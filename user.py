@@ -200,10 +200,10 @@ class P2PUser():
             for i in range(len(self.clients)):
                 client = self.clients[i]
                 client_request_string = '%'.join(assigned_chunks[i])
-                print "[user.py] [Client " + str(i) + "] flag_deficit: ", int(flag_deficit), \
+                print "[user.py] [Client " + str(i) + "] flag_deficit: ", flag_deficit, \
                     ", Assigned chunks: ", assigned_chunks[i], \
                     ", Request string: ", client_request_string
-                client.put_instruction(inst_UPDG + flag_deficit)
+                client.put_instruction(inst_UPDG + str(flag_deficit))
                 client.put_instruction(inst_RETR + '.' + client_request_string)
 
             ###### DECIDING CHUNKS THAT HAVE TO BE DOWNLOADED FROM CACHE: TIME 0 ######
