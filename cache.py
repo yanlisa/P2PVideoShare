@@ -567,9 +567,11 @@ class CacheHandler(StreamHandler):
         # line = ID
         if line not in CacheHandler.id_to_index.keys():
             CacheHandler.id_to_index[line] = self.index # Data transfer conection
+            print "[cache.py] Successfully added (ID, index) = (" + line + ", " + str(self.index) + ")"
             self.respond("200 I successfully added (ID, index) = (" + line + ", " + str(self.index) + ")")
         else:
             self.index = CacheHandler.id_to_index[line] # Info transfer conection
+            print "[cache.py] Successfully matched a connection for (ID, index) = (" + line + ", " + str(self.index) + ")"
             self.respond("200 I successfully matched a connection for (ID, index) = (" + line + ", " + str(self.index) + ")")
 
     def ftp_RETR(self, file):
