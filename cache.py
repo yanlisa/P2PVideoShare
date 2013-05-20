@@ -390,6 +390,7 @@ class Cache(object):
                         print '[cache.py]DEBUG__ dual_k[', j, '] =', self.dual_k[j]
                         tmp_sum = self.dual_k[j]
                     print '[cache.py]DEBUG__ dual_k sum =', tmp_sum
+                    print '[cache.py]DEBUG__ self.dual_k', self.dual_k
 
                     for j in range(len(handlers)):
                         handler_j = handlers[j]
@@ -481,6 +482,7 @@ class Cache(object):
                         self.dual_k[i] = max(0, self.dual_k[i])
                     if log_ct == 0:
                         print '[cache.py] User ' + str(i) + ' dual_k ' + str(self.dual_k[i])
+                    print '[cache.py]DEBUG__ self.dual_k', self.dual_k
 
                 # Need to update dual_mu
                 if log_ct == 0:
