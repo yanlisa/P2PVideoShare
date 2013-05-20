@@ -104,11 +104,16 @@ class P2PUser():
         ct_period = int(T_buffer / T_update_info)
         ct_loop = ct_period - 1
 
+        clients_copy = []
         while True:
             ct_loop += 1
             if ct_loop == ct_period:
                 # Copy self.clients to client_copy
-                clients_copy = []
+
+                for each in clients_copy:
+                    each_client = client_copy.pop()
+                    each_client.put_instruction('QUIT')
+
                 for each in self.clients:
                     each_ip = each.address
                     each_client = ThreadClient(each_ip, self.packet_size, 1)
