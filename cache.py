@@ -351,10 +351,14 @@ class Cache(object):
                 video_check_list = {}
                 for i in range(len(handlers)):
                     handler = handlers[i]
+                    print '[cache.py] ' + str(i) + 'th connection, index = ' + str(handler.index)
                     if handler._closed == True:
                         if DEBUGGING_MSG:
                             print '[cache.py] Connection ' + str(i) + ' is closed'
                         continue
+                    else:
+                        if DEBUGGING_MSG:
+                            print '[cache.py] Connection ' + str(i) + ' is open'
 
                     # Open connection
                     current_rate = self.get_conn_rate(i)
