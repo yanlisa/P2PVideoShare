@@ -232,10 +232,14 @@ class Cache(object):
                 for i in range(len(handlers)):
                     ## 1. UPDATE PRIMAL_X
                     handler = handlers[i]
+                    print '[cache.py] ' + str(i) + 'th connection, index = ' + str(handler.index)
                     if handler._closed == True:
                         if DEBUGGING_MSG:
                             print '[cache.py] Connection ' + str(i) + ' is closed'
                         continue
+                    else:
+                        if DEBUGGING_MSG:
+                            print '[cache.py] Connection ' + str(i) + ' is open'
                     video_name = self.get_watching_video(i)
                     code_param_n = self.movie_LUT.code_param_n_lookup(video_name)
                     code_param_k = self.movie_LUT.code_param_k_lookup(video_name)
