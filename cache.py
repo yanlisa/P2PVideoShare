@@ -231,7 +231,12 @@ class Cache(object):
                     print '[cache.py] No user is connected'
             else:
                 sum_x = 0
+                print '[cache.py] update PRIMAL_X'
                 for i in range(len(handlers)):
+                    if i not in self.id_to_index.values():
+                        print '[cache.py]', i, 'is not in map values, we skip'
+                        continue
+
                     ## 1. UPDATE PRIMAL_X
                     handler = handlers[i]
                     print '[cache.py] ' + str(i) + 'th connection, index = ' + str(handler.index)
@@ -356,7 +361,15 @@ class Cache(object):
             else:
                 sum_storage_virtual = 0
                 video_check_list = {}
+
+                ## 1. UPDATE PRIMAL_F
+                print '[cache.py] Update dual_k'
                 for i in range(len(handlers)):
+
+                    if i not in self.id_to_index.values():
+                        print '[cache.py]', i, 'is not in map values, we skip'
+                        continue
+
                     handler = handlers[i]
                     print '[cache.py] ' + str(i) + 'th connection, index = ' + str(handler.index)
                     if handler._closed == True:
@@ -458,7 +471,12 @@ class Cache(object):
                                 print '[cache.py] storage not updated'
 
                 ## 2. UPDATE DUAL_K
+                print '[cache.py] Update dual_k'
                 for i in range(len(handlers)):
+                    if i not in self.id_to_index.values():
+                        print '[cache.py]', i, 'is not in map values, we skip'
+                        continue
+
                     handler = handlers[i]
                     if handler._closed == True:
                         if log_ct == 0:
