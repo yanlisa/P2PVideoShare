@@ -560,7 +560,6 @@ def zipfCDF(n, zipf_param=1):
 def main():
     mu = 1
     # Create unique user ID
-    user_id = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(6))
 
     print '[user.py]', tracker_address
     # Discover movies.
@@ -573,6 +572,7 @@ def main():
 
     runtime_ct = 0
     while True:
+        user_id = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(6))
         runtime_ct += 1
         wait_time = random.expovariate(1/float(mu))
         print '[user.py] wait time:', wait_time
