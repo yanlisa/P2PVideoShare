@@ -278,7 +278,7 @@ class Cache(object):
                         print '[cache.py] total rate = ', (rate_per_chunk * code_param_k)
                     delta_k = self.bound(self.primal_x[i] - self.primal_f[video_name] * rate_per_chunk * code_param_k, self.dual_k[i], 0, INFINITY)
                     if log_ct == 0:
-		        print '[cache.py] User ' + str(i) + ' delta_k ' + str(delta_k)
+		                print '[cache.py] User ' + str(i) + ' delta_k ' + str(delta_k)
                     self.dual_k[i] += self.eps_k * delta_k
                     if POSITIVE_CONSTRAINT:
                         self.dual_k[i] = max(0, self.dual_k[i])
@@ -287,7 +287,7 @@ class Cache(object):
 
                 ## 3. UPDATE DUAL_LA
                 if log_ct == 0:
-		    print '[cache.py] sum_x ' , sum_x
+		            print '[cache.py] sum_x ' , sum_x
                 delta_la = self.bound(sum_x - self.bandwidth_cap, self.dual_la, 0, INFINITY)
                 self.dual_la += self.eps_la * delta_la
                 if POSITIVE_CONSTRAINT:
@@ -384,6 +384,13 @@ class Cache(object):
                     if packet_size == 0:
                         continue
                     dual_k_sum = 0
+
+                    tmp_sum = 0
+                    for j in range(len(handlers)):
+                        print '[cache.py]DEBUG__ dual_k[', j, '] =', self.dual_k[j]
+                        tmp_sum = self.dual_k[j]
+                    print '[cache.py]DEBUG__ dual_k sum =', tmp_sum
+
                     for j in range(len(handlers)):
                         handler_j = handlers[j]
                         if handler_j._closed == True:
