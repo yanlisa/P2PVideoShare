@@ -165,6 +165,8 @@ class StreamFTP(threading.Thread, FTP, object):
                 if internal_command[0] == "CNKN":
                     new_chunk_size = int(internal_command[1])
                     self.set_chunk_size(new_chunk_size)
+            elif fn_name == "VLEN":
+                resp = self.retrlines(cmd)
             else: # for any other command, call retrlines.
                 try:
                     resp = self.voidcmd(cmd)
