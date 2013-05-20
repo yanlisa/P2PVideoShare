@@ -233,7 +233,7 @@ class Cache(object):
                 sum_x = 0
                 print '[cache.py] update PRIMAL_X'
                 for i in range(len(handlers)):
-                    if i not in self.id_to_index.values():
+                    if i not in handlers.id_to_index.values():
                         print '[cache.py]', i, 'is not in map values, we skip'
                         continue
 
@@ -366,7 +366,7 @@ class Cache(object):
                 print '[cache.py] Update dual_k'
                 for i in range(len(handlers)):
 
-                    if i not in self.id_to_index.values():
+                    if i not in handlers.id_to_index.values():
                         print '[cache.py]', i, 'is not in map values, we skip'
                         continue
 
@@ -473,7 +473,7 @@ class Cache(object):
                 ## 2. UPDATE DUAL_K
                 print '[cache.py] Update dual_k'
                 for i in range(len(handlers)):
-                    if i not in self.id_to_index.values():
+                    if i not in handlers.id_to_index.values():
                         print '[cache.py]', i, 'is not in map values, we skip'
                         continue
 
