@@ -247,7 +247,7 @@ class Cache(object):
 
                     # First, find the optiaml variables
                     g = self.get_g(i)
-                    print "[cache.py] Connection " + str(i) + " : (self.index, g, x) ", (handlers[i].index,  g, self.primal_x[x])
+                    print "[cache.py] Connection " + str(i) + " : (self.index, g, x) ", (handlers[i].index,  g, self.primal_x[i])
                     delta_x = self.bound(g - (self.dual_la + self.dual_k[i]), \
                                         self.primal_x[i], 0, self.bandwidth_cap)
                     self.primal_x[i] += self.eps_x * delta_x
