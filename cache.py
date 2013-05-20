@@ -558,20 +558,21 @@ class CacheHandler(StreamHandler):
         """
         # Update G for this user
         CacheHandler.binary_g[self.index] = int(line)
-        self.respond("200 I successfully updated g=" + line + " for the user.")
+        self.respond("200 I successfully updated g=" + line + " for the user" + str(self.index))
 
     def ftp_ID(self, line):
         """
         FTP command: Update ID from users.
         """
         # line = ID
+        print "[cache.py] CacheHandler.id_to_index =", CacheHandler.id_to_index
         if line not in CacheHandler.id_to_index.keys():
             CacheHandler.id_to_index[line] = self.index # Data transfer conection
-            #print "[cache.py] Successfully added (ID, index) = (" + line + ", " + str(self.index) + ")"
+            print "[cache.py] Successfully added (ID, index) = (" + line + ", " + str(self.index) + ")"
             self.respond("200 I successfully added (ID, index) = (" + line + ", " + str(self.index) + ")")
         else:
             self.index = CacheHandler.id_to_index[line] # Info transfer conection
-            #print "[cache.py] Successfully matched a connection for (ID, index) = (" + line + ", " + str(self.index) + ")"
+            print "[cache.py] Successfully matched a connection for (ID, index) = (" + line + ", " + str(self.index) + ")"
             self.respond("200 I successfully matched a connection for (ID, index) = (" + line + ", " + str(self.index) + ")")
 
     def ftp_RETR(self, file):
