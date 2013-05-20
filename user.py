@@ -99,19 +99,21 @@ class P2PUser():
 
         # self.clients : list of connected guys
 
-	T_update_info = 5
-	T_buffer = CACHE_DOWNLOAD_DURATION + SERVER_DOWNLOAD_DURATION 
-	ct_period = int(T_buffer / T_update_info)
+        T_update_info = 5
+        T_buffer = CACHE_DOWNLOAD_DURATION + SERVER_DOWNLOAD_DURATION
+        ct_period = int(T_buffer / T_update_info)
         ct_loop = ct_period - 1
-        
-	while True:
+
+        while True:
             ct_loop += 1
             if ct_loop == ct_period:
                 # Copy self.clients to client_copy
                 clients_copy = []
                 for each in self.clients:
                     each_ip = each.address
-                    clients_copy.append(ThreadClient(each_ip, self.packet_size, 1))
+                    each_client = ThreadClient(each_ip, self.packet_size, 1)
+                    clients_copy.append(each_client)
+                    each_client.put_instruction('ID %s' % self.user_name)
                 ct_loop = 0
 
             available_chunks = [0]*len(clients_copy) # available_chunks[i] = cache i's availble chunks
@@ -171,12 +173,14 @@ class P2PUser():
 
         for i in range(self.num_of_caches):
             each_client = ThreadClient(cache_ip_addr[i], self.packet_size, i)
+            each_client.put_instruction('ID %s' % self.user_name)
             self.clients.append(each_client)
             connected_caches.append(each_client)
             print '[user.py] ', i, 'th connection is CONNECTED : ' , cache_ip_addr[i]
 
         for i in range(self.num_of_caches, len(cache_ip_addr)):
             each_client = (cache_ip_addr[i], self.packet_size, i)
+            each_client.put_instruction('ID %s' % self.user_name)
             not_connected_caches.append(each_client)
             print '[user.py] ', i, 'th connection is RESERVED: ' , cache_ip_addr[i]
 
