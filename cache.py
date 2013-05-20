@@ -11,7 +11,7 @@ import resource
 from helper import *
 
 # Debugging MSG
-DEBUGGING_MSG = False
+DEBUGGING_MSG = True
 
 # Algorithm DEBUGGING
 POSITIVE_CONSTRAINT = True
