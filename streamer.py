@@ -165,11 +165,11 @@ class StreamFTP(threading.Thread, FTP, object):
                 if internal_command[0] == "CNKN":
                     new_chunk_size = int(internal_command[1])
                     self.set_chunk_size(new_chunk_size)
-            elif fn_name == "VLEN":
-                resp = self.retrlines(cmd)
+            elif fn_name in ["UPDG", "ID", "NOOP"]:
+                resp = self.voidcmd(cmd)
             else: # for any other command, call retrlines.
                 try:
-                    resp = self.voidcmd(cmd)
+                    resp = self.retrlines(cmd)
                 except socket.error:
                     logging.exception("Connection closed.  Related info: " + str(sys.exc_info()[0]))
                     break
