@@ -172,7 +172,7 @@ class StreamFTP(threading.Thread, FTP, object):
                     logging.exception("Connection closed.  Related info: " + str(sys.exc_info()[0]))
                     break
                 except:
-                    logging.exception("Unexpected error in conn to " + str(self.host_address) + ":" + str(sys.exc_info()[0]))
+                    logging.exception("cmd = " + cmd + ", Unexpected error in conn to " + str(self.host_address) + ":" + str(sys.exc_info()[0]))
                     break
 
 def runrecv(packet_size, fname):
