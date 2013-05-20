@@ -40,7 +40,7 @@ T_storage = .01
 #T_rate = .1
 #T_storage = .1
 T_topology = 600
-STORAGE_UPDATE_PERIOD_OUTER = 1500
+STORAGE_UPDATE_PERIOD_OUTER = 1
 
 # IP Table
 class ThreadStreamFTPServer(StreamFTPServer, threading.Thread):
