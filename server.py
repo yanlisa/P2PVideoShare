@@ -147,6 +147,8 @@ proto_cmds['CNKS'] = dict(perm='l', auth=True, arg=None,
                               help='Syntax: CNKS (list available chunk nums).')
 proto_cmds['UPDG'] = dict(perm=None, auth=True, arg=True,
                               help='Syntax: UPDG (1 if satisfied, 0 if not).')
+proto_cmds['ID'] = dict(perm=None, auth=True, arg=True,
+                              help='Syntax: ID (string)')
 proto_cmds['RETO'] = dict(perm='r', auth=True, arg=True,
                   help='Syntax: RETO <SP> file-name (retrieve a file).')
 
@@ -384,6 +386,13 @@ class StreamHandler(ftpserver.FTPHandler):
         """
         # Update G for this user
         self.respond("200 I successfully updated g for the user.")
+
+    def ftp_ID(self, line):
+        """
+        FTP command: Update ID from users.
+        """
+        # Update ID for this user
+        self.respond("200 I successfully updated ID(=" + line + ")for the user.")
 
     def ftp_LIST(self, path):
         """Return a list of files in the specified directory to the

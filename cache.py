@@ -149,7 +149,7 @@ class Cache(object):
 
         # set public.
         handler.masquerade_address = self.public_address
-
+        handler.id_to_index = {} # Dictionary from ID to index
         handler.rates = [0]*MAX_CONNS # in chunks per frame
         # handler.chunks = [chunks]*MAX_VIDEOS
         handler.chunks = {}
@@ -559,6 +559,18 @@ class CacheHandler(StreamHandler):
         # Update G for this user
         CacheHandler.binary_g[self.index] = int(line)
         self.respond("200 I successfully updated g=" + line + " for the user.")
+
+    def ftp_ID(self, line):
+        """
+        FTP command: Update ID from users.
+        """
+        # line = ID
+        if line not in CacheHandler.id_to_index.keys():
+            CacheHandler.id_to_index[line] = self.index # Data transfer conection
+            self.respond("200 I successfully added (ID, index) = (" + line + ", " + str(self.index) + ")")
+        else:
+            self.index = CacheHandler.id_to_index[line] # Info transfer conection
+            self.respond("200 I successfully matched a connection for (ID, index) = (" + line + ", " + str(self.index) + ")")
 
     def ftp_RETR(self, file):
         """Retrieve the specified file (transfer from the server to the
