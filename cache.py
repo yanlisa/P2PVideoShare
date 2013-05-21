@@ -321,7 +321,7 @@ class Cache(object):
 
         chosen_chunks = index
         server_request = map(str, chosen_chunks)
-        server_request_string = '%'.join(server_request)
+        server_request_string = '%'.join(server_request) + '&0'
 
         self.server_client.put_instruction(inst_INTL) # set chunk_size to typical frame.
         for i in range(1, frame_num+1):
@@ -333,7 +333,7 @@ class Cache(object):
             # wait till download is completed
             resp_RETR = self.server_client.get_response()
             parsed_form = parse_chunks(resp_RETR)
-            fname, framenum, chunks = parsed_form
+            fname, framenum, chunks, user_or_cache = parsed_form
             print '[cache.py] Finished downloading: Frame %s Chunk %s' % (framenum, chunks)
         return True
 
@@ -626,7 +626,7 @@ class CacheHandler(StreamHandler):
             print file
         parsedform = parse_chunks(file)
         if parsedform:
-            filename, framenum, chunks = parsedform
+            filename, framenum, chunks, user_or_cache = parsedform
             try:
                 # filename should be prefixed by "file-" in order to be valid.
                 # frame number is expected to exist for this cache.

@@ -111,7 +111,7 @@ class P2PUser():
                 # Copy self.clients to client_copy
 
                 for each in clients_copy:
-                    each_client = client_copy.pop()
+                    each_client = clients_copy.pop()
                     each_client.put_instruction('QUIT')
 
                 for each in self.clients:
@@ -273,7 +273,7 @@ class P2PUser():
             # request assigned chunks
             for i in range(len(self.clients)):
                 client = self.clients[i]
-                client_request_string = '%'.join(assigned_chunks[i])
+                client_request_string = '%'.join(assigned_chunks[i]) + '&1'
                 print "[user.py] [Client " + str(i) + "] flag_deficit: ", flag_deficit, \
                     ", Assigned chunks: ", assigned_chunks[i], \
                     ", Request string: ", client_request_string
@@ -291,7 +291,7 @@ class P2PUser():
                 self.server_client.put_instruction(inst_NOOP)
                 print '[user.py] Caches handling code_param_k chunks, so no request to server. Sending a NOOP'
             else:
-                server_request_string = '%'.join(server_request)
+                server_request_string = '%'.join(server_request) + '&1'
                 self.server_client.put_instruction(inst_RETR + '.' + server_request_string)
                 if(DEBUGGING_MSG):
                     print "[user.py] Requesting from server: ", server_request, ", Request string: ", server_request_string
@@ -331,7 +331,7 @@ class P2PUser():
                 addtl_server_request = chunks_to_request(chunk_nums_rx, range(0, code_param_n), code_param_k - num_chunks_rx)
                 print "[user.py] addtl_server_requests", addtl_server_request
                 if addtl_server_request:
-                    addtl_server_request_string = '%'.join(addtl_server_request)
+                    addtl_server_request_string = '%'.join(addtl_server_request) + '&1'
                     # server should always be set with flag_deficit = 0 (has all chunks)
                     self.server_client.put_instruction(inst_RETR + '.' + addtl_server_request_string)
                     if(DEBUGGING_MSG):
@@ -350,12 +350,12 @@ class P2PUser():
             if server_request:
                 resp_RETR = self.server_client.get_response()
                 parsed_form = parse_chunks(resp_RETR)
-                fname, framenum, chunks = parsed_form
+                fname, framenum, chunks, user_or_cache = parsed_form
                 print "[user.py] Downloaded chunks from server: ", chunks
             if addtl_server_request:
                 resp_RETR = self.server_client.get_response()
                 parsed_form = parse_chunks(resp_RETR)
-                fname, framenum, chunks = parsed_form
+                fname, framenum, chunks, user_or_cache = parsed_form
                 print "[user.py] Downloaded chunks from server: ", chunks
 
             # Now play it

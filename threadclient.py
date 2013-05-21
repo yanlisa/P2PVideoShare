@@ -77,7 +77,7 @@ class ThreadClient(object):
 
         parsed_form = parse_chunks(fnamestr)
         if parsed_form:
-            fname, framenum, chunks = parsed_form
+            fname, framenum, chunks, user_or_cache = parsed_form
             video_name = fname
             fname = fname + '.' + framenum
 

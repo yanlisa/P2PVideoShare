@@ -252,15 +252,15 @@ class StreamHandler(ftpserver.FTPHandler):
         """
         parsedform = parse_chunks(file)
         if parsedform:
-            filename, framenum, chunks = parsedform
+            filename, framenum, chunks, user_or_cache = parsedform
             each_chunk_size = self.movie_LUT.chunk_size_lookup(filename)
 
             log_load('user', int(each_chunk_size) * len(chunks))
             ## Check ID & Log appropriately
-            #if self.ID.startswith('user'):
-            #    log_load('user', int(each_chunk_size) * len(chunks))
-            #elif self.ID.startswith('cache'):
-            #    log_load('cache', int(each_chunk_size) * len(chunks))
+            if user_or_cache == 1:
+                log_load('user', int(each_chunk_size) * len(chunks))
+            else:
+                log_load('cache', int(each_chunk_size) * len(chunks))
 
             try:
                 # filename should be prefixed by "file-" in order to be valid.

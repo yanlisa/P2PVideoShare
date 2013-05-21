@@ -196,10 +196,11 @@ def chunk_files_in_frame_dir(folder_name):
 def parse_chunks(arg):
     """Returns file name, chunks, and frame number.
     File string format:
-        file-<filename>.<framenum>.<chunk1>%<chunk2>%<chunk3>
+        file-<filename>.<framenum>.<chunk1>%<chunk2>%<chunk3>&user_or_cache
 
     """
-    filestr = arg
+    filestr = arg.split('&')[0]
+    binarystr = arg.split('&')[1]
     if filestr.find('file-') != -1:
         filestr = (filestr.split('file-'))[-1]
 
@@ -207,9 +208,8 @@ def parse_chunks(arg):
     if len(parts) < 2:
             return None
     filename, framenum = parts[0], parts[1]
-    rettuple = (filename, framenum)
     if len(parts[2]) == 0:
-        return (filename, framenum, [])
+        return (filename, framenum, int(binarystr), [])
     else:
         chunks = map(int, (parts[2]).split('%'))
-        return (filename, framenum, chunks)
+        return (filename, framenum, int(binarystr), chunks)
