@@ -209,7 +209,7 @@ def parse_chunks(arg):
             return None
     filename, framenum = parts[0], parts[1]
     if len(parts[2]) == 0:
-        return (filename, framenum, int(binarystr), [])
+        return (filename, framenum, [], int(binarystr))
     else:
         chunks = map(int, (parts[2]).split('%'))
-        return (filename, framenum, int(binarystr), chunks)
+        return (filename, framenum, chunks, int(binarystr))
