@@ -255,7 +255,6 @@ class StreamHandler(ftpserver.FTPHandler):
             filename, framenum, chunks, user_or_cache = parsedform
             each_chunk_size = self.movie_LUT.chunk_size_lookup(filename)
 
-            log_load('user', int(each_chunk_size) * len(chunks))
             ## Check ID & Log appropriately
             if user_or_cache == 1:
                 log_load('user', int(each_chunk_size) * len(chunks))
