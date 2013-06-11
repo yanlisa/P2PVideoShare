@@ -31,6 +31,9 @@ DECODE_WAIT_DURATION = 0.1 # sec
 tracker_address = load_tracker_address()
 num_of_caches = 5
 
+# Update Information Period
+T_update_info = 0.1
+
 class P2PUser():
 
     #def __init__(self, tracker_address, video_name, packet_size):
@@ -99,7 +102,6 @@ class P2PUser():
 
         # self.clients : list of connected guys
 
-        T_update_info = 5
         T_buffer = CACHE_DOWNLOAD_DURATION + SERVER_DOWNLOAD_DURATION
         ct_period = int(T_buffer / T_update_info)
         ct_loop = ct_period - 1
