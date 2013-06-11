@@ -62,6 +62,8 @@ class P2PUser():
         self.num_of_caches = num_of_caches
         self.manager = None # TODO: create the manager class to decode/play
 
+        self.info_thread = '' # Thread for exchanging information
+
     def VLC_start_video(self, video_path):
         # Put the file into the queue and play it
         url = 'http://127.0.0.1:8080/requests/status.xml?command=in_play&input=file://'
@@ -211,7 +213,7 @@ class P2PUser():
         base_file = open('video-' + video_name + '/' + base_file_name, 'ab')
         base_file_full_path = os.path.abspath('video-' + video_name + '/' + base_file_name)
 
-        thread.start_new_thread( self.update_info, (video_name, code_param_n, code_param_k) )
+        self.info_thread = thread.start_new_thread( self.update_info, (video_name, code_param_n, code_param_k) )
 
         for frame_number in xrange(start_frame, num_frames + 1):
             sys.stdout.flush()
@@ -453,6 +455,7 @@ class P2PUser():
         my_port = 0
         my_video_name = video_name
         deregister_to_tracker_as_user(tracker_address, my_ip, my_port, video_name)
+        self.info_thread.exit()
         print "[user.py] BYE"
         sys.stdout.flush()
 
