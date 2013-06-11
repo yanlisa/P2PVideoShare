@@ -1,7 +1,6 @@
 import threading
 from threadclient import ThreadClient
 from helper import *
-import Queue
 
 # Update Information Period
 T_update_info = 0.1

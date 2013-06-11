@@ -2,6 +2,7 @@ import os
 import urllib2
 import csv
 import commands
+import Queue
 
 DEBUGGING_MSG = True
 
