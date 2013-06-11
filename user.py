@@ -369,8 +369,7 @@ class P2PUser():
                         removed_cache.put_instruction('QUIT')
                         self.clients.remove(removed_cache)
                         connected_caches.remove(removed_cache)
-                        new_cache_meta = (self.cache_ip_addr[client_index], 1000, client_index)
-                        not_connected_caches.append(new_cache_meta)
+                        not_connected_caches.append(removed_cache)
 
                         print '[user.py] Topology Update : ', removed_cache.address, 'is chocked.'
 
