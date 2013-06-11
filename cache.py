@@ -627,6 +627,7 @@ class CacheHandler(StreamHandler):
             file-<filename>
         """
         if DEBUGGING_MSG:
+            pass
             # print file
         parsedform = parse_chunks(file)
         if parsedform:
