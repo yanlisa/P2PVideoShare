@@ -8,7 +8,7 @@ CACHE_DOWNLOAD_DURATION = 8 # sec
 SERVER_DOWNLOAD_DURATION = 2 # sec
 
 class infoThread (threading.Thread):
-    def __init__(self, video_name, code_param_n, code_param_k, filename):
+    def __init__(self, video_name, code_param_n, code_param_k):
         threading.Thread.__init__(self)
         self.video_name = video_name
         self.filename = filename
