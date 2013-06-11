@@ -8,6 +8,7 @@ import csv
 import time
 import threading
 import resource
+import sys
 from helper import *
 
 # Debugging MSG
@@ -433,16 +434,18 @@ class Cache(object):
                     if log_ct == 0:
                         print '[cache.py] stored_chunks ', stored_chunks
                     num_stored_chunks = len(stored_chunks)
-                    assigned_num_of_chunks = max(int(self.primal_f[video_name] * code_param_k), 0) # ceiling
+                    assigned_num_of_chunks = min(max(int(self.primal_f[video_name] * code_param_k), 0), code_param_k) # ceiling
                     if log_ct == 0:
                         print '[cache.py] num_stored_chunks ', num_stored_chunks
                         print '[cache.py] assigned_num_of_chks ', assigned_num_of_chunks
                     if ct % STORAGE_UPDATE_PERIOD_OUTER == 0:
                         if assigned_num_of_chunks > num_stored_chunks:
-                            if len(stored_chunks) >= code_param_k:
+                            if num_stored_chunks >= code_param_k:
                                 if log_ct == 0:
                                     print '[cache.py] Downloading nothing from server'
-                                self.download_one_chunk_from_server(video_name, '')
+                                print '[cache.py] Logic error'
+                                sys.exit(0)
+                                #self.download_one_chunk_from_server(video_name, '')
                             else:
                                 chunk_index = random.sample( list(set(range(0,code_param_n)) - set(map(int, stored_chunks))), 1 ) # Sample one out of missing chunks
                                 if self.download_one_chunk_from_server(video_name, chunk_index) == True:
