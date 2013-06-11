@@ -522,6 +522,7 @@ class Cache(object):
             time.sleep(T_period)
 
     def connection_check(self):
+        pass
         # print '[cache.py] connection checking'
         #conns = self.get_conns()
 
