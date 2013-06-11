@@ -334,11 +334,10 @@ class P2PUser():
                         else: # Add a new cache temporarily
                             new_cache_index = random.sample(range(len(not_connected_caches)), 1)
                             if new_cache_index >= 0:
-                                new_cache_meta = not_connected_caches[new_cache_index[0]]
-                                new_cache = ThreadClient(*new_cache_meta)
+                                new_cache = not_connected_caches[new_cache_index[0]]
                                 self.clients.append(new_cache)
                                 connected_caches.append(new_cache)
-                                not_connected_caches.remove(new_cache_meta)
+                                not_connected_caches.remove(new_cache)
                                 print '[user.py] Topology Update : Temporarily added ', new_cache.address
                                 choke_state = 1 # Now, move to transitional state
                                 choke_ct = 0
