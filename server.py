@@ -350,7 +350,7 @@ class StreamHandler(ftpserver.FTPHandler):
                 fd = self.run_as_current_user(self.fs.open, filepath, 'rb')
                 files.put(fd)
             except StopIteration, err:
-                why = _strerror(err)
+                print err
                 self.respond('544 %s' %why)
                 break
         return files

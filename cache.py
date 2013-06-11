@@ -20,7 +20,7 @@ POSITIVE_CONSTRAINT = True
 cache_config_file = '../../config/cache_config.csv'
 
 # Log Configuration
-LOG_PERIOD = 100
+LOG_PERIOD = 1000
 
 INFINITY = 10e10
 MAX_CONNS = 1000
