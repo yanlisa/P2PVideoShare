@@ -335,7 +335,7 @@ class P2PUser():
                             new_cache_index = random.sample(range(len(not_connected_caches)), 1)
                             if new_cache_index >= 0:
                                 new_cache_meta = not_connected_caches[new_cache_index[0]]
-                                new_cache = ThreadClient(*new_cache_meta)
+                                new_cache = ThreadClient(new_cache_meta)
                                 self.clients.append(new_cache)
                                 connected_caches.append(new_cache)
                                 not_connected_caches.remove(new_cache_meta)
