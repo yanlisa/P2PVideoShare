@@ -47,7 +47,7 @@ class infoThread (threading.Thread):
                 # Copy self.clients to client_copy
 
                 for each in clients_copy:
-                    each_client = self.user.clients_copy.pop()
+                    each_client = clients_copy.pop()
                     each_client.put_instruction('QUIT')
 
                 for each in self.user.clients:
