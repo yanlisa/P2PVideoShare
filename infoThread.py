@@ -1,6 +1,7 @@
 import threading
 from threadclient import ThreadClient
 from helper import *
+import Queue
 
 # Update Information Period
 T_update_info = 0.1
@@ -71,7 +72,7 @@ class infoThread (threading.Thread):
             print '[user.py] Update_info_loop : Rates ', rates
             print '[user.py] Update_info_loop : Available chunks', available_chunks
 
-            assigned_chunks = cache_chunks_to_request(available_chunks, rates, code_param_n, code_param_k)
+            assigned_chunks = cache_chunks_to_request(available_chunks, rates, self.code_param_n, self.code_param_k)
 
             effective_rates = [0]*len(rates)
             for i in range(len(rates)):
