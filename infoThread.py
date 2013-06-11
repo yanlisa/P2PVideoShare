@@ -39,10 +39,10 @@ class infoThread (threading.Thread):
                 # Copy self.clients to client_copy
 
                 for each in clients_copy:
-                    each_client = user.clients_copy.pop()
+                    each_client = self.user.clients_copy.pop()
                     each_client.put_instruction('QUIT')
 
-                for each in user.clients:
+                for each in self.user.clients:
                     each_ip = each.address
                     each_client = ThreadClient(each_ip, self.packet_size, 1)
                     clients_copy.append(each_client)
