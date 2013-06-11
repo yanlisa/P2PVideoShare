@@ -45,9 +45,9 @@ class infoThread (threading.Thread):
 
                 for each in self.user.clients:
                     each_ip = each.address
-                    each_client = ThreadClient(each_ip, self.packet_size, 1)
+                    each_client = ThreadClient(each_ip, self.user.packet_size, 1)
                     clients_copy.append(each_client)
-                    each_client.put_instruction('ID %s' % self.user_name)
+                    each_client.put_instruction('ID %s' % self.user.user_name)
                 ct_loop = 0
 
             available_chunks = [0]*len(clients_copy) # available_chunks[i] = cache i's availble chunks
