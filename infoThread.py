@@ -18,7 +18,7 @@ class infoThread (threading.Thread):
         print 'Starting Info Exchange Thread'
         self.update_info()
 
-    def update_info(self)
+    def update_info(self):
         filename = 'file-' + self.video_name + '.' + str(1)
         folder_name = 'video-' + self.video_name + '/' + self.video_name + '.' + str(1) + '.dir/'
         inst_CNKS = 'CNKS ' + self.filename
