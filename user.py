@@ -331,7 +331,7 @@ class P2PUser():
                 addtl_server_request = chunks_to_request(chunk_nums_rx, range(0, code_param_n), code_param_k - num_chunks_rx)
                 print "[user.py] addtl_server_requests", addtl_server_request
                 if addtl_server_request:
-                    addtl_server_request_string = '%'.join(addtl_server_request) + '&1'
+                    addtl_server_request_string = '%'.join(addtl_server_request) + '&1'     # The last digit '1' means 'I am user'
                     # server should always be set with flag_deficit = 0 (has all chunks)
                     self.server_client.put_instruction(inst_RETR + '.' + addtl_server_request_string)
                     if(DEBUGGING_MSG):
@@ -571,6 +571,8 @@ def main():
     print '[user.py] Popularity cdf', cdf
 
     runtime_ct = 0
+    popularity_change = False
+
     while True:
         user_id = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(6))
         runtime_ct += 1
@@ -580,11 +582,15 @@ def main():
 
         os.system("rm -r video*")
         video_index = max(i for r in [random.random()] for i,c in cdf if c <= r) # http://stackoverflow.com/questions/4265988/generate-random-numbers-with-a-given-numerical-distribution
-        if runtime_ct > 5:
-            print '[user.py] New popularity is applied'
-            video_name = movies[number_of_videos - video_index - 1]
+
+        if popularity_change:
+            if runtime_ct > 5:
+                print '[user.py] New popularity is applied'
+                video_name = movies[number_of_videos - video_index - 1]
+            else:
+                video_name = movies[video_index]
         else:
-            video_name = movies[video_index] # uniformly pick from movies
+            video_name = movies[video_index]
         user_name = 'user-' + user_id
         print '[user.py] Starting to watch video %s' % video_name
         sys.stdout.flush()
