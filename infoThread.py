@@ -8,8 +8,9 @@ CACHE_DOWNLOAD_DURATION = 8 # sec
 SERVER_DOWNLOAD_DURATION = 2 # sec
 
 class infoThread (threading.Thread):
-    def __init__(self, video_name, code_param_n, code_param_k):
+    def __init__(self, video_name, code_param_n, code_param_k, user):
         threading.Thread.__init__(self)
+        self.user = user
         self.video_name = video_name
         self.filename = 'file-' + video_name + '.' + str(0) # CNKS does not need the frame number
         self.code_param_n = code_param_n
@@ -38,10 +39,10 @@ class infoThread (threading.Thread):
                 # Copy self.clients to client_copy
 
                 for each in clients_copy:
-                    each_client = clients_copy.pop()
+                    each_client = user.clients_copy.pop()
                     each_client.put_instruction('QUIT')
 
-                for each in self.clients:
+                for each in user.clients:
                     each_ip = each.address
                     each_client = ThreadClient(each_ip, self.packet_size, 1)
                     clients_copy.append(each_client)

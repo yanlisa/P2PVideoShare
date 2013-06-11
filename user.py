@@ -144,7 +144,7 @@ class P2PUser():
         base_file = open('video-' + video_name + '/' + base_file_name, 'ab')
         base_file_full_path = os.path.abspath('video-' + video_name + '/' + base_file_name)
 
-        self.info_thread = infoThread(video_name, code_param_n, code_param_k)
+        self.info_thread = infoThread(video_name, code_param_n, code_param_k, self)
         self.info_thread.start()
 
         for frame_number in xrange(start_frame, num_frames + 1):
