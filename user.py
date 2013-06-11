@@ -392,57 +392,6 @@ class P2PUser():
         print "[user.py] BYE"
         sys.stdout.flush()
 
-def cache_chunks_to_request(available_chunks, rates, code_param_n, code_param_k):
-    """
-    (a) Sort the packets by their rarity (defined by the presence of packets in multiple caches).
-    (b) Starting with the rarest first, assign the rarest packet to the cache with the lowest used BW ratio currently. Pop off the rarest packet and decrement the bandwidth of the assigned cache.
-    (c) Repeat until all packets have been assigned a cache source, or until 20 chunks have been assigned.
-    """
-
-    # index assignment here
-    chunk_locs = {}
-    assigned_chunks = [list()]*len(rates)
-    for i in range(len(rates)):
-        for j in available_chunks[i]:
-            if rates[i]:
-                if j in chunk_locs:
-                    (chunk_locs[j]).append(i)
-                else:
-                    chunk_locs[j] = [i]
-
-    # sort chunks by rarest first
-    chunk_freqs = Queue.PriorityQueue()
-    for chunk in chunk_locs:
-        chunk_freqs.put((len(chunk_locs[chunk]), chunk))
-
-    # from rarest first, make chunk request list by assigning next available chunk
-    # to carrier with the lowest ratio of used cache rate so far (fairness)
-    for i in range(code_param_k):
-        if chunk_freqs.empty():
-            break
-        freq, chunk = chunk_freqs.get()
-        best_location = -1
-        for cache in chunk_locs[chunk]:
-            ratio_bw_used = float(len(assigned_chunks[cache]))/rates[cache]
-            if best_location == -1:
-                if ratio_bw_used < 1:
-                    best_location = cache
-                    # print "No best_location set for chunk %s, as ratio bw is %d: %f" % (chunk, cache, ratio_bw_used)
-            else:
-                best_locations_ratio_bw = float(len(assigned_chunks[best_location]))/rates[best_location]
-                # print "%d:%f vs. %d:current best %f" % (cache, ratio_bw_used, best_location, best_locations_ratio_bw)
-                if ratio_bw_used < best_locations_ratio_bw:
-                    best_location = cache
-                    # print "best location for chunk %s determined to be %d" % (chunk, best_location)
-        if best_location == -1:
-            continue
-        if not assigned_chunks[best_location]:
-            assigned_chunks[best_location] = [str(chunk)]
-        else:
-            (assigned_chunks[best_location]).append(str(chunk))
-
-    return assigned_chunks
-
 def chunks_to_request(A, B, num_ret):
     """ Find the elements in B that are not in A. From these elements, return a
     randomized set that has maximum num_ret elements.

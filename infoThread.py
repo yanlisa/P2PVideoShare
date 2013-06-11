@@ -1,5 +1,5 @@
 import threading
-from user import cache_chunks_to_request
+from helper import *
 
 # Update Information Period
 T_update_info = 0.1
