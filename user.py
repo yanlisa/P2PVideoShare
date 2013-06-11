@@ -119,7 +119,7 @@ class P2PUser():
             print '[user.py] ', i, 'th connection is CONNECTED : ' , cache_ip_addr[i]
 
         for i in range(self.num_of_caches, len(cache_ip_addr)):
-            each_client = (cache_ip_addr[i], self.packet_size, i)
+            each_client = ThreadClient(cache_ip_addr[i], self.packet_size, i)
             each_client.put_instruction('ID %s' % self.user_name)
             not_connected_caches.append(each_client)
             print '[user.py] ', i, 'th connection is RESERVED: ' , cache_ip_addr[i]
