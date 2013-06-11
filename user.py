@@ -13,6 +13,7 @@ import math
 import sys
 import threading
 import string
+from infoThread import infoThread
 
 # Debugging MSG
 DEBUGGING_MSG = True
