@@ -92,7 +92,7 @@ class Cache(object):
         self.public_address = cache_config[3]
         register_to_tracker_as_cache(tracker_address, self.public_address, self.address[1])
         # register_to_tracker_as_cache(tracker_address, self.address[0], self.address[1])
-        print '[cache.py] Address : ', (self.public_address, self.address[1])
+        # print '[cache.py] Address : ', (self.public_address, self.address[1])
         stream_rate = int(cache_config[4])
         # num_of_chunks_cache_stores = int(cache_config[5])
 
@@ -192,7 +192,7 @@ class Cache(object):
             return []
 
     def set_chunks(self, video_name, new_chunks):
-        print '[cache.py]', new_chunks
+        # print '[cache.py]', new_chunks
         CacheHandler.chunks[video_name] = new_chunks
         # self.mini_server.get_handlers()[index].set_chunks(new_chunks)
 
@@ -235,7 +235,7 @@ class Cache(object):
                 print '[cache.py] update PRIMAL_X'
                 for i in range(len(handlers)):
                     if i not in CacheHandler.id_to_index.values():
-                        print '[cache.py]', i, 'is not in map values, we skip'
+                        # print '[cache.py]', i, 'is not in map values, we skip'
                         continue
 
                     ## 1. UPDATE PRIMAL_X
@@ -364,7 +364,7 @@ class Cache(object):
                 video_check_list = {}
 
                 ## 1. UPDATE PRIMAL_F
-                print '[cache.py] Update dual_k'
+                # print '[cache.py] Update dual_k'
                 for i in range(len(handlers)):
 
                     if i not in CacheHandler.id_to_index.values():
@@ -401,10 +401,10 @@ class Cache(object):
 
                     tmp_sum = 0
                     for j in range(len(handlers)):
-                        print '[cache.py]DEBUG__ dual_k[', j, '] =', self.dual_k[j]
+                        # print '[cache.py]DEBUG__ dual_k[', j, '] =', self.dual_k[j]
                         tmp_sum = self.dual_k[j]
-                    print '[cache.py]DEBUG__ dual_k sum =', tmp_sum
-                    print '[cache.py]DEBUG__ self.dual_k', self.dual_k[:2]
+                    # print '[cache.py]DEBUG__ dual_k sum =', tmp_sum
+                    # print '[cache.py]DEBUG__ self.dual_k', self.dual_k[:2]
 
                     for j in range(len(handlers)):
                         handler_j = handlers[j]
@@ -474,10 +474,10 @@ class Cache(object):
                                 print '[cache.py] storage not updated'
 
                 ## 2. UPDATE DUAL_K
-                print '[cache.py] Update dual_k'
+                # print '[cache.py] Update dual_k'
                 for i in range(len(handlers)):
                     if i not in CacheHandler.id_to_index.values():
-                        print '[cache.py]', i, 'is not in map values, we skip'
+                        # print '[cache.py]', i, 'is not in map values, we skip'
                         continue
 
                     handler = handlers[i]
@@ -503,7 +503,7 @@ class Cache(object):
                         self.dual_k[i] = max(0, self.dual_k[i])
                     if log_ct == 0:
                         print '[cache.py] User ' + str(i) + ' dual_k ' + str(self.dual_k[i])
-                    print '[cache.py]DEBUG__ self.dual_k', self.dual_k[:2]
+                    # print '[cache.py]DEBUG__ self.dual_k', self.dual_k[:2]
 
                 # Need to update dual_mu
                 if log_ct == 0:
@@ -522,7 +522,7 @@ class Cache(object):
             time.sleep(T_period)
 
     def connection_check(self):
-        print '[cache.py] connection checking'
+        # print '[cache.py] connection checking'
         #conns = self.get_conns()
 
         # Currently assuming 'a single movie'. It needs to be generalized
@@ -580,17 +580,17 @@ class CacheHandler(StreamHandler):
         """
         FTP command: Returns this cache's chunk number set.
         """
-        print "index:", self.index
-        print '[cache.py] CacheHandler.chunks', CacheHandler.chunks
-        print '[cache.py] line', arg
+        # print "index:", self.index
+        # print '[cache.py] CacheHandler.chunks', CacheHandler.chunks
+        # print '[cache.py] line', arg
         video_name = arg.split('file-')[-1].split('.')[0]
-        print '[cache.py] video_name ', video_name
+        # print '[cache.py] video_name ', video_name
         if video_name in CacheHandler.chunks.keys():
             data = '%'.join(map(str, CacheHandler.chunks[video_name]))
         else:
             data = '%'.join(map(str, ''))
         data = data + '&' + str(int(CacheHandler.rates[self.index]))
-        print "Sending CNKS: ", data
+        # print "Sending CNKS: ", data
         #CacheHandler.connected[self.index] = True
         self.push_dtp_data(data, isproducer=False, cmd="CNKS")
 
@@ -607,14 +607,14 @@ class CacheHandler(StreamHandler):
         FTP command: Update ID from users.
         """
         # line = ID
-        print "[cache.py] CacheHandler.id_to_index =", CacheHandler.id_to_index
+        # print "[cache.py] CacheHandler.id_to_index =", CacheHandler.id_to_index
         if line not in CacheHandler.id_to_index.keys():
             CacheHandler.id_to_index[line] = self.index # Data transfer conection
-            print "[cache.py] Successfully added (ID, index) = (" + line + ", " + str(self.index) + ")"
+            # print "[cache.py] Successfully added (ID, index) = (" + line + ", " + str(self.index) + ")"
             self.respond("200 I successfully added (ID, index) = (" + line + ", " + str(self.index) + ")")
         else:
             self.index = CacheHandler.id_to_index[line] # Info transfer conection
-            print "[cache.py] Successfully matched a connection for (ID, index) = (" + line + ", " + str(self.index) + ")"
+            # print "[cache.py] Successfully matched a connection for (ID, index) = (" + line + ", " + str(self.index) + ")"
             self.respond("200 I successfully matched a connection for (ID, index) = (" + line + ", " + str(self.index) + ")")
 
     def ftp_RETR(self, file):
@@ -626,7 +626,7 @@ class CacheHandler(StreamHandler):
             file-<filename>
         """
         if DEBUGGING_MSG:
-            print file
+            # print file
         parsedform = parse_chunks(file)
         if parsedform:
             filename, framenum, chunks, user_or_cache = parsedform
@@ -650,11 +650,11 @@ class CacheHandler(StreamHandler):
                 self.respond('550 %s.' % why)
 
             parentCache = self.parentCache
-            print '[cache.py] primal_x to this link was', parentCache.primal_x[self.index]
+            # print '[cache.py] primal_x to this link was', parentCache.primal_x[self.index]
             packet_size = parentCache.movie_LUT.chunk_size_lookup(filename)
             rate_per_chunk = packet_size / 1000 / BUFFER_LENGTH * 8 # (Kbps)
             parentCache.primal_x[self.index] = rate_per_chunk * len(chunks)
-            print '[cache.py] primal_x is forced down to', parentCache.primal_x[self.index]
+            # print '[cache.py] primal_x is forced down to', parentCache.primal_x[self.index]
 
             #CacheHandler.connected[self.index] = True
             CacheHandler.watching_video[self.index] = filename
@@ -676,15 +676,15 @@ class CacheHandler(StreamHandler):
         file_list_iterator = self.run_as_current_user(self.fs.get_list_dir, path)
         file_list = list(file_list_iterator)
 
-        print "[cache.py]", chunks
+        # print "[cache.py]", chunks
         for x in range(len(file_list)):
             each_file = file_list[x]
-            print "[cache.py]", x, "th file", each_file
+            # print "[cache.py]", x, "th file", each_file
             filename = ((each_file.split(' ')[-1]).split('\r'))[0]
             chunk_num = (each_file.split('_')[0]).split('.')[-1]
             if chunk_num.isdigit() and int(chunk_num) in chunks:
                 filepath = path + '/' + filename
-                print "filepath ", filepath
+                # print "filepath ", filepath
                 fd = self.run_as_current_user(self.fs.open, filepath, 'rb')
                 files.put(fd)
                 if (DEBUGGING_MSG):
