@@ -22,6 +22,12 @@ class infoThread (threading.Thread):
         self.update_info()
 
     def update_info(self):
+        user = self.user
+        video_name = self.video_name
+        filename = self.filename
+        code_param_n = self.code_param_n
+        code_param_k = self.code_param_k
+
         filename = 'file-' + self.video_name + '.' + str(1)
         folder_name = 'video-' + self.video_name + '/' + self.video_name + '.' + str(1) + '.dir/'
         inst_CNKS = 'CNKS ' + self.filename
