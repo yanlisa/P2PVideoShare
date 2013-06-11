@@ -192,6 +192,8 @@ class FTP:
                     print "[ftplib.py] [Errno 35] Resource temporarily unavailable. Retrying."
                     time.sleep(0)
                     continue
+                if str(ex).startswith('timeout'):
+                    continue
                 raise ex
         if self.debugging > 1:
             print '*get*', self.sanitize(line)

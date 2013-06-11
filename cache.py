@@ -75,26 +75,16 @@ class Cache(object):
         """Make the FTP server instance and the Cache Downloader instance.
         Obtain the queue of data from the FTP server."""
 
-        # Parse cache configuration
-        # [ cache_id,
-        #   private_ip, port #,
-        #   public_ip,
-        #   stream_rate,
-        #   num_of_chunks_cache_stores ]
         self.packet_size = 2504
         server_ip_address = get_server_address(tracker_address)
         self.server_client = ThreadClient(server_ip_address, self.packet_size)
-        # Cache will get a response when each chunk is downloaded.
         self.server_client.set_respond_RETR(True)
 
         cache_id = int(cache_config[0])
         self.address = (cache_config[1], int(cache_config[2]))
         self.public_address = cache_config[3]
         register_to_tracker_as_cache(tracker_address, self.public_address, self.address[1])
-        # register_to_tracker_as_cache(tracker_address, self.address[0], self.address[1])
-        # print '[cache.py] Address : ', (self.public_address, self.address[1])
         stream_rate = int(cache_config[4])
-        # num_of_chunks_cache_stores = int(cache_config[5])
 
         if True:
             # Variables for algorithms
@@ -140,11 +130,9 @@ class Cache(object):
         self.sum_storage = 0
 
         self.authorizer = ftpserver.DummyAuthorizer()
-        # allow anonymous login.
-        self.authorizer.add_anonymous(path, perm='elr')
+        self.authorizer.add_anonymous(path, perm='elr') # allow anonymous login.
         handler = CacheHandler
         handler.parentCache = self
-        # handler.timeout = 1
         handler.authorizer = self.authorizer
         self.movie_LUT = retrieve_MovieLUT_from_tracker(tracker_address)
         handler.movie_LUT = self.movie_LUT
@@ -153,11 +141,10 @@ class Cache(object):
         # set public.
         handler.masquerade_address = self.public_address
         handler.id_to_index = {} # Dictionary from ID to index
-        handler.rates = [0]*MAX_CONNS # in chunks per frame
-        # handler.chunks = [chunks]*MAX_VIDEOS
+        handler.rates = [0] * MAX_CONNS # in chunks per frame
         handler.chunks = {}
-        handler.binary_g = [0]*MAX_CONNS # binary: provided chunks sufficient for conn
-        handler.watching_video = ['']*MAX_CONNS
+        handler.binary_g = [0] * MAX_CONNS # binary: provided chunks sufficient for conn
+        handler.watching_video = [''] * MAX_CONNS
 
         # Create server on this cache.
         self.mini_server = ThreadStreamFTPServer(self.address, handler, stream_rate)
