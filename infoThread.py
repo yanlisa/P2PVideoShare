@@ -11,7 +11,7 @@ class infoThread (threading.Thread):
     def __init__(self, video_name, code_param_n, code_param_k):
         threading.Thread.__init__(self)
         self.video_name = video_name
-        self.filename = filename
+        self.filename = 'file-' + video_name + '.' + str(0) # CNKS does not need the frame number
         self.code_param_n = code_param_n
         self.code_param_k = code_param_k
 
@@ -22,7 +22,6 @@ class infoThread (threading.Thread):
     def update_info(self):
         filename = 'file-' + self.video_name + '.' + str(1)
         folder_name = 'video-' + self.video_name + '/' + self.video_name + '.' + str(1) + '.dir/'
-        self.filename = 'file-' + video_name + '.' + str(0) # CNKS does not need the frame number
         inst_CNKS = 'CNKS ' + self.filename
         inst_UPDG = 'UPDG '
 
