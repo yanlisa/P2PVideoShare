@@ -291,6 +291,7 @@ class P2PUser():
                 self.server_client.put_instruction(inst_NOOP)
                 print '[user.py] Caches handling code_param_k chunks, so no request to server. Sending a NOOP'
             else:
+                print '[user.py] Server_request = "' + server_request + '"'
                 server_request_string = '%'.join(server_request) + '&1'
                 self.server_client.put_instruction(inst_RETR + '.' + server_request_string)
                 if(DEBUGGING_MSG):
