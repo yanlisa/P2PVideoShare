@@ -193,6 +193,7 @@ class FTP:
                     time.sleep(0)
                     continue
                 if str(ex).startswith('timeout'):
+                    print "[ftplib.py] Timeout, continuing"
                     continue
                 raise ex
         if self.debugging > 1:
