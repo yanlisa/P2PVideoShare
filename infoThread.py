@@ -17,6 +17,7 @@ class infoThread (threading.Thread):
         self.filename = 'file-' + video_name + '.' + str(0) # CNKS does not need the frame number
         self.code_param_n = code_param_n
         self.code_param_k = code_param_k
+        self.flag = True
 
     def run(self):
         print 'Starting Info Exchange Thread'
@@ -42,6 +43,9 @@ class infoThread (threading.Thread):
 
         clients_copy = []
         while True:
+            if not self.flag:
+                print '[infoThread.py] Thread terminates'
+                break
             ct_loop += 1
             if ct_loop == ct_period:
                 # Copy self.clients to client_copy

@@ -145,6 +145,7 @@ class P2PUser():
         base_file_full_path = os.path.abspath('video-' + video_name + '/' + base_file_name)
 
         self.info_thread = infoThread(video_name, code_param_n, code_param_k, self)
+        self.info_thread.flag = True
         self.info_thread.start()
 
         for frame_number in xrange(start_frame, num_frames + 1):
@@ -387,7 +388,8 @@ class P2PUser():
         my_port = 0
         my_video_name = video_name
         deregister_to_tracker_as_user(tracker_address, my_ip, my_port, video_name)
-        self.info_thread.stop()
+        self.info_thread.flag = False
+        self.info_thread.join()
 
         print "[user.py] BYE"
         sys.stdout.flush()
