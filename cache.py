@@ -77,7 +77,7 @@ class Cache(object):
 
         self.packet_size = 2504
         server_ip_address = get_server_address(tracker_address)
-        self.server_client = ThreadClient(server_ip_address, self.packet_size)
+        self.server_client = ThreadClient(self, server_ip_address, self.packet_size)
         self.server_client.set_respond_RETR(True)
 
         cache_id = int(cache_config[0])
