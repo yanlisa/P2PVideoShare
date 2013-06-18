@@ -13,6 +13,7 @@ class infoThread (threading.Thread):
     def __init__(self, video_name, code_param_n, code_param_k, user):
         threading.Thread.__init__(self)
         self.user = user
+        self.user_name = user.user_name + '_InfoThread'
         self.video_name = video_name
         self.filename = 'file-' + video_name + '.' + str(0) # CNKS does not need the frame number
         self.code_param_n = code_param_n
@@ -56,7 +57,7 @@ class infoThread (threading.Thread):
 
                 for each in self.user.clients:
                     each_ip = each.address
-                    each_client = ThreadClient(each_ip, self.user.packet_size, 1)
+                    each_client = ThreadClient(self, each_ip, self.user.packet_size, 1)
                     clients_copy.append(each_client)
                     each_client.put_instruction('ID %s' % self.user.user_name)
                 ct_loop = 0
