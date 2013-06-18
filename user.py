@@ -54,7 +54,7 @@ class P2PUser():
         # After the cache download period, the files themselves will be checked
         # to see what remains to be downloaded from the server.
         server_ip_address = retrieve_server_address_from_tracker(tracker_address)
-        self.server_client = ThreadClient(server_ip_address, self.packet_size)
+        self.server_client = ThreadClient(user, server_ip_address, self.packet_size)
         self.server_client.set_respond_RETR(True)
         self.tracker_address = tracker_address
         self.clients = []
@@ -112,14 +112,14 @@ class P2PUser():
         choke_ct = 0
 
         for i in range(self.num_of_caches):
-            each_client = ThreadClient(cache_ip_addr[i], self.packet_size, i)
+            each_client = ThreadClient(user, cache_ip_addr[i], self.packet_size, i)
             each_client.put_instruction('ID %s' % self.user_name)
             self.clients.append(each_client)
             connected_caches.append(each_client)
             print '[user.py] ', i, 'th connection is CONNECTED : ' , cache_ip_addr[i]
 
         for i in range(self.num_of_caches, len(cache_ip_addr)):
-            each_client = ThreadClient(cache_ip_addr[i], self.packet_size, i)
+            each_client = ThreadClient(user, cache_ip_addr[i], self.packet_size, i)
             each_client.put_instruction('ID %s' % self.user_name)
             not_connected_caches.append(each_client)
             print '[user.py] ', i, 'th connection is RESERVED: ' , cache_ip_addr[i]

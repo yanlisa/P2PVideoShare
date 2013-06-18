@@ -27,10 +27,11 @@ class StreamFTP(threading.Thread, FTP, object):
             self._message = message
         message = property(_get_message, _set_message)
 
-    def __init__(self, host='', user='', passwd='', acct='',
+    def __init__(self, user, host='', user='', passwd='', acct='',
                  chunk_size=2504):
         if DEBUGGING_MSG:
             print "DEBUG, host : ", host
+        self.user = user
         self.instr_queue = Queue.Queue()
         self.resp_queue = Queue.Queue() # responses, in order.
         self.conn = None # connection socket
@@ -120,6 +121,7 @@ class StreamFTP(threading.Thread, FTP, object):
             except Exception, err:
                 sys.stderr.write('ERROR: %s\n' % str(err))
                 sys.stderr.write('@: %s\n' % str(self.host_address))
+                sys.stderr.write('@USER: %s\n' % self.user.user_name)
 
     def run(self):
         """

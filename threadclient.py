@@ -12,12 +12,13 @@ class ThreadClient(object):
     This class unfortunately crosses the data abstraction layer, but I was not
     sure of a better way to implement this.
     """
-    def __init__(self, address, packet_size=0, client_id = 0):
+    def __init__(self, user, address, packet_size=0, client_id = 0):
         """
         Makes a StreamFTP thread and starts it.
         """
+        self.user = user
         self.address = address
-        self.client = StreamFTP(address)
+        self.client = StreamFTP(user, address)
         self.client.set_chunk_size(packet_size)
         self.client.set_callback(self.chunkcallback)
         self.instr_queue = self.client.get_instr_queue()
