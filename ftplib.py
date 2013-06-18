@@ -195,6 +195,7 @@ class FTP:
                 if str(ex).startswith('timeout'):
                     print "[ftplib.py] Timeout, continuing"
                     continue
+                print "[ftplib.py] socket error ex =", ex
                 raise ex
         if self.debugging > 1:
             print '*get*', self.sanitize(line)
