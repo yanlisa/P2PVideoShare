@@ -49,8 +49,6 @@ class StreamFTP(threading.Thread, FTP, object):
         threading.Thread.__init__(self)
 
     def set_chunk_size(self, new_chunk_size):
-        if DEBUGGING_MSG:
-            print "[streamer.py] New chunk size: ", new_chunk_size
         self.chunk_size = new_chunk_size
 
     def set_chunks(self, chunks):
@@ -75,7 +73,6 @@ class StreamFTP(threading.Thread, FTP, object):
         if self.chunk_size:
             blocksize = self.chunk_size
         while 1:
-            #data = self.conn.recv(blocksize)
             try:
                 data = self.conn.recv(self.chunk_size)
             except self.MyException as e:
@@ -122,6 +119,7 @@ class StreamFTP(threading.Thread, FTP, object):
                 return res
             except Exception, err:
                 sys.stderr.write('ERROR: %s\n' % str(err))
+                sys.stderr.write('@: %s\n' % str(self.host_address))
 
     def run(self):
         """
