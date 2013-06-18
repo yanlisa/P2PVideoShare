@@ -54,7 +54,7 @@ class P2PUser():
         # After the cache download period, the files themselves will be checked
         # to see what remains to be downloaded from the server.
         server_ip_address = retrieve_server_address_from_tracker(tracker_address)
-        self.server_client = ThreadClient(user, server_ip_address, self.packet_size)
+        self.server_client = ThreadClient(self, server_ip_address, self.packet_size)
         self.server_client.set_respond_RETR(True)
         self.tracker_address = tracker_address
         self.clients = []
