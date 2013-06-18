@@ -217,6 +217,7 @@ class P2PUser():
                     ", Request string: ", client_request_string
                 client.put_instruction(inst_UPDG + str(flag_deficit))
                 if not assigned_chunks[i]:
+                    print '[user.py_DEBUG]', i, assigned_chunks[i]
                     client.put_instruction(inst_NOOP)
                 else:
                     pass
