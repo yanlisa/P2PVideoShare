@@ -116,7 +116,12 @@ class StreamFTP(threading.Thread, FTP, object):
 
     def retrresp(self):
         """Can have different responses, so just keep trying."""
-        return self.getresp()
+        while True:
+            try:
+                res = self.getresp()
+            except Error, err:
+                sys.stderr.write('ERROR: %s\n' % str(err))
+        return res
 
     def run(self):
         """
