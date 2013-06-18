@@ -216,8 +216,8 @@ class P2PUser():
                     ", Assigned chunks: ", assigned_chunks[i], \
                     ", Request string: ", client_request_string
                 client.put_instruction(inst_UPDG + str(flag_deficit))
-                if assigned_chunks[i] == []:
-                    self.server_client.put_instruction(inst_NOOP)
+                if not assigned_chunks[i]:
+                    client.put_instruction(inst_NOOP)
                 else:
                     client.put_instruction(inst_RETR + '.' + client_request_string)
 
