@@ -27,10 +27,10 @@ class StreamFTP(threading.Thread, FTP, object):
             self._message = message
         message = property(_get_message, _set_message)
 
-    def __init__(self, user='', host=''):
+    def __init__(self, owner='', host=''):
         if DEBUGGING_MSG:
             print "DEBUG, host : ", host
-        self.user = user
+        self.owner = owner
         self.instr_queue = Queue.Queue()
         self.resp_queue = Queue.Queue() # responses, in order.
         self.conn = None # connection socket
