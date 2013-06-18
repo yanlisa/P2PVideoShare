@@ -27,8 +27,7 @@ class StreamFTP(threading.Thread, FTP, object):
             self._message = message
         message = property(_get_message, _set_message)
 
-    def __init__(self, user, host='', user='', passwd='', acct='',
-                 chunk_size=2504):
+    def __init__(self, user='', host='', chunk_size=2504):
         if DEBUGGING_MSG:
             print "DEBUG, host : ", host
         self.user = user
