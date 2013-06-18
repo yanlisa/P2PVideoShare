@@ -120,7 +120,7 @@ class StreamFTP(threading.Thread, FTP, object):
             except Exception, err:
                 sys.stderr.write('ERROR: %s\n' % str(err))
                 sys.stderr.write('@: %s\n' % str(self.host_address))
-                sys.stderr.write('@USER: %s\n' % self.user.user_name)
+                sys.stderr.write('@USER: %s\n' % self.owner.user_name)
 
     def run(self):
         """
