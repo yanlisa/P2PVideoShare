@@ -221,6 +221,7 @@ class Cache(object):
                 sum_x = 0
                 print '[cache.py] update PRIMAL_X'
                 for i in range(len(handlers)):
+                    print CacheHandler.id_to_index.values()
                     if i not in CacheHandler.id_to_index.values():
                         continue
 
