@@ -216,7 +216,10 @@ class P2PUser():
                     ", Assigned chunks: ", assigned_chunks[i], \
                     ", Request string: ", client_request_string
                 client.put_instruction(inst_UPDG + str(flag_deficit))
-                client.put_instruction(inst_RETR + '.' + client_request_string)
+                if assigned_chunks[i] == []:
+                    self.server_client.put_instruction(inst_NOOP)
+                else:
+                    client.put_instruction(inst_RETR + '.' + client_request_string)
 
             ###### DECIDING CHUNKS THAT HAVE TO BE DOWNLOADED FROM CACHE: TIME 0 ######
             # Before CACHE_DOWNLOAD_DURATION, also start requesting chunks from server.
