@@ -222,12 +222,10 @@ class Cache(object):
                 print '[cache.py] update PRIMAL_X'
                 for i in range(len(handlers)):
                     if i not in CacheHandler.id_to_index.values():
-                        # print '[cache.py]', i, 'is not in map values, we skip'
                         continue
 
                     ## 1. UPDATE PRIMAL_X
                     handler = handlers[i]
-                    print '[cache.py] ' + str(i) + 'th connection, index = ' + str(handler.index)
                     if handler._closed == True:
                         if DEBUGGING_MSG:
                             print '[cache.py] Connection ' + str(i) + ' is closed'
@@ -235,6 +233,8 @@ class Cache(object):
                     else:
                         if DEBUGGING_MSG:
                             print '[cache.py] Connection ' + str(i) + ' is open'
+                    print '[cache.py] ' + str(i) + 'th connection, index = ' + str(handler.index)
+
                     video_name = self.get_watching_video(i)
                     code_param_n = self.movie_LUT.code_param_n_lookup(video_name)
                     code_param_k = self.movie_LUT.code_param_k_lookup(video_name)
@@ -359,7 +359,6 @@ class Cache(object):
                         continue
 
                     handler = handlers[i]
-                    print '[cache.py] ' + str(i) + 'th connection, index = ' + str(handler.index)
                     if handler._closed == True:
                         if DEBUGGING_MSG:
                             print '[cache.py] Connection ' + str(i) + ' is closed'
@@ -367,6 +366,7 @@ class Cache(object):
                     else:
                         if DEBUGGING_MSG:
                             print '[cache.py] Connection ' + str(i) + ' is open'
+                    print '[cache.py] ' + str(i) + 'th connection, index = ' + str(handler.index)
 
                     # Open connection
                     current_rate = self.get_conn_rate(i)
@@ -388,10 +388,7 @@ class Cache(object):
 
                     tmp_sum = 0
                     for j in range(len(handlers)):
-                        # print '[cache.py]DEBUG__ dual_k[', j, '] =', self.dual_k[j]
                         tmp_sum = self.dual_k[j]
-                    # print '[cache.py]DEBUG__ dual_k sum =', tmp_sum
-                    # print '[cache.py]DEBUG__ self.dual_k', self.dual_k[:2]
 
                     for j in range(len(handlers)):
                         handler_j = handlers[j]
