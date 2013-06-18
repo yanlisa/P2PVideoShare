@@ -27,7 +27,7 @@ class StreamFTP(threading.Thread, FTP, object):
             self._message = message
         message = property(_get_message, _set_message)
 
-    def __init__(self, user='', host='', chunk_size=2504):
+    def __init__(self, user='', host=''):
         if DEBUGGING_MSG:
             print "DEBUG, host : ", host
         self.user = user
@@ -36,7 +36,7 @@ class StreamFTP(threading.Thread, FTP, object):
         self.conn = None # connection socket
         self.callback = None
         self.chunks = []
-        self.chunk_size = chunk_size
+        self.chunk_size = 2504
         self.resp_RETR = False # When set, puts chunk/frame num in resp_queue after received.
         self.end_flag = False
 
