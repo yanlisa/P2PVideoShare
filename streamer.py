@@ -119,9 +119,9 @@ class StreamFTP(threading.Thread, FTP, object):
         while True:
             try:
                 res = self.getresp()
-            except Error, err:
+                return res
+            except Exception, err:
                 sys.stderr.write('ERROR: %s\n' % str(err))
-        return res
 
     def run(self):
         """
