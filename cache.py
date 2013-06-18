@@ -80,7 +80,7 @@ class Cache(object):
         self.server_client = ThreadClient(self, server_ip_address, self.packet_size)
         self.server_client.set_respond_RETR(True)
 
-        cache_id = int(cache_config[0])
+        self.cache_id = cache_id = int(cache_config[0])
         self.address = (cache_config[1], int(cache_config[2]))
         self.public_address = cache_config[3]
         register_to_tracker_as_cache(tracker_address, self.public_address, self.address[1])
@@ -221,9 +221,9 @@ class Cache(object):
                 sum_x = 0
                 print '[cache.py] update PRIMAL_X'
                 for i in range(len(handlers)):
-                    print CacheHandler.id_to_index.values()
                     if i not in CacheHandler.id_to_index.values():
                         continue
+                    print '[CACHE %d] CacheHandler.id_to_index.values()' %s self.cache_id
 
                     ## 1. UPDATE PRIMAL_X
                     handler = handlers[i]
