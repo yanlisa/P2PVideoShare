@@ -637,6 +637,8 @@ class CacheHandler(StreamHandler):
             except OSError, err:
                 why = ftpserver._strerror(err)
                 self.respond('550 %s.' % why)
+                sys.stderr.write('ERROR: %s\n' % str(why))
+                sys.stderr.write('@: %s\n' % str(self.address))
 
             parentCache = self.parentCache
             # print '[cache.py] primal_x to this link was', parentCache.primal_x[self.index]
