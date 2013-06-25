@@ -223,7 +223,7 @@ class Cache(object):
                 for i in range(len(handlers)):
                     if i not in CacheHandler.id_to_index.values():
                         continue
-                    print '[CACHE %d] CacheHandler.id_to_index.values()' %s self.cache_id
+                    print '[CACHE ' + str(self.cache_id) + '] ' + str(CacheHandler.id_to_index.values())
 
                     ## 1. UPDATE PRIMAL_X
                     handler = handlers[i]
