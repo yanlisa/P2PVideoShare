@@ -103,6 +103,6 @@ class infoThread (threading.Thread):
             sleep(T_update_info)
 
         # Close all connections
-        for each in clients_copy:
+        while clients_copy:
             each_client = clients_copy.pop()
             each_client.put_instruction('QUIT')

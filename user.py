@@ -385,6 +385,8 @@ class P2PUser():
     def disconnect(self, tracker_address, video_name, user_name):
         for client in self.clients:
             client.put_instruction('QUIT')
+        for client in not_connected_caches:
+            client.put_instruction('QUIT')
         self.server_client.put_instruction('QUIT')
         print "[user.py] Closed all connections."
 
