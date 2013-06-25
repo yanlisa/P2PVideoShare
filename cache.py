@@ -91,7 +91,7 @@ class Cache(object):
             average_streaming_rate = 3000 # Kbps
             average_length = 120 # sec
 
-            scale = 3
+            scale = 0.3
             self.eps_x = 1 * scale
             self.eps_k = 1 * scale
             self.eps_la = .3 * scale
@@ -223,7 +223,7 @@ class Cache(object):
                 for i in range(len(handlers)):
                     if i not in CacheHandler.id_to_index.values():
                         continue
-                    print '[CACHE ' + str(self.cache_id) + '] ' + str(CacheHandler.id_to_index.values())
+#                    print '[CACHE ' + str(self.cache_id) + '] ' + str(CacheHandler.id_to_index.values())
 
                     ## 1. UPDATE PRIMAL_X
                     handler = handlers[i]
@@ -234,7 +234,7 @@ class Cache(object):
                     else:
                         if DEBUGGING_MSG:
                             print '[cache.py] Connection ' + str(i) + ' is open'
-                    print '[cache.py] ' + str(i) + 'th connection, index = ' + str(handler.index)
+                    #print '[cache.py] ' + str(i) + 'th connection, index = ' + str(handler.index)
 
                     video_name = self.get_watching_video(i)
                     code_param_n = self.movie_LUT.code_param_n_lookup(video_name)
@@ -367,7 +367,7 @@ class Cache(object):
                     else:
                         if DEBUGGING_MSG:
                             print '[cache.py] Connection ' + str(i) + ' is open'
-                    print '[cache.py] ' + str(i) + 'th connection, index = ' + str(handler.index)
+#                    print '[cache.py] ' + str(i) + 'th connection, index = ' + str(handler.index)
 
                     # Open connection
                     current_rate = self.get_conn_rate(i)
@@ -387,16 +387,13 @@ class Cache(object):
                         continue
                     dual_k_sum = 0
 
-                    tmp_sum = 0
-                    for j in range(len(handlers)):
-                        tmp_sum = self.dual_k[j]
-
                     for j in range(len(handlers)):
                         handler_j = handlers[j]
                         if handler_j._closed == True:
                             continue
                         if self.get_watching_video(j) == video_name:
                             dual_k_sum += self.dual_k[j]
+			    print 'Handler %d is watching %s. dual_k = %.1f, dual_k_sum = %.1f' % (j, video_name, self.dual_k[j],  dual_k_sum)
                     if log_ct == 0:
                         print '[cache.py] dual_k_sum = ', dual_k_sum
                         print '[cache.py] dual_mu = ', self.dual_mu
@@ -479,7 +476,8 @@ class Cache(object):
                     rate_per_chunk = packet_size / 1000 / BUFFER_LENGTH * 8 # (Kbps)
                     if log_ct == 0:
                         print '[cache.py] self.primal_f', self.primal_f
-                        print '[cache.py] self.primal_f[', video_name, '] = ', self.primal_f[video_name]
+                    print '[cache.py] self.primal_f[', video_name, '] = ', self.primal_f[video_name]
+                    print '[cache.py] %d, x=%.2f, fR=%.2f' % (i, self.primal_x[i], self.primal_f[video_name] * rate_per_chunk * code_param_k)
                     delta_k = self.bound(self.primal_x[i] - self.primal_f[video_name] * rate_per_chunk * code_param_k, self.dual_k[i], 0, INFINITY)
                     if log_ct == 0:
                         print '[cache.py] User ' + str(i) + ' delta_k ' + str(delta_k)
