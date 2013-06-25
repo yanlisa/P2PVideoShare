@@ -104,6 +104,7 @@ class StreamFTPServer(ftpserver.FTPServer):
             # to the client before disconnecting it.
             if self.max_cons and (len(asyncore.socket_map) > self.max_cons):
                 print "Connection accepted for max_cons"
+                sys.stderr.write('ERROR: Connection accepted for max_cons')
                 handler.handle_max_cons()
                 return
 
