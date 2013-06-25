@@ -51,7 +51,7 @@ class infoThread (threading.Thread):
             if ct_loop == ct_period:
                 # Copy self.clients to client_copy
 
-                while client_copy:
+                while clients_copy:
                     each_client = clients_copy.pop()
                     each_client.put_instruction('QUIT')
 
