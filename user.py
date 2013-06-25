@@ -130,6 +130,7 @@ class P2PUser():
         print '[user.py] retrieving VLEN'
         vlen_str = self.clients[0].get_response().split('\n')[0]
         vlen_items = vlen_str.split('&')
+USER_TOPOLOGY_UPDATE = True
         print "VLEN: ", vlen_items
         num_frames, code_param_n, code_param_k = int(vlen_items[0]), int(vlen_items[4]), int(vlen_items[5])
 
