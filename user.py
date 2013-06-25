@@ -497,6 +497,5 @@ def main():
         print '[user.py] Download of video %s finished.' % video_name
         sys.stdout.flush()
 
-
 if __name__ == "__main__":
     main()
