@@ -3,6 +3,7 @@ if [ ! -z "$1" ] ; then
     num_of_users=$1
 fi
 rm log/*
+rm -r users
 if [ ! -d "users" ]; then
     mkdir "users"
 fi
@@ -15,7 +16,8 @@ do
     fi
     cd "user_"$i
     rm -r video*
-    python ../../user.py > ../../log/user_$i.txt &
+    #python ../../user.py > ../../log/user_$i.txt &
+    python ../../user.py &
     cd ".."
 done
 cd ".."

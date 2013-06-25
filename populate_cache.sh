@@ -6,7 +6,7 @@ cd "config"
 cd ".."
 
 rm log/*
-
+rm -r caches
 if [ ! -d "caches" ]; then
     mkdir "caches"
 fi
@@ -19,7 +19,13 @@ do
     fi
     cd "cache"$i
     rm -r video*
-    python ../../cache.py $i > ../../log/cache_$i.txt &
+    #python ../../cache.py $i > ../../log/cache_$i.txt &
+    if [ i == 1 ]; then
+	    python ../../cache.py $i &
+    else
+    	python ../../cache.py $i > ../../log/cache_$i.txt &
+    fi
+	
     cd ..
     sleep .1
 done
