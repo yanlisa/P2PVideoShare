@@ -15,8 +15,8 @@ do
     fi
     cd "user_"$i
     rm -r video*
-    python ../../user.py > ../../log/user_$i.txt &
-    #python ../../user.py &
+    #python ../../user.py > ../../log/user_$i.txt &
+    python ../../user.py &
     cd ".."
 done
 cd ".."
