@@ -20,11 +20,7 @@ do
     cd "cache"$i
     rm -r video*
     #python ../../cache.py $i > ../../log/cache_$i.txt &
-    if [ i == 1 ]; then
-	    python ../../cache.py $i &
-    else
-    	python ../../cache.py $i > ../../log/cache_$i.txt &
-    fi
+    python ../../cache.py $i &
 	
     cd ..
     sleep .1
