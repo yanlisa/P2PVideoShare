@@ -372,7 +372,7 @@ class P2PUser():
                         print '[user.py] cdf :', cdf
                         client_index = max(i for r in [random.random()] for i,c in cdf if c <= r) # http://stackoverflow.com/questions/4265988/generate-random-numbers-with-a-given-numerical-distribution
                         removed_cache = self.clients[client_index]
-                        removed_cache.put_instruction('QUIT')
+                        #removed_cache.put_instruction('QUIT')
                         self.clients.remove(removed_cache)
                         connected_caches.remove(removed_cache)
                         not_connected_caches.append(removed_cache)
