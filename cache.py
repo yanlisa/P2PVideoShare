@@ -224,10 +224,6 @@ class Cache(object):
                 for i in range(len(handlers)):
                     if i not in CacheHandler.id_to_index.values():
                         continue
-<<<<<<< HEAD
-=======
-#                    print '[CACHE ' + str(self.cache_id) + '] ' + str(CacheHandler.id_to_index.values())
->>>>>>> bbc3e94d07478f5a76bbea774d2a380738326665
 
                     ## 1. UPDATE PRIMAL_X
                     handler = handlers[i]
@@ -481,11 +477,6 @@ class Cache(object):
                     if log_ct == 0:
                         print '[cache.py] self.primal_f', self.primal_f
                     print '[cache.py] self.primal_f[', video_name, '] = ', self.primal_f[video_name]
-<<<<<<< HEAD
-                    print '[cache.py] HANDLER %d : x = %.1f, fr = %.1f' % (self.primal_x[i], self.primal_f[video_name] * rate_per_chunk * code_param_k)
-=======
-                    print '[cache.py] %d, x=%.2f, fR=%.2f' % (i, self.primal_x[i], self.primal_f[video_name] * rate_per_chunk * code_param_k)
->>>>>>> bbc3e94d07478f5a76bbea774d2a380738326665
                     delta_k = self.bound(self.primal_x[i] - self.primal_f[video_name] * rate_per_chunk * code_param_k, self.dual_k[i], 0, INFINITY)
                     if log_ct == 0:
                         print '[cache.py] User ' + str(i) + ' delta_k ' + str(delta_k)
