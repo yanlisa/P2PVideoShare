@@ -99,7 +99,7 @@ class P2PUser():
     def download(self, video_name, start_frame):
         print '[user.py] P2Puser starts downloading'
         connected_caches = []
-        not_connected_caches = []
+        self.not_connected_caches = not_connected_caches = []
         # Connect to the caches
         cache_ip_addr = retrieve_caches_address_from_tracker(self.tracker_address, 100, self.user_name)
         self.cache_ip_addr = cache_ip_addr
