@@ -220,7 +220,6 @@ class Cache(object):
             else:
                 sum_x = 0
                 print '[cache.py] update PRIMAL_X'
-                print '[CACHE %d] CacheHandler.id_to_index.values()' %s self.cache_id
                 for i in range(len(handlers)):
                     if i not in CacheHandler.id_to_index.values():
                         continue
