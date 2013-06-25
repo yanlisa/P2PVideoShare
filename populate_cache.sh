@@ -6,7 +6,7 @@ cd "config"
 cd ".."
 
 rm log/*
-
+rm -r caches
 if [ ! -d "caches" ]; then
     mkdir "caches"
 fi
