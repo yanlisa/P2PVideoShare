@@ -20,7 +20,7 @@ DEBUGGING_MSG = True
 VLC_PLAYER_USE = False
 
 # Topology
-USER_TOPOLOGY_UPDATE = False
+USER_TOPOLOGY_UPDATE = True
 T_choke = 1 # Choke period
 T_choke2 = 2 # Choke period
 eps_choke = 1 # Choke parameter
