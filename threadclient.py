@@ -84,6 +84,7 @@ class ThreadClient(object):
 
         video_dirname = 'video-' + video_name
         dirname = video_dirname + '/' + fname + '.dir'
+        print "HIHIHIHI"
         try:
             os.mkdir(video_dirname)
         except:

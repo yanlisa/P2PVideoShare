@@ -103,10 +103,7 @@ class P2PUser():
         # Connect to the caches
         cache_ip_addr = retrieve_caches_address_from_tracker(self.tracker_address, 100, self.user_name)
         self.cache_ip_addr = cache_ip_addr
-        #connected_caches = set([])
         self.num_of_caches = min(self.num_of_caches, len(cache_ip_addr))
-        #connected_caches_index = [0] * self.num_of_caches
-        #not_connected_caches = set(range(len(cache_ip_addr)))
 
         choke_state = 0 # 0 : usual state, 1 : overhead state
         choke_ct = 0
@@ -477,7 +474,7 @@ def main():
         print '[user.py] wait time:', wait_time
         sleep(wait_time)
 
-        os.system("rm -r video*")
+        #os.system("rm -r video*")
         video_index = max(i for r in [random.random()] for i,c in cdf if c <= r) # http://stackoverflow.com/questions/4265988/generate-random-numbers-with-a-given-numerical-distribution
 
         if popularity_change:

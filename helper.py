@@ -5,13 +5,7 @@ import commands
 import Queue
 
 DEBUGGING_MSG = True
-
-(temp, temp_str1) = commands.getstatusoutput('~/ftp-git/tracker_ip.sh')
-temp_str2 = temp_str1.replace('.','-').split('-')
-tracker_address = 'http://' + '.'.join(temp_str2[1:5]) + ':8081/req/'
-#tracker_address = 'http://0.0.0.0:8081/req/'
-print temp_str2
-print tracker_address
+tracker_address = 'http://54.227.254.17:8081/req/'
 
 def load_tracker_address():
     return tracker_address
