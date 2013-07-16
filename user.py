@@ -455,7 +455,7 @@ def main():
         print '[user.py] wait time:', wait_time
         sleep(wait_time)
 
-        #os.system("rm -r video*")
+        os.system("rm -r video*")
         video_index = max(i for r in [random.random()] for i,c in cdf if c <= r) # http://stackoverflow.com/questions/4265988/generate-random-numbers-with-a-given-numerical-distribution
 
         if popularity_change:
