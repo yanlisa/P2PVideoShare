@@ -99,6 +99,7 @@ def retrieve_MovieLUT_from_tracker(tracker_address): # Retrieve it from the trac
     lut = MovieLUT()
 
     req_str = 'GET_ALL_VIDEOS'
+    print "RET_STR", tracker_address + req_str
     ret_str = urllib2.urlopen(tracker_address + req_str).read()
     ret_str_split = ret_str.split('\n')
     for each_row in ret_str_split:

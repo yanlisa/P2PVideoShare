@@ -14,28 +14,9 @@ import sys
 import threading
 import string
 from infoThread import infoThread
-
-# Debugging MSG
-DEBUGGING_MSG = True
-VLC_PLAYER_USE = False
-
-# Topology
-USER_TOPOLOGY_UPDATE = True
-T_choke = 1 # Choke period
-T_choke2 = 2 # Choke period
-eps_choke = 1 # Choke parameter
-
-# Global parameters
-CACHE_DOWNLOAD_DURATION = 8 # sec
-SERVER_DOWNLOAD_DURATION = 2 # sec
-DECODE_WAIT_DURATION = 0.1 # sec
-tracker_address = load_tracker_address()
-num_of_caches = 5
-
+import ConfigParser
 
 class P2PUser():
-
-    #def __init__(self, tracker_address, video_name, packet_size):
     def __init__(self, tracker_address, video_name, user_name):
         """ Create a new P2PUser.  Set the packet size, instantiate the manager,
         and establish clients.  Currently, the clients are static but will
@@ -495,4 +476,26 @@ def main():
         sys.stdout.flush()
 
 if __name__ == "__main__":
+    # Load configurations
+    config = ConfigParser.ConfigParser()
+    config.read(sys.argv[1])
+
+    # General
+    DEBUGGING_MSG = config.getboolean('General', 'DEBUGGING_MSG')
+    VLC_PLAYER_USE = config.getboolean('General', 'VLC_PLAYER_USE')
+
+    # Topology
+    USER_TOPOLOGY_UPDATE = config.getboolean('Topology', 'USER_TOPOLOGY_UPDATE')
+    T_choke = config.getfloat('Topology', 'T_choke')
+    T_choke2 = config.getfloat('Topology', 'T_choke2')
+    eps_choke = config.getfloat('Topology', 'eps_choke')
+
+    # Global
+    CACHE_DOWNLOAD_DURATION = config.getfloat('Global', 'CACHE_DOWNLOAD_DURATION');
+    SERVER_DOWNLOAD_DURATION = config.getfloat('Global', 'SERVER_DOWNLOAD_DURATION');
+    DECODE_WAIT_DURATION = config.getfloat('Global', 'DECODE_WAIT_DURATION');
+    tracker_address = config.get('Global', 'tracker_address');
+    print tracker_address
+    num_of_caches = config.getint('Global', 'num_of_caches');
+
     main()
