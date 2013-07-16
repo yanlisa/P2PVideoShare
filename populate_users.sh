@@ -1,4 +1,4 @@
-num_of_users=1
+num_of_users=5
 if [ ! -z "$1" ] ; then
     num_of_users=$1
 fi
@@ -17,7 +17,7 @@ do
     cd "user_"$i
     rm -r video*
     #python ../../user.py > ../../log/user_$i.txt &
-    python ../../user.py development.ini &
+    python ../../user.py ../../development.ini &
     cd ".."
 done
 cd ".."
