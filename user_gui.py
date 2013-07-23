@@ -48,13 +48,11 @@ class P2PUser():
         # Put the file into the queue and play it
         url = 'http://127.0.0.1:8080/requests/status.xml?command=in_play&input=file://'
         url = url + video_path
-        print '[user.py] ', url
         urllib2.urlopen(url).read()
 
     def VLC_pause_video(self):
         # Pause or play it
         url = 'http://127.0.0.1:8080/requests/status.xml?command=pl_pause'
-        print '[user.py] ', url
         urllib2.urlopen(url).read()
 
     def VLC_empty_list(self):
@@ -310,6 +308,7 @@ class P2PUser():
             filefec.decode_from_files(base_file, chunksList)
             print 'decoded.  Size of base file =', os.path.getsize('video-' + video_name + '/' + base_file_name)
             if frame_number == 1 and VLC_PLAYER_USE:
+                self.VLC_empty_list()
                 self.VLC_start_video(base_file_full_path)
 
             if USER_TOPOLOGY_UPDATE:
@@ -446,31 +445,20 @@ def main():
     movie_LUT = retrieve_MovieLUT_from_tracker(tracker_address)
 
     movies = movie_LUT.movies_LUT.keys()
-    zipf_param = 1
-    cdf = zipfCDF(len(movies), zipf_param) # Popularity CDF
-    print '[user.py] Popularity cdf', cdf
-
     runtime_ct = 0
     popularity_change = False
 
     while True:
+        print 'List of available videos in the system'
+        for each in movies:
+            print '-', each
+        while True:
+            input_str = raw_input('Please choose a video:')
+            if input_str in movies:
+                video_name = input_str
+                break
+
         user_id = ''.join(random.choice(string.ascii_uppercase + string.digits) for x in range(6))
-        runtime_ct += 1
-        wait_time = random.expovariate(1/float(mu))
-        print '[user.py] wait time:', wait_time
-        sleep(wait_time)
-
-        os.system("rm -r video*")
-        video_index = max(i for r in [random.random()] for i,c in cdf if c <= r) # http://stackoverflow.com/questions/4265988/generate-random-numbers-with-a-given-numerical-distribution
-
-        if popularity_change:
-            if runtime_ct > 5:
-                print '[user.py] New popularity is applied'
-                video_name = movies[number_of_videos - video_index - 1]
-            else:
-                video_name = movies[video_index]
-        else:
-            video_name = movies[video_index]
         user_name = 'user-' + user_id
         print '[user.py] Starting to watch video %s' % video_name
         sys.stdout.flush()
@@ -483,15 +471,11 @@ def main():
 if __name__ == "__main__":
     # Load configurations
     config = ConfigParser.ConfigParser()
-    def VLC_empty_list(self):
-        # Empty playlist
-        url = 'http://127.0.0.1:8080/requests/status.xml?command=pl_empty'
-        urllib2.urlopen(url).read()
     config.read(sys.argv[1])
 
     # General
-    DEBUGGING_MSG = config.getboolean('General', 'DEBUGGING_MSG')
-    VLC_PLAYER_USE = config.getboolean('General', 'VLC_PLAYER_USE')
+    DEBUGGING_MSG = config.getboolean('GUI', 'DEBUGGING_MSG')
+    VLC_PLAYER_USE = config.getboolean('GUI', 'VLC_PLAYER_USE')
 
     # Topology
     USER_TOPOLOGY_UPDATE = config.getboolean('Topology', 'USER_TOPOLOGY_UPDATE')
