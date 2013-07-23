@@ -223,5 +223,5 @@ if __name__ == "__main__":
     player = MainFrame("MASCOTS 2013 Demo")
     # show the player window centred and run the application
     player.Centre()
-    player.Show()
+    player.Show(True)
     app.MainLoop()

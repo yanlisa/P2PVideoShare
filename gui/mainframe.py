@@ -1,3 +1,6 @@
+import wx
+import os
+
 class MainFrame(wx.Frame):
     """The main window has to deal with events.
     """
@@ -15,6 +18,8 @@ class MainFrame(wx.Frame):
         sizer.Add(self.mainpanel, 1, flag=wx.EXPAND)
         self.SetSizer(sizer)
         self.SetMinSize((350, 300))
+        print 'hi'
+        self.Centre()
 
     def OnExit(self, evt):
         """Closes the window.
