@@ -7,7 +7,8 @@ from time import sleep
 T_update_info = 0.1
 # Global parameters
 CACHE_DOWNLOAD_DURATION = 8 # sec
-SERVER_DOWNLOAD_DURATION = 2 # sec
+SERVER_DOWNLOAD_DURATION = 1.5 # sec
+DEBUGGING_MSG = False
 
 class infoThread (threading.Thread):
     def __init__(self, video_name, code_param_n, code_param_k, user):
@@ -80,8 +81,9 @@ class infoThread (threading.Thread):
 
             ## index assignment here
             # Assign chunks to cache using cache_chunks_to_request.
-            print '[user.py] Update_info_loop : Rates ', rates
-            print '[user.py] Update_info_loop : Available chunks', available_chunks
+            if DEBUGGING_MSG:
+                print '[user.py] Update_info_loop : Rates ', rates
+                print '[user.py] Update_info_loop : Available chunks', available_chunks
 
             assigned_chunks = cache_chunks_to_request(available_chunks, rates, self.code_param_n, self.code_param_k)
 

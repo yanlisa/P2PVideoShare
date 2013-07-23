@@ -40,6 +40,8 @@ import os
 import sys
 import time
 
+DEBUGGING_MSG = False
+
 # Import SOCKS module if it exists, else standard socket module socket
 try:
     import SOCKS; socket = SOCKS; del SOCKS # import SOCKS as socket
@@ -185,7 +187,8 @@ class FTP:
         while True:
             try:
                 line = self.file.readline()
-                print '[ftplib.py] line :', line
+                if DEBUGGING_MSG:
+                    print '[ftplib.py] line :', line
                 break
             except socket.error as ex:
                 if str(ex) == "[Errno 35] Resource temporarily unavailable":
