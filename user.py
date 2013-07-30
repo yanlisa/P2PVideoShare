@@ -483,10 +483,6 @@ def main():
 if __name__ == "__main__":
     # Load configurations
     config = ConfigParser.ConfigParser()
-    def VLC_empty_list(self):
-        # Empty playlist
-        url = 'http://127.0.0.1:8080/requests/status.xml?command=pl_empty'
-        urllib2.urlopen(url).read()
     config.read(sys.argv[1])
 
     # General
