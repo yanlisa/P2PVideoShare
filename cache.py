@@ -24,7 +24,7 @@ cache_config_file = '../../config/cache_config.csv'
 LOG_PERIOD = 1000
 
 INFINITY = 10e10
-MAX_CONNS = 1000
+MAX_CONNS = 10000
 MAX_VIDEOS = 1000
 BUFFER_LENGTH = 10
 path = "."
