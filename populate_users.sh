@@ -17,7 +17,7 @@ do
     cd "user_"$i
     rm -r video*
     #python ../../user.py > ../../log/user_$i.txt &
-    python ../../user.py ../../development.ini &
+    python ../../user.py ../../development.ini > /dev/null &
     cd ".."
 done
 cd ".."
