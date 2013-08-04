@@ -390,9 +390,12 @@ class Cache(object):
                         handler_j = handlers[j]
                         if handler_j._closed == True:
                             continue
-                        if self.get_watching_video(j) == video_name:
-                            dual_k_sum += self.dual_k[j]
-			    print 'Handler %d is watching %s. dual_k = %.1f, dual_k_sum = %.1f' % (j, video_name, self.dual_k[j],  dual_k_sum)
+                        try:
+                            if self.get_watching_video(j) == video_name:
+                                dual_k_sum += self.dual_k[j]
+                        except IndexError:
+                            sys.stderr.write('IndexError occured. j = %d' % j)
+                    print 'Handler %d is watching %s. dual_k = %.1f, dual_k_sum = %.1f' % (j, video_name, self.dual_k[j],  dual_k_sum)
                     if log_ct == 0:
                         print '[cache.py] dual_k_sum = ', dual_k_sum
                         print '[cache.py] dual_mu = ', self.dual_mu
@@ -571,7 +574,11 @@ class CacheHandler(StreamHandler):
             data = '%'.join(map(str, CacheHandler.chunks[video_name]))
         else:
             data = '%'.join(map(str, ''))
-        data = data + '&' + str(int(CacheHandler.rates[self.index]))
+        try:
+            data = data + '&' + str(int(CacheHandler.rates[self.index]))
+        except IndexError:
+            sys.stderr.write('IndexError occured')
+            data = data + '&'
         # print "Sending CNKS: ", data
         #CacheHandler.connected[self.index] = True
         self.push_dtp_data(data, isproducer=False, cmd="CNKS")
