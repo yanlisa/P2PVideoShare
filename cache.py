@@ -91,7 +91,7 @@ class Cache(object):
             average_streaming_rate = 3000 # Kbps
             average_length = 120 # sec
 
-            scale = 1
+            scale = .3
             self.eps_x = 1 * scale
             self.eps_k = 1 * scale
             self.eps_la = .3 * scale
